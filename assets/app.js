@@ -1,10 +1,24 @@
 /**
- * Main JavaScript file for Permits System
+ * Permits System - Main JavaScript Application
  * 
- * Purpose: 
- * - Registers service worker for PWA functionality
- * - Handles service worker updates
- * - Auto-reloads page when new version is available
+ * Description: Core client-side JavaScript for PWA functionality and service worker management
+ * Name: app.js
+ * Last Updated: 21/10/2025 19:22:30 (UK)
+ * Author: irlam
+ * 
+ * Purpose:
+ * - Register service worker for Progressive Web App (PWA) capabilities
+ * - Enable offline functionality and asset caching
+ * - Handle service worker updates and version changes
+ * - Auto-reload page when new version is available
+ * - Provide user notifications for updates
+ * 
+ * Features:
+ * - Automatic service worker registration on page load
+ * - Periodic update checks every 60 seconds
+ * - User-friendly update prompts
+ * - Seamless version transitions
+ * - Error handling and logging
  */
 
 // Register service worker if browser supports it

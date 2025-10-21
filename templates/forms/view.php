@@ -1,9 +1,33 @@
 <?php
 /**
- * Form View Template
+ * Permits System - Form View Template
  * 
- * Description: Displays a complete view of a permit/form with all details
+ * Description: Complete read-only view of a permit with all details, history, and actions
  * Name: view.php
+ * Last Updated: 21/10/2025 19:22:30 (UK)
+ * Author: irlam
+ * 
+ * Purpose:
+ * - Display complete permit details in read-only format
+ * - Show all checklist items with their statuses
+ * - Display digital signatures
+ * - List file attachments with upload capability
+ * - Show audit trail / event history
+ * - Provide actions (edit, duplicate, delete, print, QR code)
+ * 
+ * Features:
+ * - Print-friendly layout for PDF export
+ * - QR code generation for mobile access
+ * - File attachment management
+ * - Status badges with color coding
+ * - Responsive design for all devices
+ * - Event timeline showing form history
+ * 
+ * Expected Variables:
+ * - $form: Database record of the form
+ * - $template: Form template definition
+ * - $attachments: Array of file attachments
+ * - $events: Array of audit events
  */
 
 $base = $_ENV['APP_URL'] ?? '/';

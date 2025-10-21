@@ -1,15 +1,32 @@
 /**
- * Service Worker for Permits System
+ * Permits System - Service Worker
  * 
- * Description: Enables offline functionality and caches static assets
+ * Description: Progressive Web App service worker for offline functionality and asset caching
  * Name: sw.js
+ * Last Updated: 21/10/2025 19:22:30 (UK)
+ * Author: irlam
  * 
- * Version: Update this version number when you deploy changes!
+ * Purpose:
+ * - Enable offline access to the permits application
+ * - Cache static assets (CSS, JS, manifest) for faster loading
+ * - Implement cache-first strategy for performance
+ * - Automatically clean up old cache versions
+ * - Provide seamless update experience
+ * 
+ * Features:
+ * - Install event: Download and cache static assets
+ * - Activate event: Clean up old caches
+ * - Fetch event: Serve from cache with network fallback
+ * - Message event: Handle skip waiting commands
+ * - Smart caching: Never cache API endpoints or dynamic pages
+ * 
+ * Version Management:
+ * IMPORTANT: Increment CACHE_VERSION every time you deploy changes!
  * This forces browsers to download the new service worker and clear old cache
+ * Format: permits-v[number] or permits-YYYYMMDD-HHMM
  */
 
-// IMPORTANT: Increment this version number every time you deploy changes
-// Format: permits-v[number] or permits-YYYYMMDD-HHMM
+// Cache version identifier - update this on each deployment
 const CACHE_VERSION = 'permits-v3-quickwins';
 
 // Static assets to cache (CSS, JS, manifest)

@@ -1,26 +1,63 @@
 <?php
-// admin-templates.php — upload/list JSON form templates (protected by ADMIN_KEY)
+/**
+ * Permits System - Template Administration Panel
+ * 
+ * Description: Secure admin interface for uploading and managing form templates
+ * Name: admin-templates.php
+ * Last Updated: 21/10/2025 19:22:30 (UK)
+ * Author: irlam
+ * 
+ * Purpose:
+ * - Upload new form template JSON files
+ * - Update existing templates (upsert by template ID)
+ * - View list of all installed templates
+ * - Protected by ADMIN_KEY environment variable
+ * 
+ * Security:
+ * - Requires valid ADMIN_KEY as query parameter
+ * - Uses hash_equals() to prevent timing attacks
+ * - Validates JSON structure before saving
+ * - Hidden from search engines with X-Robots-Tag header
+ * 
+ * Usage:
+ * - Access: https://yourdomain.com/admin-templates.php?key=YOUR_ADMIN_KEY
+ * - Upload JSON files with required fields: id, title, meta.fields, sections
+ */
+
+// Prevent search engine indexing of admin pages
 header('X-Robots-Tag: noindex, nofollow', true);
+
+// Load dependencies and bootstrap application
 require __DIR__ . '/vendor/autoload.php';
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
+// Verify admin key from query string for access control
 $key = $_GET['key'] ?? 'pick-a-long-random-string';
+
+// Use hash_equals() to prevent timing attacks on key comparison
 if (!$key || !isset($_ENV['ADMIN_KEY']) || !hash_equals($_ENV['ADMIN_KEY'], $key)) {
   http_response_code(403);
   echo "<h1>403 Forbidden</h1><p>Missing/wrong key.</p>";
   exit;
 }
 
+// Handle template upload form submission
 $msg = null; $err = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['tpl'])) {
   try {
+    // Validate file upload
     if (!is_uploaded_file($_FILES['tpl']['tmp_name'])) throw new RuntimeException('Upload failed');
+    
+    // Read and parse JSON file
     $raw = file_get_contents($_FILES['tpl']['tmp_name']);
     $j = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    
+    // Extract and validate required fields
     $id   = $j['id']   ?? null;
     $name = $j['title'] ?? ($j['name'] ?? null);
     if (!$id || !$name) throw new RuntimeException('Template must include "id" and "title"');
-    // Upsert
+    
+    // Upsert template (insert or update if exists)
     $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
     if ($driver === 'mysql') {
       $sql = "INSERT INTO form_templates (id,name,version,json_schema,created_by,published_at,updated_at)

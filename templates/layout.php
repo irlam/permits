@@ -1,4 +1,25 @@
 <?php
+/**
+ * Permits System - Homepage Layout Template
+ * 
+ * Description: Main layout template for the permits homepage with search and form listing
+ * Name: layout.php
+ * Last Updated: 21/10/2025 19:22:30 (UK)
+ * Author: irlam
+ * 
+ * Purpose:
+ * - Display homepage with permit listing
+ * - Provide search and filter interface
+ * - Show available form templates
+ * - Enable quick access to create new permits
+ * 
+ * Features:
+ * - Advanced search functionality (by text, status, template, date range)
+ * - Responsive grid layout for forms
+ * - Modern dark theme with improved aesthetics
+ * - Mobile-friendly interface
+ */
+
 $base = $_ENV['APP_URL'] ?? '/';
 $params = $_GET ?? [];
 ?><!doctype html>
