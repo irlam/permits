@@ -1,18 +1,39 @@
+# ===================================================================
+# Permits System - Apache Configuration
+# 
+# Description: Apache URL rewriting and security configuration
+# Name: .htaccess
+# Last Updated: 21/10/2025 19:22:30 (UK)
+# Author: irlam
+# 
+# Purpose:
+# - Enable clean URLs without .php extensions
+# - Route all requests through index.php front controller
+# - Serve static files (CSS, JS, images) directly
+# - Block access to sensitive directories
+# - Improve security and SEO
+# 
+# Features:
+# - Front controller pattern for Slim Framework routing
+# - Static asset bypass for performance
+# - Directory access protection
+# - Query string preservation
+# ===================================================================
 
+# Enable URL rewriting module
 RewriteEngine On
-# Serve existing files directly
+
+# Serve existing files and directories directly (CSS, JS, images, etc.)
+# This improves performance by not routing static assets through PHP
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Otherwise route everything to index.php
+# Route all other requests through index.php (front controller)
+# QSA = Query String Append (preserves GET parameters)
+# L = Last rule (stop processing if this matches)
 RewriteRule ^ index.php [QSA,L]
-# Block private folders
+
+# Block direct access to sensitive directories for security
+# Returns 404 for any attempts to access these folders
 RedirectMatch 404 ^/(bin|data|src|templates|vendor)/
-
-# If you still need pretty URLs, keep your existing front-controller rewrite:
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-RewriteRule ^ index.php [QSA,L]

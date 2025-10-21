@@ -1,25 +1,508 @@
-/* Minimal styles; replace with your project CSS */
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;background:#0b1220;color:#e5e7eb;margin:0}
-.top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #1f2937;background:#0a101a;position:sticky;top:0}
-.btn{display:inline-block;padding:8px 12px;border:1px solid #1f2937;border-radius:8px;background:#111827;color:#e5e7eb;text-decoration:none}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
-.card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:12px}
-.tbl{width:100%;border-collapse:collapse}
-.tbl th,.tbl td{border:1px solid #1f2937;padding:6px 8px;text-align:left}
-/* form */
-.wrap{max-width:1100px;margin:0 auto;padding:16px}
-.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.field label{font-size:12px;color:#94a3b8;display:block;margin-bottom:4px}
-.field input,.field select,.field textarea{width:100%;background:#0a101a;color:#e5e7eb;border:1px solid #1f2937;border-radius:10px;padding:10px}
-.items{display:flex;flex-direction:column;gap:8px;padding:10px}
-.item{border:1px dashed #1f2937;border-radius:12px;padding:8px}
-.row{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center}
-.pill{display:inline-flex;gap:6px;align-items:center;border:1px solid #1f2937;background:#0a101a;border-radius:999px;padding:4px 8px;font-size:12px}
-.siggrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sig canvas{width:100%;height:160px;background:#fff;border:1px solid #ccc;border-radius:6px}
-@media print{
-  html,body{background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .top,.btn{display:none!important}
-  .card,.item,.field,.tbl th,.tbl td{background:#fff!important;border-color:#bbb!important}
-  .row{grid-template-columns:18px 1fr auto!important}
+/**
+ * Permits System - Main Stylesheet
+ * 
+ * Description: Modern dark theme styling for the permits application
+ * Name: app.css
+ * Last Updated: 21/10/2025 19:22:30 (UK)
+ * Author: irlam
+ * 
+ * Purpose:
+ * - Provide cohesive, professional dark theme design
+ * - Ensure responsive layouts for all screen sizes
+ * - Improve readability and user experience
+ * - Support print/PDF export with optimized styling
+ * 
+ * Color Scheme (Modern Dark Theme):
+ * - Background: #0a0f1a (deep dark blue-black)
+ * - Cards/Panels: #111827 (dark slate)
+ * - Borders: #1f2937 (subtle borders)
+ * - Text Primary: #f9fafb (almost white)
+ * - Text Secondary: #9ca3af (muted gray)
+ * - Accent: #3b82f6 (modern blue)
+ * - Success: #10b981 (green)
+ * - Warning: #f59e0b (amber)
+ * - Danger: #ef4444 (red)
+ * 
+ * Design Features:
+ * - Border radius: 8px-12px (smooth rounded corners)
+ * - Box shadows for depth and hierarchy
+ * - Smooth transitions (0.2s ease)
+ * - Consistent spacing (12px, 16px, 24px)
+ * - Improved button hover effects
+ * - Better form input styling
+ */
+
+/* ==================== Base Styles ==================== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Arial, sans-serif;
+  background: #0a0f1a;
+  color: #f9fafb;
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+/* ==================== Top Navigation Bar ==================== */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #1f2937;
+  background: #111827;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+/* ==================== Buttons ==================== */
+.btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  background: #111827;
+  color: #f9fafb;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn:hover {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-accent {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-accent:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* ==================== Grid Layout ==================== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+}
+
+/* ==================== Cards ==================== */
+.card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+.card h2 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.card li {
+  margin-bottom: 12px;
+}
+
+/* ==================== Tables ==================== */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.tbl th,
+.tbl td {
+  border: 1px solid #1f2937;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.tbl th {
+  background: #0a0f1a;
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tbl td {
+  color: #f9fafb;
+}
+
+.tbl tbody tr {
+  transition: background 0.2s ease;
+}
+
+.tbl tbody tr:hover {
+  background: #0a0f1a;
+}
+
+/* ==================== Form Wrapper ==================== */
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+/* ==================== Form Fields ==================== */
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: #0a0f1a;
+  color: #f9fafb;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ==================== Checklist Items ==================== */
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.item {
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 16px;
+  background: #0a0f1a;
+  transition: all 0.2s ease;
+}
+
+.item:hover {
+  background: #111827;
+  border-color: #374151;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.label-text {
+  color: #f9fafb;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.status {
+  display: flex;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid #1f2937;
+  background: #0a0f1a;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pill:hover {
+  background: #111827;
+  border-color: #374151;
+}
+
+.pill input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.note {
+  margin-top: 12px;
+}
+
+.note textarea {
+  width: 100%;
+  background: #111827;
+  color: #f9fafb;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 60px;
+  resize: vertical;
+}
+
+/* ==================== Details/Collapsible Sections ==================== */
+details.card {
+  margin-bottom: 16px;
+}
+
+details summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  list-style: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details summary::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+  color: #3b82f6;
+}
+
+details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.cp {
+  font-size: 18px;
+  color: #f9fafb;
+}
+
+/* ==================== Signatures ==================== */
+.sig-wrap {
+  margin-top: 24px;
+}
+
+.sig {
+  padding: 0;
+}
+
+.sigtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f9fafb;
+  margin-bottom: 16px;
+}
+
+.siggrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.sigbox {
+  background: #0a0f1a;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.sig canvas {
+  width: 100%;
+  height: 180px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.rowish {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.muted {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* ==================== Tools/Actions ==================== */
+.tools {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #1f2937;
+}
+
+/* ==================== Responsive Design ==================== */
+@media (max-width: 768px) {
+  .top {
+    padding: 12px 16px;
+  }
+  
+  .top h1 {
+    font-size: 20px;
+  }
+  
+  .wrap {
+    padding: 16px;
+  }
+  
+  .meta {
+    grid-template-columns: 1fr;
+  }
+  
+  .siggrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .row {
+    grid-template-columns: 20px 1fr;
+  }
+  
+  .status {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+  }
+}
+
+/* ==================== Print Styles ==================== */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 12px;
+  }
+  
+  .top,
+  .btn,
+  .tools {
+    display: none !important;
+  }
+  
+  .card,
+  .item,
+  .field,
+  .tbl th,
+  .tbl td {
+    background: #fff !important;
+    border-color: #999 !important;
+    box-shadow: none !important;
+  }
+  
+  .row {
+    grid-template-columns: 18px 1fr auto !important;
+  }
+  
+  .page-head {
+    border-bottom: 2px solid #111;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
 }
