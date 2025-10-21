@@ -15,12 +15,12 @@
  * 
  * Usage:
  * Run from command line: php bin/send-notifications.php
- * Or via cron: */5 * * * * php /path/to/permits/bin/send-notifications.php
+ * Or via cron: (every 5 minutes) php /path/to/permits/bin/send-notifications.php
  * 
  * Cron Schedule Recommendation:
- * - Every 5 minutes: */5 * * * *
- * - Every 15 minutes: */15 * * * *
- * - Every hour: 0 * * * *
+ * - Every 5 minutes: (star)/5 (star) (star) (star) (star)
+ * - Every 15 minutes: (star)/15 (star) (star) (star) (star)
+ * - Every hour: 0 (star) (star) (star) (star)
  */
 
 // Load application bootstrap
