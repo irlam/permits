@@ -1,13 +1,13 @@
 <?php return array(
     'root' => array(
         'name' => 'defecttracker/permits',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-copilot/add-advanced-features-permits',
+        'version' => 'dev-copilot/add-advanced-features-permits',
+        'reference' => 'd3b901024289b0710cbb5082df76115cac0c07be',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => false,
+        'dev' => true,
     ),
     'versions' => array(
         'brick/math' => array(
@@ -20,9 +20,9 @@
             'dev_requirement' => false,
         ),
         'defecttracker/permits' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-copilot/add-advanced-features-permits',
+            'version' => 'dev-copilot/add-advanced-features-permits',
+            'reference' => 'd3b901024289b0710cbb5082df76115cac0c07be',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

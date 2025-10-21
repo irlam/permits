@@ -3219,6 +3219,6 @@
             "install-path": "../web-token/jwt-library"
         }
     ],
-    "dev": false,
+    "dev": true,
     "dev-package-names": []
 }
