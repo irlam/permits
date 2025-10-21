@@ -27,7 +27,7 @@
  * 
  * Usage:
  * - Command line: php bin/reminders.php
- * - Cron: */30 * * * * php /path/to/bin/reminders.php
+ * - Cron: (star)/30 * * * * php /path/to/bin/reminders.php (every 30 mins)
  * - Recommended: Run every 30 minutes for timely alerts
  */
 
