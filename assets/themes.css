@@ -1,0 +1,181 @@
+/**
+ * Permits System - Theme Styles
+ * 
+ * Description: Theme customization and color scheme definitions
+ * Name: themes.css
+ * Last Updated: 21/10/2025 21:03:42 (UK)
+ * Author: irlam
+ * 
+ * Purpose:
+ * - Define light and dark theme color schemes
+ * - Support theme switching functionality
+ * - Provide custom theme variables
+ * - Enable user preference persistence
+ * 
+ * Features:
+ * - Dark theme (default)
+ * - Light theme option
+ * - CSS custom properties for easy customization
+ * - Smooth theme transitions
+ */
+
+/* ==================== CSS Custom Properties ==================== */
+
+/* Dark Theme (Default) */
+:root {
+  --color-background: #0a0f1a;
+  --color-surface: #111827;
+  --color-surface-2: #0a101a;
+  --color-border: #1f2937;
+  --color-border-light: #374151;
+  
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  --color-background: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-2: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-border-light: #d1d5db;
+  
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #6b7280;
+  
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+}
+
+/* Apply theme colors to existing elements */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.2s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Theme-specific element styling */
+[data-theme="light"] .card,
+[data-theme="light"] .top {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .btn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .btn:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-border-light);
+}
+
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+/* Theme transition animation */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Preserve instant transitions for interactive elements */
+button,
+a,
+.btn {
+  transition-property: all;
+  transition-duration: 0.2s;
+}
+
+/* Print styles - always use light theme */
+@media print {
+  :root {
+    --color-background: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-2: #f9fafb;
+    --color-border: #999999;
+    --color-text-primary: #111111;
+    --color-text-secondary: #444444;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #4b5563;
+    --color-border-light: #6b7280;
+  }
+  
+  [data-theme="light"] {
+    --color-border: #9ca3af;
+    --color-border-light: #6b7280;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .theme-toggle {
+    transition: none !important;
+    animation: none !important;
+  }
+}

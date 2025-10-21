@@ -587,3 +587,44 @@ $app->get('/api/export/csv', function(Req $req, Res $res) use ($db) {
   
   return $res;
 });
+
+// ----- Authentication routes
+$app->get('/login', function(Req $req, Res $res) use ($root) {
+  ob_start();
+  include $root . '/login.php';
+  $html = ob_get_clean();
+  $res->getBody()->write($html);
+  return $res;
+});
+
+$app->post('/login', function(Req $req, Res $res) use ($root) {
+  ob_start();
+  include $root . '/login.php';
+  $html = ob_get_clean();
+  $res->getBody()->write($html);
+  return $res;
+});
+
+$app->get('/logout', function(Req $req, Res $res) use ($db) {
+  $auth = new \Permits\Auth($db);
+  $auth->logout();
+  return $res->withHeader('Location', '/login')->withStatus(302);
+});
+
+// ----- Settings route
+$app->get('/settings', function(Req $req, Res $res) use ($root) {
+  ob_start();
+  include $root . '/settings.php';
+  $html = ob_get_clean();
+  $res->getBody()->write($html);
+  return $res;
+});
+
+$app->post('/settings', function(Req $req, Res $res) use ($root) {
+  ob_start();
+  include $root . '/settings.php';
+  $html = ob_get_clean();
+  $res->getBody()->write($html);
+  return $res;
+});
+
