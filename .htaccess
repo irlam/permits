@@ -1,0 +1,18 @@
+
+RewriteEngine On
+# Serve existing files directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Otherwise route everything to index.php
+RewriteRule ^ index.php [QSA,L]
+# Block private folders
+RedirectMatch 404 ^/(bin|data|src|templates|vendor)/
+
+# If you still need pretty URLs, keep your existing front-controller rewrite:
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^ index.php [QSA,L]
