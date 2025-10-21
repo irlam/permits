@@ -547,3 +547,43 @@ $app->post('/api/push/subscribe', function(Req $req, Res $res) use ($db) {
   $res->getBody()->write(json_encode(['ok'=>true]));
   return $res->withHeader('Content-Type','application/json');
 });
+
+// ----- Dashboard route
+$app->get('/dashboard', function(Req $req, Res $res) use ($db, $root) {
+  // Include and execute dashboard.php
+  ob_start();
+  include $root . '/dashboard.php';
+  $html = ob_get_clean();
+  $res->getBody()->write($html);
+  return $res;
+});
+
+// ----- CSV Export route
+$app->get('/api/export/csv', function(Req $req, Res $res) use ($db) {
+  $exporter = new \Permits\Export($db);
+  
+  // Get filters from query parameters
+  $params = $req->getQueryParams();
+  $filters = [];
+  
+  if (!empty($params['search'])) {
+    $filters['search'] = $params['search'];
+  }
+  if (!empty($params['status'])) {
+    $filters['status'] = $params['status'];
+  }
+  if (!empty($params['template'])) {
+    $filters['template'] = $params['template'];
+  }
+  if (!empty($params['date_from'])) {
+    $filters['date_from'] = $params['date_from'];
+  }
+  if (!empty($params['date_to'])) {
+    $filters['date_to'] = $params['date_to'];
+  }
+  
+  // Export to CSV (this will output directly and exit)
+  $exporter->exportToCSV($filters);
+  
+  return $res;
+});
