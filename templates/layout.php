@@ -42,7 +42,10 @@ $params = $_GET ?? [];
 <body>
 <header class="top">
   <h1>Permits & Registers</h1>
-  <a class="btn" href="/">Home</a>
+  <div style="display: flex; gap: 12px;">
+    <a class="btn" href="/dashboard">Dashboard</a>
+    <a class="btn" href="/">Home</a>
+  </div>
 </header>
 
 <section class="grid">
@@ -85,6 +88,18 @@ $params = $_GET ?? [];
       <div class="search-actions">
         <button type="submit" class="btn">🔍 Search</button>
         <a href="/" class="btn">Clear</a>
+        <?php
+        // Build export URL with current filters
+        $exportParams = array_filter([
+          'search' => $params['search'] ?? '',
+          'status' => $params['status'] ?? '',
+          'template' => $params['template'] ?? '',
+          'date_from' => $params['date_from'] ?? '',
+          'date_to' => $params['date_to'] ?? '',
+        ]);
+        $exportUrl = '/api/export/csv' . (!empty($exportParams) ? '?' . http_build_query($exportParams) : '');
+        ?>
+        <a href="<?=htmlspecialchars($exportUrl)?>" class="btn btn-accent">📥 Export CSV</a>
       </div>
     </form>
   </div>

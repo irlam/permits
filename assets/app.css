@@ -506,3 +506,149 @@ details[open] summary::before {
     margin-bottom: 16px;
   }
 }
+
+/* ==================== Mobile Enhancements ==================== */
+
+/* Mobile-specific styles for touch devices */
+@media (max-width: 768px) {
+  /* Touch-friendly buttons - minimum 44x44px tap targets */
+  .btn {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+  
+  /* Mobile navigation */
+  .top {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+  
+  .top h1 {
+    font-size: 20px;
+  }
+  
+  /* Stack buttons vertically on very small screens */
+  .top > div {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  /* Mobile-optimized forms */
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 14px;
+    min-height: 44px;
+  }
+  
+  /* Mobile grid layout */
+  .grid {
+    padding: 12px;
+    gap: 16px;
+  }
+  
+  /* Single column on mobile */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Touch-friendly cards */
+  .card {
+    padding: 16px;
+  }
+  
+  /* Mobile table improvements */
+  .tbl {
+    font-size: 14px;
+  }
+  
+  .tbl th,
+  .tbl td {
+    padding: 10px 8px;
+  }
+  
+  /* Hide less important columns on mobile */
+  .tbl .hide-mobile {
+    display: none;
+  }
+  
+  /* Mobile search panel */
+  .search-panel {
+    padding: 12px;
+  }
+  
+  .search-form {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .search-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .search-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Swipe gesture indicators */
+.swipe-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.swipe-indicator::after {
+  content: '←  →';
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: #6b7280;
+  font-size: 12px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Touch feedback for interactive elements */
+@media (hover: none) {
+  .btn:active,
+  .card:active {
+    opacity: 0.8;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-width: 896px) and (orientation: landscape) {
+  .top {
+    padding: 8px 16px;
+  }
+  
+  .grid {
+    padding: 8px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 375px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .top h1 {
+    font-size: 18px;
+  }
+  
+  .btn {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+  
+  .card {
+    padding: 12px;
+  }
+}
