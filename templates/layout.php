@@ -27,6 +27,61 @@ $params = $_GET ?? [];
   <meta name="theme-color" content="#0ea5e9">
   <title>Permits</title>
   <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
+  <script>
+    (function(){
+      var NativeWebSocket = window.WebSocket || window.MozWebSocket;
+      if(!NativeWebSocket){return;}
+      var blockedPattern = /\/ws\/ws(\/|$)/i;
+
+      function createStub(url){
+        var eventTargets = {open:[],message:[],error:[],close:[]};
+        function dispatch(type, detail){
+          var evt; try{evt = new Event(type);}catch(e){evt = {type:type};}
+          if(detail){for(var k in detail){if(Object.prototype.hasOwnProperty.call(detail,k)){evt[k]=detail[k];}}}
+          (eventTargets[type]||[]).forEach(function(fn){try{fn.call(stub,evt);}catch(err){console.error(err);}});
+          var handler = stub['on'+type];
+          if(typeof handler === 'function'){try{handler.call(stub,evt);}catch(err){console.error(err);}}
+        }
+        var stub = {
+          url:url,
+          readyState:NativeWebSocket.CLOSED,
+          bufferedAmount:0,
+          extensions:'',
+          protocol:'',
+          binaryType:'blob',
+          onopen:null,
+          onmessage:null,
+          onerror:null,
+          onclose:null,
+          addEventListener:function(type,fn){if(eventTargets[type]){eventTargets[type].push(fn);}},
+          removeEventListener:function(type,fn){var list=eventTargets[type]; if(!list){return;} var idx=list.indexOf(fn); if(idx>-1){list.splice(idx,1);}},
+          dispatchEvent:function(evt){dispatch(evt.type,evt);},
+          send:function(){console.warn('Blocked WebSocket send to',url);},
+          close:function(){},
+        };
+        setTimeout(function(){dispatch('error',{message:'Blocked dev websocket'});dispatch('close',{wasClean:true,code:1000,reason:'Blocked dev websocket'});},0);
+        return stub;
+      }
+
+      function createNative(url,protocols){
+        if(NativeWebSocket.length===1){return new NativeWebSocket(url);}
+        return protocols!==undefined?new NativeWebSocket(url,protocols):new NativeWebSocket(url);
+      }
+
+      function WrappedWebSocket(url,protocols){
+        if(typeof url==='string' && blockedPattern.test(url)){
+          console.info('Suppressed dev WebSocket:',url);
+          return createStub(url);
+        }
+        return createNative(url,protocols);
+      }
+
+      WrappedWebSocket.prototype = NativeWebSocket.prototype;
+      if(Object.setPrototypeOf){Object.setPrototypeOf(WrappedWebSocket,NativeWebSocket);} else {WrappedWebSocket.__proto__ = NativeWebSocket;}
+      window.WebSocket = WrappedWebSocket;
+      if('MozWebSocket' in window){window.MozWebSocket = WrappedWebSocket;}
+    })();
+  </script>
   <style>
     .search-panel{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:16px;grid-column:1/-1}
     .search-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end}
