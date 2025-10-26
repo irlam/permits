@@ -1,0 +1,32 @@
+-- Align k87747_permits schema with latest application requirements
+-- Run this after importing the original dump (k87747_permits.sql) via phpMyAdmin.
+-- Compatible with MySQL 8.0+
+
+START TRANSACTION;
+
+-- Ensure form_templates has metadata columns consumed by the app helpers
+ALTER TABLE `form_templates`
+  ADD COLUMN IF NOT EXISTS `created_by` VARCHAR(191) NULL AFTER `json_schema`,
+  ADD COLUMN IF NOT EXISTS `published_at` DATETIME NULL AFTER `created_by`,
+  ADD COLUMN IF NOT EXISTS `updated_at` DATETIME NULL AFTER `published_at`;
+
+-- Backfill timestamps for existing rows so new code sees sensible values
+UPDATE `form_templates`
+   SET `published_at` = COALESCE(`published_at`, NOW()),
+       `updated_at` = COALESCE(`updated_at`, NOW())
+ WHERE `published_at` IS NULL
+    OR `updated_at` IS NULL;
+
+-- Seed default permit duration presets used by the admin duration manager
+INSERT INTO `settings` (`key`, `value`, `updated_at`)
+VALUES
+  (
+    'permit_duration_presets',
+    '[{"label":"1 hour","minutes":60},{"label":"4 hours","minutes":240},{"label":"1 day","minutes":1440}]',
+    NOW()
+  )
+ON DUPLICATE KEY UPDATE
+    `value` = VALUES(`value`),
+    `updated_at` = VALUES(`updated_at`);
+
+COMMIT;

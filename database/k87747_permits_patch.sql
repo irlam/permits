@@ -1,0 +1,2 @@
+-- The MySQL patch statements were moved to database/k87747_permits_patch.sql.txt
+-- to avoid being interpreted by non-MySQL tooling inside the workspace.
