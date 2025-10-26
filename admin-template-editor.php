@@ -217,13 +217,16 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         .alert { padding: 14px 18px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; }
         .alert-success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); color: #bbf7d0; }
         .alert-error { background: rgba(248, 113, 113, 0.16); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
-        .layout { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); gap: 24px; }
+        .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
         .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35); }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #2d3a54; }
-        th { font-weight: 600; color: #cbd5f5; }
-        tr:hover td { background: rgba(59, 130, 246, 0.08); }
-        .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(148, 163, 184, 0.18); color: #e2e8f0; font-size: 12px; }
+        .card-list { position: sticky; top: 32px; }
+        .template-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+        .template-button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px; border-radius: 14px; border: 1px solid transparent; background: rgba(15, 23, 42, 0.6); color: inherit; text-decoration: none; transition: all 0.15s ease-in-out; }
+        .template-button:hover { border-color: rgba(59, 130, 246, 0.6); background: rgba(59, 130, 246, 0.12); }
+        .template-button.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.18); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45); }
+        .template-title { font-weight: 600; font-size: 15px; }
+        .template-meta { display: flex; gap: 10px; align-items: center; font-size: 12px; color: #94a3b8; }
+        .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(148, 163, 184, 0.18); color: #e2e8f0; font-size: 12px; }
         .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; background: #3b82f6; color: #fff; text-decoration: none; font-size: 14px; }
         .btn:hover { background: #2563eb; }
         .btn-secondary { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; }
@@ -239,6 +242,7 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         .empty { color: #94a3b8; font-size: 14px; text-align: center; padding: 16px 0; }
         @media (max-width: 960px) {
             .layout { grid-template-columns: 1fr; }
+            .card-list { position: static; }
         }
     </style>
 </head>
@@ -257,33 +261,29 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         <?php endforeach; ?>
 
         <div class="layout">
-            <div class="card">
+            <div class="card card-list">
                 <h2 style="margin-bottom:16px; font-size:20px;">Available Templates</h2>
                 <?php if (!$templates): ?>
                     <p class="empty">No templates found. Run the importer first.</p>
                 <?php else: ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Version</th>
-                                <th>Updated</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($templates as $template): ?>
-                                <tr<?php echo ($template['id'] === $activeTemplateId) ? ' style="background: rgba(59,130,246,0.12);"' : ''; ?>>
-                                    <td><code><?php echo htmlspecialchars($template['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></code></td>
-                                    <td><?php echo htmlspecialchars($template['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></td>
-                                    <td><span class="tag">v<?php echo htmlspecialchars((string)$template['version'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span></td>
-                                    <td><?php echo formatDateForDisplay($template['updated_at'] ?? null); ?></td>
-                                    <td style="text-align:right;"><a class="btn btn-secondary" href="/admin-template-editor.php?template=<?php echo urlencode($template['id']); ?>">Edit</a></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                    <ul class="template-list">
+                        <?php foreach ($templates as $template): ?>
+                            <?php
+                                $isActive = $template['id'] === $activeTemplateId;
+                                $class = $isActive ? 'template-button active' : 'template-button';
+                            ?>
+                            <li>
+                                <a class="<?php echo $class; ?>" href="/admin-template-editor.php?template=<?php echo urlencode($template['id']); ?>">
+                                    <span class="template-title"><?php echo htmlspecialchars($template['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                                    <div class="template-meta">
+                                        <span class="tag">v<?php echo htmlspecialchars((string)$template['version'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                                        <span><?php echo htmlspecialchars($template['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                                        <span>Updated <?php echo formatDateForDisplay($template['updated_at'] ?? null); ?></span>
+                                    </div>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 <?php endif; ?>
             </div>
 
