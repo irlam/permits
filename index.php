@@ -78,6 +78,29 @@ try {
     error_log("Error fetching templates: " . $e->getMessage());
 }
 
+// Get recently approved permits
+try {
+    $approvedStmt = $db->pdo->query("
+        SELECT 
+            f.ref_number,
+            f.holder_name,
+            f.unique_link,
+            f.valid_to,
+            f.approved_at,
+            f.created_at,
+            ft.name AS template_name
+        FROM forms f
+        JOIN form_templates ft ON f.template_id = ft.id
+        WHERE f.status = 'active'
+        ORDER BY COALESCE(f.approved_at, f.created_at) DESC
+        LIMIT 6
+    ");
+    $approvedPermits = $approvedStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $approvedPermits = [];
+    error_log("Error fetching approved permits: " . $e->getMessage());
+}
+
 // Template icons mapping
 $templateIcons = [
     'hot-works-permit' => '🔥',
@@ -649,6 +672,61 @@ function formatDateUK($date) {
                             </div>
                             <div class="template-version">
                                 Version <?php echo htmlspecialchars($template['version']); ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Approved Permits -->
+        <div class="card" id="approved-permits">
+            <h2 class="card-title">✅ Recently Approved Permits</h2>
+            <p style="color: #6b7280; margin-bottom: 24px;">
+                Latest permits that have been approved and are now active.
+            </p>
+
+            <?php if (empty($approvedPermits)): ?>
+                <div class="empty-state">
+                    <div class="empty-state-icon">🗂️</div>
+                    <div class="empty-state-title">No approved permits yet</div>
+                    <p>Once permits are approved by a manager, they will appear here.</p>
+                </div>
+            <?php else: ?>
+                <div class="permit-results">
+                    <?php foreach ($approvedPermits as $permit): ?>
+                        <div class="permit-card approved">
+                            <div class="permit-header">
+                                <div class="permit-ref">
+                                    <?php echo htmlspecialchars($permit['template_name']); ?>
+                                    #<?php echo htmlspecialchars($permit['ref_number']); ?>
+                                </div>
+                                <?php echo getStatusBadge('active'); ?>
+                            </div>
+
+                            <?php if (!empty($permit['holder_name'])): ?>
+                                <div class="permit-info">
+                                    <strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="permit-info">
+                                <strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?>
+                            </div>
+
+                            <?php if (!empty($permit['valid_to'])): ?>
+                                <div class="permit-info">
+                                    <strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="permit-actions">
+                                <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" class="btn btn-primary">
+                                    👁️ View Permit
+                                </a>
+                                <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1" class="btn btn-secondary">
+                                    🖨️ Print
+                                </a>
                             </div>
                         </div>
                     <?php endforeach; ?>
