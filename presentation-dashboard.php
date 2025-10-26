@@ -330,6 +330,8 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(16px);
+            transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1),
+                        opacity 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
         }
         .card::before {
             content: '';
@@ -344,10 +346,22 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
         .card:hover::before {
             opacity: 1;
         }
+        [data-animate] {
+            opacity: 0;
+            transform: translateY(36px) scale(0.98);
+        }
+        [data-animate].is-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
         .metric-value {
             font-size: clamp(32px, 3vw, 48px);
             font-weight: 700;
             margin: 0 0 6px;
+            transition: transform 0.6s ease;
+        }
+        [data-animate].is-visible .metric-value {
+            transform: scale(1.05);
         }
         .metric-label {
             color: #94a3b8;
@@ -472,39 +486,39 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
         </header>
 
         <section class="grid grid-cols-4">
-            <article class="card" id="metric-total" data-narration="We are currently tracking <?php echo htmlspecialchars(number_format($metrics['total'])); ?> permits in total.">
+            <article class="card" data-animate id="metric-total" data-narration="We are currently tracking <?php echo htmlspecialchars(number_format($metrics['total'])); ?> permits in total.">
                 <div class="metric-label">Total permits</div>
                 <div class="metric-value"><?php echo htmlspecialchars(number_format($metrics['total'])); ?></div>
                 <div class="metric-trend trend-flat">Portfolio scale</div>
             </article>
-            <article class="card" id="metric-active" data-narration="<?php echo htmlspecialchars(number_format($metrics['active'] ?? 0)); ?> permits are active right now.">
+            <article class="card" data-animate id="metric-active" data-narration="<?php echo htmlspecialchars(number_format($metrics['active'] ?? 0)); ?> permits are active right now.">
                 <div class="metric-label">Active</div>
                 <div class="metric-value"><?php echo htmlspecialchars(number_format($metrics['active'] ?? 0)); ?></div>
                 <div class="metric-trend trend-up">Live operations</div>
             </article>
-            <article class="card" id="metric-approved" data-narration="<?php echo htmlspecialchars(number_format($recentApproved)); ?> approvals landed in the last thirty days.">
+            <article class="card" data-animate id="metric-approved" data-narration="<?php echo htmlspecialchars(number_format($recentApproved)); ?> approvals landed in the last thirty days.">
                 <div class="metric-label">Approvals (30d)</div>
                 <div class="metric-value"><?php echo htmlspecialchars(number_format($recentApproved)); ?></div>
                 <div class="metric-trend trend-up">Momentum</div>
             </article>
-            <article class="card" id="metric-expiring" data-narration="<?php echo htmlspecialchars(number_format($expiringSoon)); ?> permits will expire within seven days.">
+            <article class="card" data-animate id="metric-expiring" data-narration="<?php echo htmlspecialchars(number_format($expiringSoon)); ?> permits will expire within seven days.">
                 <div class="metric-label">Expiring (7d)</div>
                 <div class="metric-value"><?php echo htmlspecialchars(number_format($expiringSoon)); ?></div>
                 <div class="metric-trend trend-flat">Risk radar</div>
             </article>
         </section>
 
-        <section class="card" id="trend-card" data-narration="Here is the monthly flow of permits created and approved, showing throughput trends.">
+        <section class="card" data-animate id="trend-card" data-narration="Here is the monthly flow of permits created and approved, showing throughput trends.">
             <h2 class="section-title">Throughput trend</h2>
             <canvas id="trendChart" height="300"></canvas>
         </section>
 
         <section class="charts-grid">
-            <article class="card" id="status-card" data-narration="Permit statuses break down across the lifecycle as shown here.">
+            <article class="card" data-animate id="status-card" data-narration="Permit statuses break down across the lifecycle as shown here.">
                 <h2 class="section-title">Lifecycle status mix</h2>
                 <canvas id="statusChart" height="260"></canvas>
             </article>
-            <article class="card" id="efficiency-card" data-narration="Efficiency metrics highlight turnaround speed and reliability.">
+            <article class="card" data-animate id="efficiency-card" data-narration="Efficiency metrics highlight turnaround speed and reliability.">
                 <h2 class="section-title">Efficiency pulse</h2>
                 <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 18px;">
                     <div>
@@ -523,7 +537,7 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
             </article>
         </section>
 
-        <section class="card" id="top-card" data-narration="Our most popular permit templates are leading the charge here.">
+        <section class="card" data-animate id="top-card" data-narration="Our most popular permit templates are leading the charge here.">
             <h2 class="section-title">Top performing templates</h2>
             <?php if ($topTemplates): ?>
             <div class="top-list">
@@ -550,6 +564,23 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-qiWs4V/mQJu1WDVYj1WFJsbgx5caX5/Cgtiw55GaRLM/J7rnNdw1JkiNeVYwMy3p" crossorigin="anonymous"></script>
     <script>
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const observerSupported = 'IntersectionObserver' in window;
+        if (!prefersReducedMotion && observerSupported) {
+            const animatedBlocks = document.querySelectorAll('[data-animate]');
+            const animateObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        animateObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2 });
+            animatedBlocks.forEach((el) => animateObserver.observe(el));
+        } else {
+            document.querySelectorAll('[data-animate]').forEach((el) => el.classList.add('is-visible'));
+        }
+
         const trendCtx = document.getElementById('trendChart');
         const statusCtx = document.getElementById('statusChart');
 
@@ -654,6 +685,61 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
         const synth = window.speechSynthesis;
         let utteranceQueue = [];
         let activeSpotlight = null;
+        let selectedVoice = null;
+        let voicesReady = false;
+
+        function chooseVoice(list) {
+            if (!Array.isArray(list) || list.length === 0) {
+                return null;
+            }
+            const preferred = [
+                'Google UK English Female',
+                'Google US English Female',
+                'Microsoft Hazel Desktop - English (Great Britain)',
+                'Microsoft Aria Online (Natural) - English (United States)',
+                'Samantha',
+                'Karen'
+            ];
+            const byName = preferred.map((name) => list.find((v) => v.name === name)).filter(Boolean);
+            if (byName.length) {
+                return byName[0];
+            }
+            const englishVoices = list.filter((voice) => voice.lang && voice.lang.startsWith('en'));
+            return englishVoices[0] || list[0];
+        }
+
+        function resolveVoices() {
+            return new Promise((resolve) => {
+                if (!('speechSynthesis' in window)) {
+                    resolve(null);
+                    return;
+                }
+                const available = synth.getVoices();
+                if (available.length) {
+                    voicesReady = true;
+                    selectedVoice = chooseVoice(available);
+                    resolve(selectedVoice);
+                    return;
+                }
+                const handle = () => {
+                    const fresh = synth.getVoices();
+                    if (fresh.length) {
+                        window.speechSynthesis.removeEventListener('voiceschanged', handle);
+                        clearTimeout(fallbackTimer);
+                        voicesReady = true;
+                        selectedVoice = chooseVoice(fresh);
+                        resolve(selectedVoice);
+                    }
+                };
+                const fallbackTimer = setTimeout(() => {
+                    window.speechSynthesis.removeEventListener('voiceschanged', handle);
+                    resolve(null);
+                }, 1500);
+                window.speechSynthesis.addEventListener('voiceschanged', handle);
+            });
+        }
+
+        const voicePromise = resolveVoices();
 
         function highlightElement(id) {
             if (activeSpotlight) {
@@ -683,14 +769,14 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
             indicator.classList.remove('active');
         }
 
-        function playPresentation() {
+        async function playPresentation() {
             if (!('speechSynthesis' in window)) {
                 alert('Speech narration is not supported in this browser.');
                 return;
             }
-            stopPresentation();
+            await voicePromise;
 
-            indicator.classList.add('active');
+            stopPresentation();
 
             const combinedLines = [...voiceLines];
             utteranceQueue = [];
@@ -706,11 +792,22 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
                 }
             });
 
+            if (!combinedLines.length) {
+                alert('No narration content available.');
+                return;
+            }
+
+            indicator.classList.add('active');
+
             combinedLines.forEach((line, idx) => {
                 const utterance = new SpeechSynthesisUtterance(line);
                 utterance.rate = 1.02;
                 utterance.pitch = 1.0;
                 utterance.volume = 1.0;
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                    utterance.lang = selectedVoice.lang;
+                }
                 utteranceQueue.push({ utterance, idx });
             });
 
@@ -726,8 +823,14 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
                 const spotlightId = sequence[idx - voiceLines.length];
                 if (spotlightId) {
                     highlightElement(spotlightId);
+                } else {
+                    clearHighlight();
                 }
                 utterance.onend = () => {
+                    queueIndex += 1;
+                    speakNext();
+                };
+                utterance.onerror = () => {
                     queueIndex += 1;
                     speakNext();
                 };
