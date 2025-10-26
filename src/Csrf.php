@@ -28,7 +28,8 @@ class Csrf
     private static function ensureSession(): void
     {
         if (\session_status() === \PHP_SESSION_NONE) {
-            if (\function_exists('startSession')) {
+            // Use custom startSession helper if available (from Auth.php)
+            if (\function_exists('\startSession')) {
                 \startSession();
             } else {
                 \session_start();

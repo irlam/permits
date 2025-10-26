@@ -194,8 +194,8 @@ class Validator
         // Remove any characters that aren't alphanumeric, dash, underscore, or dot
         $filename = \preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
         
-        // Prevent directory traversal
-        $filename = \str_replace(['..', '//', '\\\\'], '_', $filename);
+        // Prevent directory traversal - remove all path separators and traversal sequences
+        $filename = \str_replace(['..', '/', '\\', '//', '\\\\'], '_', $filename);
         
         // Limit length
         if (\mb_strlen($filename, 'UTF-8') > 255) {
