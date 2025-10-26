@@ -58,6 +58,37 @@ try {
     // Ignore errors, metrics stay at 0
 }
 
+// Resolve status filter coming from metric cards (?status=<key>)
+$statusFilter = strtolower(trim((string)($_GET['status'] ?? '')));
+$allowedFilters = ['total', 'pending', 'active', 'expired', 'rejected', 'draft', 'closed'];
+if ($statusFilter !== '' && !in_array($statusFilter, $allowedFilters, true)) {
+    $statusFilter = '';
+}
+
+$statusSqlMap = [
+    'pending'  => 'pending_approval',
+    'active'   => 'active',
+    'expired'  => 'expired',
+    'rejected' => 'rejected',
+    'draft'    => 'draft',
+    'closed'   => 'closed',
+];
+
+$statusLabelMap = [
+    ''        => 'Recent Permits',
+    'total'   => 'All Permits',
+    'pending' => 'Pending Approval',
+    'active'  => 'Active Permits',
+    'expired' => 'Expired Permits',
+    'rejected'=> 'Rejected Permits',
+    'draft'   => 'Draft Permits',
+    'closed'  => 'Closed Permits',
+];
+
+$permitsLimit = $statusFilter === '' ? 10 : 50;
+$permitsListTitle = $statusLabelMap[$statusFilter] ?? 'Permits';
+$filterActive = $statusFilter !== '';
+
 // Get templates
 try {
     $templates = $db->pdo->query("
@@ -76,37 +107,49 @@ try {
     }
 }
 
-// Get recent permits
-$recentPermits = [];
+// Fetch permits for the current filter selection
+$permitsList = [];
 try {
     if ($isLoggedIn && $currentUser) {
-        if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager') {
-            // Admins and managers see all permits
-            $stmt = $db->pdo->query("
-                SELECT f.*, ft.name as template_name, 
-                       u.name as holder_name, u.email as holder_email
-                FROM forms f
-                JOIN form_templates ft ON f.template_id = ft.id
-                LEFT JOIN users u ON f.holder_id = u.id
-                ORDER BY f.created_at DESC
-                LIMIT 10
-            ");
-        } else {
-            // Regular users see only their permits
-            $stmt = $db->pdo->prepare("
-                SELECT f.*, ft.name as template_name
-                FROM forms f
-                JOIN form_templates ft ON f.template_id = ft.id
-                WHERE f.holder_id = ?
-                ORDER BY f.created_at DESC
-                LIMIT 10
-            ");
-            $stmt->execute([$currentUser['id']]);
+        $conditions = [];
+        $params = [];
+
+        if (!in_array($currentUser['role'], ['admin', 'manager'], true)) {
+            $conditions[] = 'f.holder_id = :holder';
+            $params['holder'] = $currentUser['id'];
         }
-        $recentPermits = $stmt->fetchAll();
+
+        if ($filterActive && $statusFilter !== 'total') {
+            $dbStatus = $statusSqlMap[$statusFilter] ?? null;
+            if ($dbStatus !== null) {
+                $conditions[] = 'f.status = :status';
+                $params['status'] = $dbStatus;
+            }
+        }
+
+        $whereClause = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
+        $limitClause = 'LIMIT ' . (int) $permitsLimit;
+
+        $sql = "
+            SELECT f.*, ft.name as template_name,
+                   u.name as holder_name, u.email as holder_email
+            FROM forms f
+            JOIN form_templates ft ON f.template_id = ft.id
+            LEFT JOIN users u ON f.holder_id = u.id
+            $whereClause
+            ORDER BY f.created_at DESC
+            $limitClause
+        ";
+
+        $stmt = $db->pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->execute();
+        $permitsList = $stmt->fetchAll();
     }
 } catch (Exception $e) {
-    $recentPermits = [];
+    $permitsList = [];
 }
 
 // Helper function for status badges
@@ -224,16 +267,28 @@ function getStatusBadge($status) {
         }
         
         .metric-card {
+            display: block;
             background: white;
             border-radius: 16px;
             padding: 24px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, outline 0.2s;
+            color: inherit;
+            text-decoration: none;
         }
         
         .metric-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .metric-card.is-active {
+            outline: 3px solid rgba(102, 126, 234, 0.35);
+            box-shadow: 0 12px 28px rgba(102, 126, 234, 0.25);
+        }
+
+        .metric-card.is-active .value {
+            color: #4338ca;
         }
         
         .metric-card .icon {
@@ -277,6 +332,7 @@ function getStatusBadge($status) {
             display: flex;
             align-items: center;
             gap: 8px;
+            justify-content: space-between;
         }
         
         /* Templates Grid */
@@ -367,6 +423,22 @@ function getStatusBadge($status) {
             font-size: 64px;
             margin-bottom: 16px;
         }
+
+        .filter-count {
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-left: 8px;
+        }
+
+        .filter-pill {
+            background: rgba(99, 102, 241, 0.12);
+            color: #4338ca;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
         
         @media (max-width: 768px) {
             .metrics-grid {
@@ -414,29 +486,29 @@ function getStatusBadge($status) {
         
         <!-- Metrics -->
         <div class="metrics-grid">
-            <div class="metric-card metric-total">
+            <a class="metric-card metric-total<?php echo $statusFilter === 'total' ? ' is-active' : ''; ?>" href="/dashboard.php?status=total">
                 <div class="icon">📊</div>
                 <div class="label">Total Permits</div>
                 <div class="value"><?php echo number_format($metrics['total']); ?></div>
-            </div>
+            </a>
             
-            <div class="metric-card metric-pending">
+            <a class="metric-card metric-pending<?php echo $statusFilter === 'pending' ? ' is-active' : ''; ?>" href="/dashboard.php?status=pending">
                 <div class="icon">⏳</div>
                 <div class="label">Pending</div>
                 <div class="value"><?php echo number_format($metrics['pending']); ?></div>
-            </div>
+            </a>
             
-            <div class="metric-card metric-active">
+            <a class="metric-card metric-active<?php echo $statusFilter === 'active' ? ' is-active' : ''; ?>" href="/dashboard.php?status=active">
                 <div class="icon">✅</div>
                 <div class="label">Active</div>
                 <div class="value"><?php echo number_format($metrics['active']); ?></div>
-            </div>
+            </a>
             
-            <div class="metric-card metric-expired">
+            <a class="metric-card metric-expired<?php echo $statusFilter === 'expired' ? ' is-active' : ''; ?>" href="/dashboard.php?status=expired">
                 <div class="icon">❌</div>
                 <div class="label">Expired</div>
                 <div class="value"><?php echo number_format($metrics['expired']); ?></div>
-            </div>
+            </a>
         </div>
         
         <!-- Create New Permit -->
@@ -473,47 +545,73 @@ function getStatusBadge($status) {
             <?php endif; ?>
         </div>
         
-        <!-- Recent Permits -->
-        <?php if ($isLoggedIn && !empty($recentPermits)): ?>
+        <!-- Permits Listing -->
+        <?php if ($isLoggedIn): ?>
             <div class="card">
-                <div class="card-title">📜 Recent Permits</div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Reference</th>
-                            <th>Type</th>
-                            <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
-                                <th>Holder</th>
-                            <?php endif; ?>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recentPermits as $permit): ?>
+                <div class="card-title">
+                    <span style="display:flex; align-items:center; gap:8px;">
+                        📜
+                        <span class="filter-pill"><?php echo htmlspecialchars($permitsListTitle); ?></span>
+                        <span class="filter-count">(<?php echo count($permitsList); ?>)</span>
+                    </span>
+                    <?php if ($filterActive): ?>
+                        <a href="/dashboard.php" class="btn btn-secondary" style="margin-left:auto; padding: 8px 14px; font-size: 12px;">
+                            ✖ Clear Filter
+                        </a>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (empty($permitsList)): ?>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">�️</div>
+                        <p><?php echo $filterActive ? 'No permits match this status yet.' : 'No recent permits to display just yet.'; ?></p>
+                    </div>
+                <?php else: ?>
+                    <table>
+                        <thead>
                             <tr>
-                                <td><strong><?php echo htmlspecialchars($permit['ref_number'] ?? 'N/A'); ?></strong></td>
-                                <td><?php echo htmlspecialchars($permit['template_name']); ?></td>
+                                <th>Reference</th>
+                                <th>Type</th>
                                 <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
-                                    <td><?php echo htmlspecialchars($permit['holder_name'] ?? $permit['holder_email'] ?? 'Unknown'); ?></td>
+                                    <th>Holder</th>
                                 <?php endif; ?>
-                                <td><?php echo getStatusBadge($permit['status']); ?></td>
-                                <td><?php echo date('d/m/Y H:i', strtotime($permit['created_at'])); ?></td>
-                                <td>
-                                    <?php if (!empty($permit['unique_link'])): ?>
-                                        <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" 
-                                           class="btn btn-secondary" 
-                                           style="padding: 6px 12px; font-size: 12px;">
-                                            👁️ View
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($permitsList as $permit): ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($permit['ref_number'] ?? 'N/A'); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($permit['template_name']); ?></td>
+                                    <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
+                                        <td><?php echo htmlspecialchars($permit['holder_name'] ?? $permit['holder_email'] ?? 'Unknown'); ?></td>
+                                    <?php endif; ?>
+                                    <td><?php echo getStatusBadge($permit['status']); ?></td>
+                                    <td><?php echo isset($permit['created_at']) ? date('d/m/Y H:i', strtotime($permit['created_at'])) : 'N/A'; ?></td>
+                                    <td>
+                                        <?php if (!empty($permit['unique_link'])): ?>
+                                            <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>"
+                                               class="btn btn-secondary"
+                                               style="padding: 6px 12px; font-size: 12px;">
+                                                👁️ View
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="card">
+                <div class="card-title">🔒 Sign in to view permits</div>
+                <p style="color:#6b7280; margin-bottom:16px;">Login to filter, browse, and manage permits from the dashboard.</p>
+                <a href="/login.php" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+                    🔐 Go to Login
+                </a>
             </div>
         <?php endif; ?>
         
