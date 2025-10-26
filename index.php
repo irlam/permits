@@ -104,16 +104,30 @@ try {
 // Template icons mapping
 $templateIcons = [
     'hot-works-permit' => '🔥',
-    'work-at-height-permit' => '🪜',
     'permit-to-dig' => '⛏️',
-    'confined-space' => '🚪',
-    'electrical-work' => '⚡',
+    'work-at-height-permit' => '🪜',
+    'confined-space-entry-permit' => '🕳️',
+    'electrical-isolation-energisation-permit' => '⚡',
+    'environmental-protection-permit' => '🌿',
+    'hazardous-substances-handling-permit' => '☣️',
+    'lifting-operations-permit' => '🏗️',
+    'noise-vibration-control-permit' => '📢',
+    'roof-access-permit' => '🏠',
+    'temporary-works-permit' => '🛠️',
+    'traffic-management-interface-permit' => '🚦',
     'default' => '📄'
 ];
 
+function slugifyTemplateName(string $name): string {
+    $slug = strtolower($name);
+    $slug = str_replace('&', 'and', $slug);
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    return trim($slug, '-');
+}
+
 function getTemplateIcon($templateName) {
     global $templateIcons;
-    $slug = strtolower(str_replace(' ', '-', $templateName));
+    $slug = slugifyTemplateName($templateName);
     return $templateIcons[$slug] ?? $templateIcons['default'];
 }
 
