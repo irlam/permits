@@ -342,6 +342,13 @@ try {
                 <p>Review, tweak, and republish existing permit templates so each scenario has the right questions before issuing.</p>
                 <a href="/admin-template-editor.php" class="btn">Edit Templates</a>
             </div>
+
+            <div class="admin-card">
+                <div class="icon">🎬</div>
+                <h3>Presentation Metrics</h3>
+                <p>Launch a cinematic dashboard with narration-ready stats for stakeholder demos and leadership briefings.</p>
+                <a href="/presentation-dashboard.php" class="btn">Open Showcase</a>
+            </div>
             
             <!-- Email Settings -->
             <div class="admin-card">
