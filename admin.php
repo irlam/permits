@@ -335,6 +335,13 @@ try {
                 <p>Run the built-in seeder to sync all JSON presets in seconds. Ideal for shared hosting without CLI access.</p>
                 <a href="/admin-template-import.php" class="btn">Import Templates</a>
             </div>
+
+            <div class="admin-card">
+                <div class="icon">🛠️</div>
+                <h3>Edit Permit Templates</h3>
+                <p>Review, tweak, and republish existing permit templates so each scenario has the right questions before issuing.</p>
+                <a href="/admin-template-editor.php" class="btn">Edit Templates</a>
+            </div>
             
             <!-- Email Settings -->
             <div class="admin-card">
