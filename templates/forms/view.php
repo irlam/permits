@@ -5,6 +5,47 @@ $metadata = json_decode($form['metadata'], true);
 $metaFields = $metadata['meta'] ?? [];
 $items = $metadata['items'] ?? [];
 $signatures = $metadata['signatures'] ?? [];
+$sectionFieldValues = $metadata['sections'] ?? [];
+
+if (!function_exists('resolveSectionKey')) {
+  function resolveSectionKey(array $section, int $index): string
+  {
+    $raw = '';
+    if (isset($section['key']) && is_string($section['key'])) {
+      $raw = $section['key'];
+    } elseif (isset($section['id']) && is_string($section['id'])) {
+      $raw = $section['id'];
+    } elseif (isset($section['title']) && is_string($section['title'])) {
+      $raw = $section['title'];
+    }
+
+    $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/', '_', $raw ?? ''), '_'));
+    return $slug !== '' ? $slug : 'section_' . $index;
+  }
+}
+
+if (!function_exists('resolveFieldKey')) {
+  function resolveFieldKey(array $field, int $index, string $sectionKey): string
+  {
+    $raw = '';
+    if (isset($field['key']) && is_string($field['key'])) {
+      $raw = $field['key'];
+    } elseif (isset($field['id']) && is_string($field['id'])) {
+      $raw = $field['id'];
+    } elseif (isset($field['name']) && is_string($field['name'])) {
+      $raw = $field['name'];
+    } elseif (isset($field['label']) && is_string($field['label'])) {
+      $raw = $field['label'];
+    }
+
+    $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/', '_', $raw ?? ''), '_'));
+    if ($slug === '') {
+      $slug = $sectionKey . '_field_' . $index;
+    }
+
+    return $slug;
+  }
+}
 $title = $schema['title'] ?? 'Form';
 
 // Status badge colors
@@ -131,9 +172,35 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
   </div>
 
   <!-- Checklist Sections -->
-  <?php foreach(($schema['sections'] ?? []) as $sIdx => $section): ?>
+  <?php foreach(($schema['sections'] ?? []) as $sIdx => $section):
+        $sectionKey = resolveSectionKey($section, $sIdx);
+        $sectionFields = $section['fields'] ?? [];
+        $storedSection = $sectionFieldValues[$sectionKey] ?? [];
+  ?>
     <div class="section-card">
       <div class="section-title"><?=htmlspecialchars($section['title'])?></div>
+      <?php if (!empty($sectionFields) && is_array($sectionFields)): ?>
+        <div class="info-grid" style="margin-bottom:12px;">
+          <?php foreach ($sectionFields as $fIdx => $field):
+              if (!is_array($field)) { continue; }
+              $fieldLabel = (string)($field['label'] ?? 'Field');
+              $fieldKey = resolveFieldKey($field, $fIdx, $sectionKey);
+              $rawValue = $storedSection[$fieldKey] ?? null;
+              if (is_array($rawValue)) {
+                  $displayValue = implode(', ', array_map('strval', $rawValue));
+              } elseif ($rawValue === null || $rawValue === '') {
+                  $displayValue = 'N/A';
+              } else {
+                  $displayValue = (string)$rawValue;
+              }
+          ?>
+            <div class="info-item">
+              <div class="info-label"><?=htmlspecialchars($fieldLabel)?></div>
+              <div class="info-value"><?=htmlspecialchars($displayValue)?></div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
       <?php foreach(($section['items'] ?? []) as $iIdx => $itemText): ?>
         <?php 
           $itemKey = "s{$sIdx}_{$iIdx}";
