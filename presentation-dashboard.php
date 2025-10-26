@@ -469,6 +469,116 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
             }
         }
     </style>
+    <script>
+        (function () {
+            if (!('WebSocket' in window)) {
+                return;
+            }
+            const NativeWebSocket = window.WebSocket;
+            const blockedPattern = /\/ws\/ws(\/|$)/i;
+
+            function makeEvent(type, detail) {
+                let evt;
+                if (typeof Event === 'function') {
+                    evt = new Event(type);
+                } else {
+                    evt = { type: type };
+                }
+                if (detail && typeof detail === 'object') {
+                    for (const key in detail) {
+                        if (Object.prototype.hasOwnProperty.call(detail, key)) {
+                            evt[key] = detail[key];
+                        }
+                    }
+                }
+                return evt;
+            }
+
+            function createStubSocket(url) {
+                const listeners = { open: [], message: [], error: [], close: [] };
+                const stub = {
+                    url,
+                    readyState: NativeWebSocket.CLOSED,
+                    bufferedAmount: 0,
+                    extensions: '',
+                    protocol: '',
+                    binaryType: 'blob',
+                    onopen: null,
+                    onmessage: null,
+                    onerror: null,
+                    onclose: null,
+                    send() {
+                        console.warn('WebSocket message ignored for blocked endpoint:', url);
+                    },
+                    close() {
+                        // no-op
+                    },
+                    addEventListener(type, handler) {
+                        if (!listeners[type]) {
+                            return;
+                        }
+                        listeners[type].push(handler);
+                    },
+                    removeEventListener(type, handler) {
+                        if (!listeners[type]) {
+                            return;
+                        }
+                        const idx = listeners[type].indexOf(handler);
+                        if (idx >= 0) {
+                            listeners[type].splice(idx, 1);
+                        }
+                    },
+                    dispatchEvent(evt) {
+                        const list = listeners[evt.type] || [];
+                        for (const handler of list) {
+                            try {
+                                handler.call(stub, evt);
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        }
+                        const propHandler = stub['on' + evt.type];
+                        if (typeof propHandler === 'function') {
+                            try {
+                                propHandler.call(stub, evt);
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        }
+                        return true;
+                    }
+                };
+
+                setTimeout(() => {
+                    const errorEvent = makeEvent('error', { message: 'Blocked dev websocket' });
+                    stub.dispatchEvent(errorEvent);
+                    const closeEvent = makeEvent('close', { wasClean: true, code: 1000, reason: 'Blocked dev websocket' });
+                    stub.dispatchEvent(closeEvent);
+                }, 0);
+
+                return stub;
+            }
+
+            function createNativeSocket(url, protocols) {
+                if (protocols !== undefined) {
+                    return new NativeWebSocket(url, protocols);
+                }
+                return new NativeWebSocket(url);
+            }
+
+            function WrappedWebSocket(url, protocols) {
+                if (typeof url === 'string' && blockedPattern.test(url)) {
+                    console.info('Blocked WebSocket connection attempt:', url);
+                    return createStubSocket(url);
+                }
+                return createNativeSocket(url, protocols);
+            }
+
+            WrappedWebSocket.prototype = NativeWebSocket.prototype;
+            Object.setPrototypeOf(WrappedWebSocket, NativeWebSocket);
+            window.WebSocket = WrappedWebSocket;
+        })();
+    </script>
 </head>
 <body>
     <div class="glow"></div>
