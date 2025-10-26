@@ -99,8 +99,8 @@ foreach ($requiredEnv as $key) {
 // Check PHP extensions
 echo "\n6. Checking PHP extensions...\n";
 
-// Determine required extensions based on database driver
-$driver = $_ENV['DB_DRIVER'] ?? 'mysql';
+// Determine required extensions based on database driver (from app config)
+$driver = $app->config('DB_DRIVER', 'mysql');
 $requiredExtensions = [
     'pdo',
     'mbstring',
