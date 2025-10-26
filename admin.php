@@ -469,6 +469,14 @@ try {
                 <p>Create, edit, and manage user accounts. Invite new users, assign roles, and control access permissions.</p>
                 <a href="/admin/users.php" class="btn">Manage Users</a>
             </div>
+
+            <!-- Custom Permit Creator -->
+            <div class="admin-card">
+                <div class="icon">🧩</div>
+                <h3>Custom Permit Creator</h3>
+                <p>Clone an existing template or start from a blank canvas, then jump straight into issuing your custom permit.</p>
+                <a href="/admin-custom-permit.php" class="btn">Create Custom Permit</a>
+            </div>
             
             <!-- Email Settings -->
             <div class="admin-card">
