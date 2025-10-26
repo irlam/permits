@@ -37,6 +37,29 @@
         {
           "label": "TTRO / TTN Reference",
           "type": "text"
+        },
+        {
+          "label": "Signage Schedule Reference",
+          "type": "text"
+        },
+        {
+          "label": "Pedestrian Management Plan",
+          "type": "select",
+          "options": [
+            { "value": "segregated", "label": "Segregated route" },
+            { "value": "banksman", "label": "Controlled crossing" },
+            { "value": "closure", "label": "Closure with diversion" }
+          ]
+        },
+        {
+          "label": "Public Notification Issued",
+          "type": "select",
+          "options": [
+            { "value": "letterdrop", "label": "Letter drop" },
+            { "value": "social_media", "label": "Social media" },
+            { "value": "press", "label": "Press notice" },
+            { "value": "not_required", "label": "Not required" }
+          ]
         }
       ]
     },
@@ -59,6 +82,29 @@
           "label": "Inspection Frequency (per day)",
           "type": "number",
           "min": 1
+        },
+        {
+          "label": "Temporary Speed Limit (mph)",
+          "type": "number",
+          "min": 5
+        },
+        {
+          "label": "Cone Spacing (m)",
+          "type": "number",
+          "min": 1
+        },
+        {
+          "label": "Lead Traffic Marshal",
+          "type": "text"
+        },
+        {
+          "label": "Remote Monitoring",
+          "type": "select",
+          "options": [
+            { "value": "cctv", "label": "CCTV" },
+            { "value": "drive_through", "label": "Drive-through" },
+            { "value": "none", "label": "None" }
+          ]
         }
       ]
     },
@@ -80,6 +126,14 @@
         {
           "label": "Snagging Actions",
           "type": "textarea"
+        },
+        {
+          "label": "Road Reopened Time",
+          "type": "time"
+        },
+        {
+          "label": "Final Inspection By",
+          "type": "text"
         }
       ]
     }

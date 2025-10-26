@@ -37,6 +37,25 @@
           "label": "Noise Limit (dB LAeq)",
           "type": "number",
           "step": 0.1
+        },
+        {
+          "label": "Predicted LAeq (dB)",
+          "type": "number",
+          "step": 0.1
+        },
+        {
+          "label": "Tool Vibration Level (m/s² A(8))",
+          "type": "number",
+          "step": 0.1
+        },
+        {
+          "label": "Hearing Protection Class",
+          "type": "select",
+          "options": [
+            { "value": "class1", "label": "Class 1" },
+            { "value": "class2", "label": "Class 2" },
+            { "value": "class3", "label": "Class 3" }
+          ]
         }
       ]
     },
@@ -59,6 +78,19 @@
           "label": "Vibration Limit (mm/s PPV)",
           "type": "number",
           "step": 0.1
+        },
+        {
+          "label": "Calibration Date",
+          "type": "date"
+        },
+        {
+          "label": "Observation Log Location",
+          "type": "text",
+          "placeholder": "Where readings recorded"
+        },
+        {
+          "label": "Public Complaints Contact",
+          "type": "text"
         }
       ]
     },
@@ -80,6 +112,15 @@
         {
           "label": "Follow-up Actions",
           "type": "textarea"
+        },
+        {
+          "label": "Actual Average LAeq (dB)",
+          "type": "number",
+          "step": 0.1
+        },
+        {
+          "label": "Residual Risk Owner",
+          "type": "text"
         }
       ]
     }

@@ -44,6 +44,31 @@
             { "value": "blanking", "label": "Blanking/ spading" },
             { "value": "other", "label": "Other" }
           ]
+        },
+        {
+          "label": "Permit Space Classification",
+          "type": "select",
+          "options": [
+            { "value": "low_risk", "label": "Low Risk" },
+            { "value": "medium_risk", "label": "Medium Risk" },
+            { "value": "high_risk", "label": "High Risk" }
+          ]
+        },
+        {
+          "label": "Continuous Monitor ID",
+          "type": "text",
+          "placeholder": "Gas detector serial / calibration"
+        },
+        {
+          "label": "Rescue Equipment Checked",
+          "type": "multiselect",
+          "options": [
+            { "value": "tripod", "label": "Tripod / davit" },
+            { "value": "winch", "label": "Rescue winch" },
+            { "value": "ba_set", "label": "Breathing apparatus" },
+            { "value": "first_aid", "label": "First aid kit" },
+            { "value": "defib", "label": "Defibrillator" }
+          ]
         }
       ]
     },
@@ -69,6 +94,17 @@
           "min": 5,
           "step": 5,
           "default": 30
+        },
+        {
+          "label": "Communication Check Interval",
+          "type": "number",
+          "placeholder": "Minutes",
+          "min": 5,
+          "step": 5
+        },
+        {
+          "label": "Rescue Team Standby Location",
+          "type": "text"
         }
       ]
     },
@@ -90,6 +126,14 @@
         {
           "label": "Handback To",
           "type": "text"
+        },
+        {
+          "label": "Permit Log Reference",
+          "type": "text"
+        },
+        {
+          "label": "Lessons Learned / Issues",
+          "type": "textarea"
         }
       ]
     }

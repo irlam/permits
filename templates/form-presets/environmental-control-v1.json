@@ -34,6 +34,20 @@
         {
           "label": "Met Office Alert Level",
           "type": "text"
+        },
+        {
+          "label": "Spill Kit Location",
+          "type": "text"
+        },
+        {
+          "label": "Weather Forecast Source",
+          "type": "select",
+          "options": [
+            { "value": "met_office", "label": "Met Office" },
+            { "value": "yr_no", "label": "Yr.no" },
+            { "value": "dark_sky", "label": "Dark Sky" },
+            { "value": "other", "label": "Other" }
+          ]
         }
       ]
     },
@@ -57,6 +71,20 @@
         {
           "label": "Control Measures in Use",
           "type": "textarea"
+        },
+        {
+          "label": "Dust Control Method",
+          "type": "select",
+          "options": [
+            { "value": "mist", "label": "Mist cannons" },
+            { "value": "damping", "label": "Water damping" },
+            { "value": "vacuum", "label": "Vacuum extraction" },
+            { "value": "suppression", "label": "Chemical suppression" }
+          ]
+        },
+        {
+          "label": "Noise Monitor Serial",
+          "type": "text"
         }
       ]
     },
@@ -77,6 +105,14 @@
         {
           "label": "Follow-up Inspection Date",
           "type": "date"
+        },
+        {
+          "label": "Incident Reference (if applicable)",
+          "type": "text"
+        },
+        {
+          "label": "Responsible Person for Actions",
+          "type": "text"
         }
       ]
     }

@@ -39,6 +39,24 @@
           "label": "Ground Bearing Pressure",
           "type": "text",
           "placeholder": "kN/m² or notes"
+        },
+        {
+          "label": "Lift Category",
+          "type": "select",
+          "options": [
+            { "value": "routine", "label": "Routine" },
+            { "value": "standard", "label": "Standard" },
+            { "value": "complex", "label": "Complex" }
+          ]
+        },
+        {
+          "label": "Outrigger Mat Size",
+          "type": "text"
+        },
+        {
+          "label": "Rigging Gear IDs",
+          "type": "textarea",
+          "placeholder": "Slings, shackles, spreader beams"
         }
       ]
     },
@@ -61,6 +79,20 @@
         {
           "label": "Banksman Name",
           "type": "text"
+        },
+        {
+          "label": "Exclusion Zone Size",
+          "type": "text",
+          "placeholder": "Dimensions / radius"
+        },
+        {
+          "label": "Emergency Stop Criteria",
+          "type": "textarea",
+          "placeholder": "Wind speed, lightning, mechanical faults"
+        },
+        {
+          "label": "Secondary Escape Route",
+          "type": "text"
         }
       ]
     },
@@ -82,6 +114,18 @@
         {
           "label": "Notes / Deviations",
           "type": "textarea"
+        },
+        {
+          "label": "Rigging Inspection Result",
+          "type": "select",
+          "options": [
+            { "value": "satisfactory", "label": "Satisfactory" },
+            { "value": "defect_found", "label": "Defect Found" }
+          ]
+        },
+        {
+          "label": "Demobilisation Start Time",
+          "type": "time"
         }
       ]
     }

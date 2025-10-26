@@ -38,6 +38,27 @@
           "label": "Lock Numbers",
           "type": "text",
           "placeholder": "Record lock or tag references"
+        },
+        {
+          "label": "Isolation Procedure Reference",
+          "type": "text",
+          "placeholder": "Method statement / LOTO plan"
+        },
+        {
+          "label": "Additional Energy Sources",
+          "type": "multiselect",
+          "options": [
+            { "value": "mechanical", "label": "Mechanical" },
+            { "value": "hydraulic", "label": "Hydraulic" },
+            { "value": "pneumatic", "label": "Pneumatic" },
+            { "value": "stored_energy", "label": "Stored Energy" },
+            { "value": "other", "label": "Other" }
+          ]
+        },
+        {
+          "label": "Test Instrument ID",
+          "type": "text",
+          "placeholder": "Serial / calibration reference"
         }
       ]
     },
@@ -60,6 +81,20 @@
         {
           "label": "Test Equipment Serial",
           "type": "text"
+        },
+        {
+          "label": "Access Control Method",
+          "type": "select",
+          "options": [
+            { "value": "barriers", "label": "Barriers" },
+            { "value": "banksman", "label": "Banksman" },
+            { "value": "permit_only", "label": "Permit-only access" },
+            { "value": "locked_panel", "label": "Locked panel" }
+          ]
+        },
+        {
+          "label": "Briefing Time",
+          "type": "datetime"
         }
       ]
     },
@@ -82,6 +117,15 @@
         {
           "label": "Functional Test Results",
           "type": "textarea"
+        },
+        {
+          "label": "Authorised By",
+          "type": "text",
+          "placeholder": "Senior authorised person"
+        },
+        {
+          "label": "Permit Close-out Reference",
+          "type": "text"
         }
       ]
     }

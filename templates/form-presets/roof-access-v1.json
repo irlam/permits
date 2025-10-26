@@ -37,6 +37,19 @@
           "label": "Fall Protection Method",
           "type": "select",
           "options": ["Guardrails", "Safety Line", "Harness", "Air Bag", "None"]
+        },
+        {
+          "label": "Fragile Surface Controls",
+          "type": "textarea",
+          "placeholder": "Covers, signage, demarcation"
+        },
+        {
+          "label": "Anchor Points Identified",
+          "type": "text"
+        },
+        {
+          "label": "Rescue Plan Reference",
+          "type": "text"
         }
       ]
     },
@@ -59,6 +72,27 @@
         {
           "label": "Spotter / Banksman",
           "type": "text"
+        },
+        {
+          "label": "Weather Monitoring Source",
+          "type": "select",
+          "options": [
+            { "value": "onsite", "label": "On-site anemometer" },
+            { "value": "met_office", "label": "Met Office" },
+            { "value": "metar", "label": "METAR feed" }
+          ]
+        },
+        {
+          "label": "Tethered Tools Check",
+          "type": "select",
+          "options": [
+            { "value": "completed", "label": "Completed" },
+            { "value": "not_required", "label": "Not required" }
+          ]
+        },
+        {
+          "label": "Work at Height Permit No.",
+          "type": "text"
         }
       ]
     },
@@ -80,6 +114,30 @@
         {
           "label": "Condition on Handover",
           "type": "textarea"
+        },
+        {
+          "label": "Anchor Inspection Completed",
+          "type": "select",
+          "options": [
+            { "value": "yes", "label": "Yes" },
+            { "value": "no", "label": "No" }
+          ]
+        },
+        {
+          "label": "Waste / Materials Removed",
+          "type": "select",
+          "options": [
+            { "value": "all_removed", "label": "All removed" },
+            { "value": "left_in_place", "label": "Left in place (detail in notes)" }
+          ]
+        },
+        {
+          "label": "Photo Record Uploaded",
+          "type": "select",
+          "options": [
+            { "value": "yes", "label": "Yes" },
+            { "value": "no", "label": "No" }
+          ]
         }
       ]
     }
