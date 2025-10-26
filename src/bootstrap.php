@@ -165,5 +165,8 @@ $app = new App($appConfig);
 require_once __DIR__ . '/Db.php';
 $db = new Db();
 
+// Make logging helpers available consistently across entry points.
+require_once __DIR__ . '/ActivityLogger.php';
+
 /** 10) Return tuple for includes */
 return [$app, $db, $root];

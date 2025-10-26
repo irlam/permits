@@ -1,38 +1,34 @@
 <?php
-/**
- * Simple Activity Logger Function
- * 
- * File Path: /src/log_activity.php
- * Description: Simple function to log activities
- * Created: 24/10/2025
- * 
- * Usage:
- * require __DIR__ . '/src/log_activity.php';
- * log_activity($db, $user_id, 'user_login', 'User logged in successfully');
- */
+declare(strict_types=1);
 
-function log_activity($db, $user_id, $type, $description) {
+use Permits\Db;
+use Throwable;
+
+/**
+ * Persist a row in the activity log table.
+ */
+function log_activity(Db $db, string $user_id, string $type, string $description): bool
+{
     try {
-        $stmt = $db->pdo->prepare("
+        $stmt = $db->pdo->prepare('
             INSERT INTO activity_log (user_id, type, description, ip_address, user_agent, created_at)
             VALUES (?, ?, ?, ?, ?, NOW())
-        ");
-        
+        ');
+
         $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
-        
+
         $stmt->execute([
             $user_id,
             $type,
             $description,
             $ip_address,
-            $user_agent
+            $user_agent,
         ]);
-        
+
         return true;
-    } catch (Exception $e) {
-        // Silent fail - don't break the app if logging fails
-        error_log("Activity log error: " . $e->getMessage());
+    } catch (Throwable $e) {
+        error_log('Activity log error: ' . $e->getMessage());
         return false;
     }
 }
@@ -56,3 +52,43 @@ function log_activity($db, $user_id, $type, $description) {
  * - template_updated  : Form template updated
  * - backup_created    : Database backup created
  */
+
+if (!function_exists('logActivity')) {
+    /**
+     * Backwards-compatible wrapper that enriches activity records with context.
+     */
+    function logActivity(string $type, string $category, string $entityType, $entityId, string $description = ''): bool
+    {
+        global $db;
+
+        if (!isset($db) || !$db instanceof Db) {
+            return false;
+        }
+
+        if (function_exists('startSession')) {
+            startSession();
+        } elseif (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $userId = (string)($_SESSION['user_id'] ?? 'system');
+
+        $parts = [];
+        if ($description !== '') {
+            $parts[] = $description;
+        }
+        if ($entityType !== '' && $entityId !== null && $entityId !== '') {
+            $parts[] = '[' . $entityType . ':' . $entityId . ']';
+        }
+        if ($category !== '') {
+            $parts[] = '(' . $category . ')';
+        }
+
+        $message = trim(implode(' ', $parts));
+        if ($message === '') {
+            $message = ucfirst($type);
+        }
+
+        return log_activity($db, $userId, $type, $message);
+    }
+}

@@ -1,20 +1,15 @@
 <?php
 /**
- * Authentication Helper Functions
- * 
- * File Path: /src/auth.php
- * Description: Handle user authentication, sessions, and login/logout
- * Created: 23/10/2025
- * Last Modified: 23/10/2025
- * 
- * Functions:
- * - startSession() - Initialize secure session
- * - isLoggedIn() - Check if user is authenticated
- * - getCurrentUser() - Get current logged-in user
- * - login() - Authenticate user and create session
- * - logout() - Destroy session and log out
- * - requireLogin() - Redirect to login if not authenticated
+ * Authentication helpers and thin OO wrapper.
+ *
+ * Exposes the legacy procedural helpers (startSession, login, etc.) while providing
+ * a lightweight Auth class for newer templates/components that expect an object.
  */
+declare(strict_types=1);
+
+use PDO;
+use Permits\Db;
+use Throwable;
 
 /**
  * Start secure session
@@ -257,4 +252,125 @@ function isSessionExpired() {
 function refreshSession() {
     startSession();
     $_SESSION['login_time'] = time();
+}
+
+/**
+ * Object-oriented wrapper consumed by templates and controllers.
+ */
+class Auth
+{
+    private Db $db;
+
+    /** Cached user for repeated lookups during a request. */
+    private ?array $userCache = null;
+
+    public function __construct(Db $db)
+    {
+        $this->db = $db;
+        startSession();
+    }
+
+    public function startSession(): void
+    {
+        startSession();
+    }
+
+    public function isLoggedIn(): bool
+    {
+        return isLoggedIn();
+    }
+
+    public function getCurrentUser(): ?array
+    {
+        if ($this->userCache !== null) {
+            return $this->userCache;
+        }
+
+        if (!$this->isLoggedIn()) {
+            return null;
+        }
+
+        try {
+            $stmt = $this->db->pdo->prepare('SELECT id, email, name, role, status, last_login FROM users WHERE id = ?');
+            $stmt->execute([$_SESSION['user_id']]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $this->userCache = $user;
+            return $user;
+        } catch (Throwable $e) {
+            error_log('Auth getCurrentUser error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function login(string $email, string $password): array
+    {
+        $result = login($email, $password);
+        if (!empty($result['success']) && $result['success'] === true) {
+            $this->userCache = $result['user'] ?? null;
+        }
+        return $result;
+    }
+
+    public function logout(): void
+    {
+        logout();
+        $this->userCache = null;
+    }
+
+    public function requireLogin(?string $redirectTo = null): void
+    {
+        if ($this->isLoggedIn()) {
+            if ($this->isSessionExpired()) {
+                $this->logout();
+            } else {
+                return;
+            }
+        }
+
+        $target = $redirectTo ?? ($_SERVER['REQUEST_URI'] ?? '/dashboard.php');
+        $loginUrl = '/login.php?redirect=' . urlencode($target);
+        header('Location: ' . $loginUrl);
+        exit;
+    }
+
+    public function hasRole(string $role): bool
+    {
+        $user = $this->getCurrentUser();
+        return $user !== null && strtolower($user['role'] ?? '') === strtolower($role);
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        $user = $this->getCurrentUser();
+        if ($user === null) {
+            return false;
+        }
+        $currentRole = strtolower($user['role'] ?? '');
+        foreach ($roles as $role) {
+            if ($currentRole === strtolower((string)$role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function isSessionExpired(): bool
+    {
+        return isSessionExpired();
+    }
+
+    public function refreshSession(): void
+    {
+        refreshSession();
+    }
+
+    public function getUserDisplayName(?array $user = null): string
+    {
+        return getUserDisplayName($user ?? $this->getCurrentUser());
+    }
+
+    public function getUserInitials(?array $user = null): string
+    {
+        return getUserInitials($user ?? $this->getCurrentUser());
+    }
 }
