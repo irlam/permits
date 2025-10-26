@@ -28,12 +28,14 @@ Modern permits management system with dashboard, notifications, export, authenti
 - Expiry reminder emails
 - New permit creation alerts
 - Template-based HTML emails
-- Configurable SMTP settings
+- Configurable SMTP / logging drivers
+- Queue processor with retry-safe status tracking
 
 **Features:**
 - Email queue for reliable delivery
+- Queue worker: `*/2 * * * * php /path/permits/bin/process-email-queue.php`
 - Customizable email templates in `templates/emails/`
-- Cron job for scheduled sending: `*/5 * * * * php /path/permits/bin/send-notifications.php`
+- Cron job for expiry reminders: `*/5 * * * * php /path/permits/bin/send-notifications.php`
 
 **Templates:**
 - `permit-approved.php` - Approval notifications
@@ -67,13 +69,15 @@ Modern permits management system with dashboard, notifications, export, authenti
 - `/logout` - Logout
 - `/settings` - User settings and configuration
 
-### 📱 Enhanced Mobile Experience
+### 📱 Enhanced Mobile & PWA Experience
 - Touch-friendly buttons (minimum 44x44px)
 - Swipe gesture support
 - Pull-to-refresh functionality
 - Mobile-optimized forms and layouts
 - Responsive grid system
 - Touch feedback animations
+- Offline-first caching for the core shell
+- Installable PWA with generated maskable icons
 
 **Mobile Features:**
 - Bottom navigation on small screens
@@ -123,8 +127,14 @@ After migration, configure settings in the `settings` table:
 
 ## Cron Jobs
 
+### Email Queue Processor
+Flush queued emails via the SMTP/log transport:
+```bash
+*/2 * * * * php /path/permits/bin/process-email-queue.php
+```
+
 ### Email Notifications
-Send queued emails and expiry reminders:
+Send proactive expiry reminder emails:
 ```bash
 */5 * * * * php /path/permits/bin/send-notifications.php
 ```
@@ -196,7 +206,8 @@ permits/
 ├── bin/
 │   ├── auto-status-update.php    # Auto status updates (cron)
 │   ├── reminders.php              # Push notification reminders (cron)
-│   ├── send-notifications.php    # Email sender (cron) [NEW]
+│   ├── send-notifications.php    # Email sender (cron)
+│   ├── process-email-queue.php   # Queue worker (cron)
 │   └── migrate-features.php      # Database migration [NEW]
 ├── src/
 │   ├── bootstrap.php              # App initialization
@@ -217,10 +228,10 @@ permits/
 ├── assets/
 │   ├── app.css                    # Main stylesheet (enhanced mobile)
 │   ├── app.js                     # JavaScript (enhanced mobile)
-│   └── themes.css                 # Theme definitions [NEW]
-├── dashboard.php                  # Dashboard page [NEW]
-├── login.php                      # Login page [NEW]
-├── settings.php                   # Settings page [NEW]
+│   └── themes.css                 # Theme definitions
+├── dashboard.php                  # Dashboard page
+├── login.php                      # Login page
+├── settings.php                   # Settings page
 ├── index.php                      # Application entry point
 └── README.md                      # This file
 ```
@@ -290,6 +301,14 @@ Or via database:
 INSERT INTO users (id, username, email, password_hash, role)
 VALUES (UUID(), 'admin', 'admin@example.com', '$2y$12$...', 'admin');
 ```
+
+### Automated Tests
+
+```bash
+composer run test
+```
+
+Runs the PHPUnit suite located in `tests/` covering the mail transport and queue processor.
 
 ## Troubleshooting
 

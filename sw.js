@@ -1,21 +1,92 @@
-/* sw.js — Service Worker (notifications only)
- * -------------------------------------------
- * - Shows a notification on 'push' with payload {title, body, url, icon, badge, tag}
- * - Focuses an existing tab or opens a new one to data.url on click
- * - Versioned, safe for frequent deploys (skipWaiting + clients.claim)
+/* sw.js — Service Worker (offline + notifications)
+ * -------------------------------------------------
+ * - Precaches core shell assets for offline use
+ * - Runtime caching for same-origin GET requests
+ * - Shows push notifications and handles clicks
+ * - Versioned cache keys for safe roll-outs
  */
 
-const SW_VERSION = 'permits-sw-v1.0.0';
+const SW_VERSION = 'permits-sw-v1.1.0';
+const PRECACHE = `permits-precache-${SW_VERSION}`;
+const RUNTIME = `permits-runtime-${SW_VERSION}`;
+
+const PRECACHE_URLS = [
+  '/',
+  '/manifest.webmanifest',
+  '/assets/app.css',
+  '/assets/app.js',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/assets/pwa/icon-192.png',
+  '/assets/pwa/icon-512.png',
+  '/assets/pwa/icon-32.png',
+];
 
 // Immediately take control on install
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil((async () => {
+    const cache = await caches.open(PRECACHE);
+    await cache.addAll(PRECACHE_URLS);
+    await self.skipWaiting();
+  })());
 });
 
-// Claim clients so updates apply without reload
+// Claim clients and clear stale caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith('permits-') && key !== PRECACHE && key !== RUNTIME)
+        .map((key) => caches.delete(key))
+    );
+    await self.clients.claim();
+  })());
 });
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Serve precached assets straight from cache
+  event.respondWith(cacheFirst(request));
+});
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    const cache = await caches.open(RUNTIME);
+    cache.put(request, response.clone());
+    return response;
+  } catch (error) {
+    const cache = await caches.open(PRECACHE);
+    return (await cache.match('/')) || Response.error();
+  }
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(PRECACHE);
+  const cached = await cache.match(request);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await fetch(request);
+    const runtime = await caches.open(RUNTIME);
+    runtime.put(request, response.clone());
+    return response;
+  } catch (error) {
+    return cached || Response.error();
+  }
+}
 
 /**
  * Parse push data safely.
