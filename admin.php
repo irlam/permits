@@ -17,6 +17,13 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
+require_once __DIR__ . '/src/check-expiry.php';
+require_once __DIR__ . '/src/permit-durations.php';
+
+if (function_exists('check_and_expire_permits')) {
+    check_and_expire_permits($db);
+}
+
 // Start session
 session_start();
 
@@ -35,6 +42,50 @@ $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$currentUser || $currentUser['role'] !== 'admin') {
     die('<h1>Access Denied</h1><p>Admin access required. <a href="/dashboard.php">Back to Dashboard</a></p>');
 }
+
+$successMessage = '';
+$errorMessage = '';
+$durationPresets = getPermitDurationPresets($db);
+$durationFormRows = $durationPresets;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'update_durations') {
+        $labels = isset($_POST['duration_label']) ? (array)$_POST['duration_label'] : [];
+        $minutes = isset($_POST['duration_minutes']) ? (array)$_POST['duration_minutes'] : [];
+
+        $submittedPresets = buildPermitDurationPresetsFromInput($labels, $minutes);
+        $durationFormRows = $submittedPresets;
+
+        $normalizedPresets = normalizePermitDurationPresets($submittedPresets);
+
+        if (empty($normalizedPresets)) {
+            $errorMessage = 'Please add at least one duration with a label and minutes greater than zero.';
+        } else {
+            try {
+                savePermitDurationPresets($db, $normalizedPresets);
+                $durationPresets = $normalizedPresets;
+                $durationFormRows = $normalizedPresets;
+                $successMessage = 'Permit duration presets updated.';
+
+                if (function_exists('logActivity')) {
+                    logActivity(
+                        'settings_updated',
+                        'admin',
+                        'setting',
+                        'permit_duration_presets',
+                        'Permit duration presets updated via admin panel.'
+                    );
+                }
+            } catch (\Throwable $e) {
+                $errorMessage = 'Unable to update duration presets: ' . $e->getMessage();
+            }
+        }
+    }
+}
+
+$durationFormRows = $durationFormRows ?: [['label' => '', 'minutes' => 60]];
 
 // Get statistics
 $stats = [];
@@ -223,6 +274,88 @@ try {
             width: 100%;
             text-align: center;
         }
+
+        .admin-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #bbf7d0;
+        }
+
+        .alert-error {
+            background: rgba(220, 38, 38, 0.12);
+            border: 1px solid rgba(220, 38, 38, 0.35);
+            color: #fecaca;
+        }
+
+        .duration-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .duration-form {
+            margin-top: 12px;
+        }
+
+        .duration-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            background: #0f172a;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .duration-row .field-group {
+            flex: 1 1 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .duration-row label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+        }
+
+        .duration-row input {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #1f2937;
+            background: #111827;
+            color: #e2e8f0;
+        }
+
+        .duration-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        #add-duration {
+            background: #475569;
+        }
+
+        #add-duration:hover {
+            background: #64748b;
+        }
         
         @media (max-width: 768px) {
             .header {
@@ -249,6 +382,14 @@ try {
     </div>
     
     <div class="container">
+        <?php if ($successMessage): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($successMessage) ?></div>
+        <?php endif; ?>
+
+        <?php if ($errorMessage): ?>
+            <div class="alert alert-error"><?= htmlspecialchars($errorMessage) ?></div>
+        <?php endif; ?>
+
         <div class="welcome">
             <h2>Welcome, <?php echo htmlspecialchars($currentUser['name']); ?>!</h2>
             <p>Manage users, configure settings, and control your permits system from here.</p>
@@ -280,6 +421,47 @@ try {
         
         <!-- Admin Functions -->
         <div class="admin-grid">
+            <div class="admin-card full-width">
+                <div class="icon">⏱️</div>
+                <h3>Permit Duration Presets</h3>
+                <p>Define the quick-select expiry options used when issuing permits. These presets keep expiry choices consistent for your team.</p>
+                <form method="post" class="duration-form">
+                    <input type="hidden" name="action" value="update_durations">
+                    <div id="duration-rows" class="duration-grid">
+                        <?php foreach ($durationFormRows as $preset): ?>
+                            <div class="duration-row">
+                                <div class="field-group">
+                                    <label>Label</label>
+                                    <input type="text" name="duration_label[]" value="<?= htmlspecialchars($preset['label'] ?? '') ?>" placeholder="e.g. 1 hour" required>
+                                </div>
+                                <div class="field-group">
+                                    <label>Minutes</label>
+                                    <input type="number" name="duration_minutes[]" value="<?= htmlspecialchars((string)($preset['minutes'] ?? '')) ?>" min="1" placeholder="60" required>
+                                </div>
+                                <button type="button" class="btn btn-secondary remove-duration">Remove</button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="duration-actions">
+                        <button type="button" class="btn btn-secondary" id="add-duration">Add another duration</button>
+                        <button type="submit" class="btn">Save Presets</button>
+                    </div>
+                </form>
+                <template id="duration-row-template">
+                    <div class="duration-row">
+                        <div class="field-group">
+                            <label>Label</label>
+                            <input type="text" name="duration_label[]" placeholder="e.g. 1 day" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Minutes</label>
+                            <input type="number" name="duration_minutes[]" min="1" placeholder="1440" required>
+                        </div>
+                        <button type="button" class="btn btn-secondary remove-duration">Remove</button>
+                    </div>
+                </template>
+            </div>
+
             <!-- User Management -->
             <div class="admin-card">
                 <div class="icon">👥</div>
@@ -329,5 +511,44 @@ try {
             </div>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const addButton = document.getElementById('add-duration');
+        const rowsContainer = document.getElementById('duration-rows');
+        const template = document.getElementById('duration-row-template');
+
+        if (!addButton || !rowsContainer || !template) {
+            return;
+        }
+
+        addButton.addEventListener('click', function () {
+            const clone = template.content.cloneNode(true);
+            rowsContainer.appendChild(clone);
+        });
+
+        rowsContainer.addEventListener('click', function (event) {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            if (target.classList.contains('remove-duration')) {
+                const row = target.closest('.duration-row');
+                if (!row) {
+                    return;
+                }
+
+                if (rowsContainer.children.length > 1) {
+                    row.remove();
+                } else {
+                    row.querySelectorAll('input').forEach(function (input) {
+                        input.value = '';
+                    });
+                }
+            }
+        });
+    });
+    </script>
 </body>
 </html>

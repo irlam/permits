@@ -17,6 +17,12 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
+require_once __DIR__ . '/src/check-expiry.php';
+
+if (function_exists('check_and_expire_permits')) {
+    check_and_expire_permits($db);
+}
+
 // Start session
 session_start();
 
