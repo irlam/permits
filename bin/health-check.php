@@ -10,10 +10,6 @@ declare(strict_types=1);
  * Usage: php bin/health-check.php
  */
 
-require_once __DIR__ . '/../src/bootstrap.php';
-
-use Permits\Db;
-
 echo "=== Permits System Health Check ===\n\n";
 
 // Check database connection
@@ -102,13 +98,22 @@ foreach ($requiredEnv as $key) {
 
 // Check PHP extensions
 echo "\n6. Checking PHP extensions...\n";
+
+// Determine required extensions based on database driver
+$driver = $_ENV['DB_DRIVER'] ?? 'mysql';
 $requiredExtensions = [
     'pdo',
-    'pdo_mysql',
     'mbstring',
     'json',
     'gd',
 ];
+
+// Add database-specific PDO driver
+if ($driver === 'mysql') {
+    $requiredExtensions[] = 'pdo_mysql';
+} elseif ($driver === 'sqlite') {
+    $requiredExtensions[] = 'pdo_sqlite';
+}
 
 foreach ($requiredExtensions as $ext) {
     if (extension_loaded($ext)) {
