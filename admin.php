@@ -327,6 +327,14 @@ try {
                 <p>Clone an existing template or start from a blank canvas, then jump straight into issuing your custom permit.</p>
                 <a href="/admin-custom-permit.php" class="btn">Create Custom Permit</a>
             </div>
+
+            <!-- Template Importer -->
+            <div class="admin-card">
+                <div class="icon">📦</div>
+                <h3>Permit Template Importer</h3>
+                <p>Run the built-in seeder to sync all JSON presets in seconds. Ideal for shared hosting without CLI access.</p>
+                <a href="/admin-template-import.php" class="btn">Import Templates</a>
+            </div>
             
             <!-- Email Settings -->
             <div class="admin-card">
