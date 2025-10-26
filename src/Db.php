@@ -1,66 +1,125 @@
 <?php
-/**
- * Permits System - Database Connection Manager
- * 
- * Description: Manages database connections with PDO and applies necessary configuration
- * Name: Db.php
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
- * 
- * Purpose:
- * - Create and configure PDO database connections
- * - Set PDO attributes for error handling and fetch modes
- * - Enable SQLite foreign key constraints when using SQLite
- * - Provide a reusable database connection instance
- * 
- * Features:
- * - Supports multiple database drivers (SQLite, MySQL, PostgreSQL)
- * - Throws exceptions on database errors for better error handling
- * - Returns associative arrays by default for easier data access
- * - Disables prepared statement emulation for better security
- */
+declare(strict_types=1);
 
 namespace Permits;
-use PDO;
 
-/**
- * Database connection wrapper class
- * 
- * Provides a configured PDO instance with security best practices
- */
-class Db {
-  /**
-   * @var PDO The PDO database connection instance
-   */
-  public PDO $pdo;
-  
-  /**
-   * Constructor - Initialize database connection with configuration
-   * 
-   * @param string $dsn Data Source Name (e.g., 'sqlite:/path/to/db.sqlite' or 'mysql:host=localhost;dbname=permits')
-   * @param string|null $user Database username (optional for SQLite)
-   * @param string|null $pass Database password (optional for SQLite)
-   */
-  public function __construct(string $dsn, ?string $user = null, ?string $pass = null) {
-    // Configure PDO with security and usability best practices
-    $opts = [
-      // Throw exceptions on errors instead of silent failures
-      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-      
-      // Return rows as associative arrays by default
-      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-      
-      // Use native prepared statements for better security (no emulation)
-      PDO::ATTR_EMULATE_PREPARES => false,
-    ];
-    
-    // Create PDO connection with the provided credentials
-    $this->pdo = new PDO($dsn, $user ?: null, $pass ?: null, $opts);
-    
-    // SQLite-specific configuration: enable foreign key constraints
-    // SQLite disables foreign keys by default, so we explicitly enable them
-    if (strpos($dsn, 'sqlite:') === 0) {
-      $this->pdo->exec('PRAGMA foreign_keys = ON;');
+use PDO;
+use PDOException;
+use RuntimeException;
+
+final class Db
+{
+    /** Public for convenience DI in legacy code */
+    public PDO $pdo;
+
+    public function __construct()
+    {
+        $driver = strtolower((string)($_ENV['DB_DRIVER'] ?? 'mysql'));
+
+        // Common PDO options
+        $opts = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ];
+
+        if ($driver === 'mysql') {
+            $this->pdo = $this->connectMySql($opts);
+            return;
+        }
+
+        if ($driver === 'sqlite') {
+            $this->pdo = $this->connectSqlite($opts);
+            return;
+        }
+
+        throw new RuntimeException("Unsupported DB_DRIVER '{$driver}'. Use 'mysql' or 'sqlite'.");
     }
-  }
+
+    /**
+     * Connect to MySQL using .env settings.
+     */
+    private function connectMySql(array $opts): PDO
+    {
+        $host     = trim((string)($_ENV['DB_HOST']     ?? '127.0.0.1'));
+        $port     = (string)($_ENV['DB_PORT']          ?? '3306');
+        $dbname   = trim((string)($_ENV['DB_DATABASE'] ?? ''));
+        $user     = (string)($_ENV['DB_USERNAME']      ?? '');
+        $pass     = (string)($_ENV['DB_PASSWORD']      ?? '');
+        $charset  = (string)($_ENV['DB_CHARSET']       ?? 'utf8mb4');
+        $collate  = (string)($_ENV['DB_COLLATION']     ?? 'utf8mb4_unicode_ci');
+        $sqlMode  = (string)($_ENV['DB_SQL_MODE']      ?? ''); // optional; leave empty to keep server default
+
+        if ($dbname === '' || $user === '') {
+            throw new RuntimeException('MySQL config incomplete: set DB_DATABASE and DB_USERNAME in .env');
+        }
+
+        $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset={$charset}";
+
+        try {
+            $pdo = new PDO($dsn, $user, $pass, $opts);
+        } catch (PDOException $e) {
+            // Add a hint while preserving the original message
+            throw new RuntimeException('MySQL connection failed: ' . $e->getMessage(), (int)$e->getCode(), $e);
+        }
+
+        // Session-level sane defaults (safe to re-run)
+        $pdo->exec("SET NAMES {$charset} COLLATE {$collate}");
+        if ($sqlMode !== '') {
+            // Let you override, e.g. STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION
+            $pdo->exec("SET SESSION sql_mode = " . $pdo->quote($sqlMode));
+        }
+
+        // Optional: keep time zone aligned with app timezone if provided
+        // $tz = (string)($_ENV['APP_TIMEZONE'] ?? 'Europe/London');
+        // $pdo->exec("SET time_zone = " . $pdo->quote($tz));
+
+        return $pdo;
+    }
+
+    /**
+     * Connect to SQLite using .env settings. Creates folder/file if missing.
+     */
+    private function connectSqlite(array $opts): PDO
+    {
+        // Default to /data/permits.sqlite under project root if not provided
+        $defaultPath = \realpath(__DIR__ . '/..') . '/data/permits.sqlite';
+        $path = (string)($_ENV['DB_SQLITE_PATH'] ?? $defaultPath);
+
+        $dir = \dirname($path);
+
+        if (!\is_dir($dir)) {
+            // Best-effort create
+            @\mkdir($dir, 0775, true);
+        }
+        if (!\is_dir($dir)) {
+            throw new RuntimeException("SQLite directory does not exist and could not be created: {$dir}");
+        }
+        if (!\is_writable($dir)) {
+            throw new RuntimeException("SQLite directory is not writable by PHP: {$dir}");
+        }
+
+        if (!\file_exists($path)) {
+            // Touch the file so PDO can open it; set group-writable for shared hosting
+            @\touch($path);
+            @\chmod($path, 0664);
+        }
+        if (!\is_writable($path)) {
+            throw new RuntimeException("SQLite file is not writable by PHP: {$path}");
+        }
+
+        $dsn = "sqlite:{$path}";
+        try {
+            $pdo = new PDO($dsn, null, null, $opts);
+        } catch (PDOException $e) {
+            throw new RuntimeException('SQLite connection failed: ' . $e->getMessage(), (int)$e->getCode(), $e);
+        }
+
+        // Pragmas for decent concurrency & integrity on shared hosting
+        $pdo->exec('PRAGMA journal_mode = WAL;');      // better concurrent reads
+        $pdo->exec('PRAGMA synchronous = NORMAL;');    // performance tradeoff
+        $pdo->exec('PRAGMA foreign_keys = ON;');       // enforce FKs
+
+        return $pdo;
+    }
 }

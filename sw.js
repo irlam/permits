@@ -1,149 +1,112 @@
-/**
- * Permits System - Service Worker
- * 
- * Description: Progressive Web App service worker for offline functionality and asset caching
- * Name: sw.js
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
- * 
- * Purpose:
- * - Enable offline access to the permits application
- * - Cache static assets (CSS, JS, manifest) for faster loading
- * - Implement cache-first strategy for performance
- * - Automatically clean up old cache versions
- * - Provide seamless update experience
- * 
- * Features:
- * - Install event: Download and cache static assets
- * - Activate event: Clean up old caches
- * - Fetch event: Serve from cache with network fallback
- * - Message event: Handle skip waiting commands
- * - Smart caching: Never cache API endpoints or dynamic pages
- * 
- * Version Management:
- * IMPORTANT: Increment CACHE_VERSION every time you deploy changes!
- * This forces browsers to download the new service worker and clear old cache
- * Format: permits-v[number] or permits-YYYYMMDD-HHMM
+/* sw.js — Service Worker (notifications only)
+ * -------------------------------------------
+ * - Shows a notification on 'push' with payload {title, body, url, icon, badge, tag}
+ * - Focuses an existing tab or opens a new one to data.url on click
+ * - Versioned, safe for frequent deploys (skipWaiting + clients.claim)
  */
 
-// Cache version identifier - update this on each deployment
-const CACHE_VERSION = 'permits-v3-quickwins';
+const SW_VERSION = 'permits-sw-v1.0.0';
 
-// Static assets to cache (CSS, JS, manifest)
-const STATIC_ASSETS = [
-  '/assets/app.css',
-  '/assets/app.js',
-  '/manifest.webmanifest'
-];
+// Immediately take control on install
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
 
-// Paths that should NEVER be cached (always fetch fresh)
-const NEVER_CACHE = [
-  '/api/',           // All API endpoints
-  '/form/',          // Form view/edit pages
-  '/new/',           // New form creation
-  '/admin-templates' // Admin panel
-];
-
-/**
- * Install Event - Downloads and caches static assets
- */
-self.addEventListener('install', event => {
-  console.log('[SW] Installing version:', CACHE_VERSION);
-  
-  event.waitUntil(
-    caches.open(CACHE_VERSION)
-      .then(cache => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => {
-        console.log('[SW] Installation complete, activating immediately');
-        return self.skipWaiting(); // Force immediate activation
-      })
-  );
+// Claim clients so updates apply without reload
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
 });
 
 /**
- * Activate Event - Cleans up old caches
+ * Parse push data safely.
+ * Accepts:
+ *  - JSON string with {title, body, url, icon, badge, tag}
+ *  - Plain text (becomes title), no URL
  */
-self.addEventListener('activate', event => {
-  console.log('[SW] Activating version:', CACHE_VERSION);
-  
-  event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
-        // Delete all old caches
-        return Promise.all(
-          cacheNames
-            .filter(cacheName => cacheName !== CACHE_VERSION)
-            .map(cacheName => {
-              console.log('[SW] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            })
-        );
-      })
-      .then(() => {
-        console.log('[SW] Claiming all clients');
-        return self.clients.claim(); // Take control of all pages immediately
-      })
-  );
+function parsePushData(event) {
+  try {
+    if (!event.data) return {};
+    const txt = event.data.text();
+    try {
+      const obj = JSON.parse(txt);
+      return (obj && typeof obj === 'object') ? obj : { title: String(txt || 'Notification') };
+    } catch {
+      return { title: String(txt || 'Notification') };
+    }
+  } catch {
+    return {};
+  }
+}
+
+// Default icons (adjust paths if needed)
+const DEFAULT_ICON  = '/assets/pwa/icon-192.png';
+const DEFAULT_BADGE = '/assets/pwa/icon-32.png';
+
+// Handle incoming push
+self.addEventListener('push', (event) => {
+  const data = parsePushData(event) || {};
+
+  const title = data.title || 'Notification';
+  const body  = data.body  || '';
+  const url   = data.url   || '/'; // default to home if not provided
+
+  const options = {
+    body,
+    icon:  data.icon  || DEFAULT_ICON,
+    badge: data.badge || DEFAULT_BADGE,
+    tag:   data.tag   || 'permits-push',
+    data:  { url },
+    renotify: false,
+    requireInteraction: false,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-/**
- * Fetch Event - Handles network requests with smart caching
- */
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  
-  // Only handle GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-  
-  // Check if this path should never be cached
-  const shouldNeverCache = NEVER_CACHE.some(path => url.pathname.startsWith(path));
-  
-  if (shouldNeverCache) {
-    // Always fetch fresh, never cache
-    event.respondWith(fetch(event.request));
-    return;
-  }
-  
-  // For static assets: Cache first, then network
-  event.respondWith(
-    caches.match(event.request)
-      .then(cachedResponse => {
-        if (cachedResponse) {
-          console.log('[SW] Serving from cache:', url.pathname);
-          return cachedResponse;
+// Click → focus an existing tab or open a new one
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const { url } = event.notification.data || {};
+  const targetUrl = typeof url === 'string' && url.length ? url : '/';
+
+  event.waitUntil((async () => {
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+    // Try to focus an existing tab whose origin matches and navigate it if needed
+    for (const client of allClients) {
+      try {
+        const clientUrl = new URL(client.url);
+        const destUrl   = new URL(targetUrl, self.location.origin);
+        if (clientUrl.origin === destUrl.origin) {
+          await client.focus();
+          // Only navigate if different path/query/hash
+          if (clientUrl.href !== destUrl.href) {
+            client.navigate(destUrl.href).catch(() => {/* ignore */});
+          }
+          return;
         }
-        
-        // Not in cache, fetch from network
-        return fetch(event.request)
-          .then(response => {
-            // Only cache successful responses
-            if (response.status === 200) {
-              const responseClone = response.clone();
-              caches.open(CACHE_VERSION)
-                .then(cache => {
-                  cache.put(event.request, responseClone);
-                });
-            }
-            return response;
-          })
-          .catch(() => {
-            // Network failed, try to return homepage from cache as fallback
-            return caches.match('/');
-          });
-      })
-  );
+      } catch {/* ignore */}
+    }
+
+    // Otherwise, open a new tab
+    await self.clients.openWindow(targetUrl);
+  })());
 });
 
-/**
- * Message Event - Allows pages to communicate with service worker
- */
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+// If the browser drops the push subscription, tell pages to re-subscribe
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of allClients) {
+      client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED' });
+    }
+  })());
+});
+
+// Optional: handle messages from pages (e.g., for version checks)
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+  if (event.data.type === 'SW_VERSION') {
+    event.ports?.[0]?.postMessage?.({ version: SW_VERSION });
   }
 });

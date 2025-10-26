@@ -1,201 +1,170 @@
 <?php
 /**
- * Permits System - Email Notification Sender (Cron Job)
+ * Email Notifications Script
  * 
- * Description: Processes the email queue and sends pending notifications
+ * Description: Sends email notifications for expiring permits and other events
  * Name: send-notifications.php
- * Last Updated: 21/10/2025 21:03:42 (UK)
- * Author: irlam
  * 
- * Purpose:
- * - Process email queue and send pending emails
- * - Send expiry reminder notifications
- * - Track email delivery status
- * - Handle SMTP configuration
+ * What it does:
+ * - Checks for permits expiring within 24 hours
+ * - Checks for permits expiring within 7 days
+ * - Sends email notifications to configured recipients
+ * - Logs all sent notifications
  * 
- * Usage:
- * Run from command line: php bin/send-notifications.php
- * Or via cron: (every 5 minutes) php /path/to/permits/bin/send-notifications.php
+ * Setup as Cron Job:
+ * Run every hour: 0 * * * * /usr/bin/php /path/to/bin/send-notifications.php
+ * Run twice daily: 0 9,17 * * * /usr/bin/php /path/to/bin/send-notifications.php
  * 
- * Cron Schedule Recommendation:
- * - Every 5 minutes: (star)/5 (star) (star) (star) (star)
- * - Every 15 minutes: (star)/15 (star) (star) (star) (star)
- * - Every hour: 0 (star) (star) (star) (star)
+ * Manual run: php bin/send-notifications.php
  */
 
-// Load application bootstrap
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../src/Mailer.php';
+use Ramsey\Uuid\Uuid;
+
+// Load environment variables
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 
-use Permits\Email;
+// Initialize mailer
+$mailer = new Mailer();
 
-echo "========================================\n";
-echo "Email Notification Sender\n";
-echo "Started: " . date('Y-m-d H:i:s') . "\n";
-echo "========================================\n\n";
-
-// Initialize email handler
-$emailHandler = new Email($db, $root);
-
-// Check if email is enabled in settings
-$emailEnabled = false;
-try {
-    $stmt = $db->pdo->prepare("SELECT value FROM settings WHERE `key` = 'email_enabled'");
-    $stmt->execute();
-    $setting = $stmt->fetch();
-    $emailEnabled = $setting && $setting['value'] === 'true';
-} catch (\Exception $e) {
-    echo "⚠ Settings table not found. Email sending disabled.\n";
-    echo "  Run: php bin/migrate-features.php\n\n";
+// Get notification recipients from environment (comma-separated emails)
+$notificationEmails = $_ENV['NOTIFICATION_EMAILS'] ?? '';
+if (empty($notificationEmails)) {
+    echo "[" . date('Y-m-d H:i:s') . "] No notification emails configured. Set NOTIFICATION_EMAILS in .env\n";
     exit(0);
 }
 
-if (!$emailEnabled) {
-    echo "ℹ Email notifications are disabled in settings.\n";
-    echo "  To enable: UPDATE settings SET value='true' WHERE `key`='email_enabled'\n\n";
-    exit(0);
-}
+$recipients = array_map('trim', explode(',', $notificationEmails));
 
-// Get SMTP settings
-$smtpHost = '';
-$smtpPort = 587;
-$smtpUser = '';
-$smtpPass = '';
-$smtpFrom = 'noreply@permits.local';
+echo "[" . date('Y-m-d H:i:s') . "] Email Notifications Script Starting...\n";
+echo "Recipients: " . implode(', ', $recipients) . "\n\n";
 
-try {
-    $settings = $db->pdo->query("SELECT `key`, value FROM settings WHERE `key` LIKE 'smtp_%'")->fetchAll();
-    foreach ($settings as $setting) {
-        switch ($setting['key']) {
-            case 'smtp_host': $smtpHost = $setting['value']; break;
-            case 'smtp_port': $smtpPort = (int)$setting['value']; break;
-            case 'smtp_user': $smtpUser = $setting['value']; break;
-            case 'smtp_pass': $smtpPass = $setting['value']; break;
-            case 'smtp_from': $smtpFrom = $setting['value']; break;
+$now = date('Y-m-d H:i:s');
+$totalSent = 0;
+$totalErrors = 0;
+
+// ============================================
+// CHECK 1: Permits expiring within 24 hours
+// ============================================
+echo "Checking permits expiring within 24 hours...\n";
+
+$twentyFourHours = date('Y-m-d H:i:s', strtotime('+24 hours'));
+$expiring24h = $db->pdo->prepare("
+    SELECT id, ref, template_id, site_block, valid_to, status
+    FROM forms
+    WHERE status IN ('issued', 'active')
+    AND valid_to BETWEEN ? AND ?
+    AND id NOT IN (
+        SELECT form_id FROM form_events 
+        WHERE type = 'email_sent' 
+        AND payload LIKE '%24h_expiry%'
+        AND at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    )
+");
+$expiring24h->execute([$now, $twentyFourHours]);
+$permits24h = $expiring24h->fetchAll();
+
+echo "Found " . count($permits24h) . " permit(s) expiring within 24 hours\n";
+
+foreach ($permits24h as $permit) {
+    foreach ($recipients as $email) {
+        try {
+            $success = $mailer->sendPermitExpiring($permit, $email, 1);
+            
+            if ($success) {
+                // Log email sent event
+                $evt = $db->pdo->prepare("INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?,?,?,?,?)");
+                $evt->execute([
+                    Uuid::uuid4()->toString(),
+                    $permit['id'],
+                    'email_sent',
+                    'system',
+                    json_encode([
+                        'type' => '24h_expiry',
+                        'recipient' => $email,
+                        'permit_ref' => $permit['ref']
+                    ])
+                ]);
+                
+                echo "  ✓ Sent 24h expiry email for {$permit['ref']} to {$email}\n";
+                $totalSent++;
+            } else {
+                echo "  ✗ Failed to send email for {$permit['ref']} to {$email}\n";
+                $totalErrors++;
+            }
+        } catch (Exception $e) {
+            echo "  ✗ Error sending email for {$permit['ref']}: " . $e->getMessage() . "\n";
+            $totalErrors++;
         }
     }
-} catch (\Exception $e) {
-    echo "❌ Error loading SMTP settings: " . $e->getMessage() . "\n\n";
-    exit(1);
 }
 
-// Validate SMTP configuration
-if (empty($smtpHost)) {
-    echo "⚠ SMTP host not configured. Cannot send emails.\n";
-    echo "  Configure SMTP settings in the settings table.\n\n";
-    exit(0);
-}
+// ============================================
+// CHECK 2: Permits expiring within 7 days
+// ============================================
+echo "\nChecking permits expiring within 7 days...\n";
 
-echo "SMTP Configuration:\n";
-echo "  Host: $smtpHost\n";
-echo "  Port: $smtpPort\n";
-echo "  User: " . ($smtpUser ?: '(none)') . "\n";
-echo "  From: $smtpFrom\n\n";
+$sevenDays = date('Y-m-d H:i:s', strtotime('+7 days'));
+$expiring7d = $db->pdo->prepare("
+    SELECT id, ref, template_id, site_block, valid_to, status
+    FROM forms
+    WHERE status IN ('issued', 'active')
+    AND valid_to BETWEEN ? AND ?
+    AND id NOT IN (
+        SELECT form_id FROM form_events 
+        WHERE type = 'email_sent' 
+        AND payload LIKE '%7d_expiry%'
+        AND at > DATE_SUB(NOW(), INTERVAL 7 DAY)
+    )
+");
+$expiring7d->execute([$twentyFourHours, $sevenDays]);
+$permits7d = $expiring7d->fetchAll();
 
-// Process pending emails
-echo "Processing email queue...\n";
-$pendingEmails = $emailHandler->getPendingEmails(50);
-echo "Found " . count($pendingEmails) . " pending email(s)\n\n";
+echo "Found " . count($permits7d) . " permit(s) expiring within 7 days\n";
 
-$sent = 0;
-$failed = 0;
-
-foreach ($pendingEmails as $email) {
-    echo "Processing email #{$email['id']}...\n";
-    echo "  To: {$email['to_email']}\n";
-    echo "  Subject: {$email['subject']}\n";
-    
-    try {
-        // In a production environment, you would use a proper SMTP library here
-        // For now, we'll use PHP's mail() function or mark as sent for demonstration
-        
-        // Build email headers
-        $headers = [
-            'From: ' . $smtpFrom,
-            'Content-Type: text/html; charset=UTF-8',
-            'MIME-Version: 1.0',
-        ];
-        
-        // Attempt to send email
-        // Note: In production, use a library like PHPMailer or Symfony Mailer for SMTP
-        $success = mail(
-            $email['to_email'],
-            $email['subject'],
-            $email['body'],
-            implode("\r\n", $headers)
-        );
-        
-        if ($success) {
-            $emailHandler->markAsSent($email['id']);
-            echo "  ✓ Email sent successfully\n";
-            $sent++;
-        } else {
-            $emailHandler->markAsFailed($email['id']);
-            echo "  ✗ Failed to send email\n";
-            $failed++;
+foreach ($permits7d as $permit) {
+    foreach ($recipients as $email) {
+        try {
+            $hoursUntilExpiry = (strtotime($permit['valid_to']) - time()) / 3600;
+            $daysUntilExpiry = ceil($hoursUntilExpiry / 24);
+            
+            $success = $mailer->sendPermitExpiring($permit, $email, $daysUntilExpiry);
+            
+            if ($success) {
+                // Log email sent event
+                $evt = $db->pdo->prepare("INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?,?,?,?,?)");
+                $evt->execute([
+                    Uuid::uuid4()->toString(),
+                    $permit['id'],
+                    'email_sent',
+                    'system',
+                    json_encode([
+                        'type' => '7d_expiry',
+                        'recipient' => $email,
+                        'permit_ref' => $permit['ref'],
+                        'days_until_expiry' => $daysUntilExpiry
+                    ])
+                ]);
+                
+                echo "  ✓ Sent 7d expiry email for {$permit['ref']} to {$email}\n";
+                $totalSent++;
+            } else {
+                echo "  ✗ Failed to send email for {$permit['ref']} to {$email}\n";
+                $totalErrors++;
+            }
+        } catch (Exception $e) {
+            echo "  ✗ Error sending email for {$permit['ref']}: " . $e->getMessage() . "\n";
+            $totalErrors++;
         }
-    } catch (\Exception $e) {
-        $emailHandler->markAsFailed($email['id']);
-        echo "  ✗ Error: " . $e->getMessage() . "\n";
-        $failed++;
     }
-    
-    echo "\n";
 }
 
-// Send expiry reminders
-echo "Checking for expiring permits...\n";
-
-try {
-    // Find permits expiring in 7 days
-    $stmt = $db->pdo->prepare("
-        SELECT f.*, DATEDIFF(f.valid_to, NOW()) as days_until_expiry
-        FROM forms f
-        WHERE f.status IN ('active', 'issued')
-        AND f.valid_to IS NOT NULL
-        AND DATEDIFF(f.valid_to, NOW()) BETWEEN 1 AND 7
-        ORDER BY f.valid_to ASC
-        LIMIT 20
-    ");
-    $stmt->execute();
-    $expiringPermits = $stmt->fetchAll();
-    
-    echo "Found " . count($expiringPermits) . " permit(s) expiring soon\n\n";
-    
-    foreach ($expiringPermits as $permit) {
-        // Check if we've already sent a reminder recently
-        $checkStmt = $db->pdo->prepare("
-            SELECT COUNT(*) FROM email_queue 
-            WHERE to_email LIKE ? 
-            AND subject LIKE ?
-            AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ");
-        $checkStmt->execute(['%' . $permit['ref'] . '%', '%Expiring%']);
-        
-        if ($checkStmt->fetchColumn() > 0) {
-            echo "  Skipping {$permit['ref']} - reminder already sent today\n";
-            continue;
-        }
-        
-        // Queue expiry reminder
-        // Note: In production, you'd get the actual recipient email from user/contact data
-        $recipientEmail = $smtpFrom; // Placeholder - replace with actual recipient
-        
-        $emailHandler->sendExpiryReminder(
-            $permit,
-            $recipientEmail,
-            (int)$permit['days_until_expiry']
-        );
-        
-        echo "  ✓ Queued expiry reminder for {$permit['ref']} ({$permit['days_until_expiry']} days)\n";
-    }
-    
-} catch (\Exception $e) {
-    echo "❌ Error checking expiring permits: " . $e->getMessage() . "\n";
-}
-
-echo "\n========================================\n";
+// Summary
+echo "\n";
 echo "Summary:\n";
-echo "  Emails sent: $sent\n";
-echo "  Failed: $failed\n";
-echo "Completed: " . date('Y-m-d H:i:s') . "\n";
-echo "========================================\n";
+echo "  Total emails sent: {$totalSent}\n";
+echo "  Errors: {$totalErrors}\n";
+echo "[" . date('Y-m-d H:i:s') . "] Email Notifications Script Complete.\n";
+
+exit($totalErrors > 0 ? 1 : 0);

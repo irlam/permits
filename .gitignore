@@ -1,0 +1,47 @@
+# Environment and configuration
+.env
+.env.local
+.env.*.local
+
+# Composer
+/vendor/
+composer.lock
+
+# User uploads
+/uploads/*
+!/uploads/.gitkeep
+
+# Logs
+*.log
+error_log
+
+# Cache
+*.cache
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build artifacts
+/dist/
+/build/
+
+# Node (if using)
+node_modules/
+package-lock.json
+
+# PHP
+*.php~
+*.bak

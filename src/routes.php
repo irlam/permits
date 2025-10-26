@@ -1,57 +1,23 @@
 <?php
-/**
- * Permits System - Route Definitions
- * 
- * Description: Defines all HTTP routes and their handlers for the Permits application
- * Name: routes.php
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
- * 
- * Purpose:
- * - Define web routes for viewing and managing permits
- * - Define API endpoints for CRUD operations on forms
- * - Handle file uploads and attachments
- * - Manage push notification subscriptions
- * - Support search, filter, and duplicate functionality
- * 
- * Route Structure:
- * - GET / - Homepage with search and form listing
- * - GET /new/{templateId} - Create new form from template
- * - GET /form/{formId} - View single form details
- * - GET /form/{formId}/edit - Edit existing form
- * - GET /form/{formId}/duplicate - Copy form as new draft
- * - POST /api/forms - Create new form (JSON API)
- * - PUT /api/forms/{formId} - Update existing form (JSON API)
- * - DELETE /api/forms/{formId} - Delete form (JSON API)
- * - GET /api/templates - List all form templates (JSON API)
- * - POST /api/forms/{formId}/attachments - Upload file attachment
- * - DELETE /api/attachments/{attachmentId} - Delete attachment
- * - POST /api/push/subscribe - Register push notification subscription
- * 
- * Dependencies:
- * - $app: Slim Framework application instance
- * - $db: Database connection instance
- * - $root: Application root directory path
- */
-
 use Psr\Http\Message\ResponseInterface as Res;
 use Psr\Http\Message\ServerRequestInterface as Req;
 use Ramsey\Uuid\Uuid;
 
 /**
- * Route: GET /
- * Homepage - Display templates and recent forms with search/filter functionality
+ * Routes file.
+ * Assumes $app, $db, $root are already in scope from index.php:
+ *   [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
  */
+
+// Home: list templates + recent forms
 $app->get('/', function(Req $req, Res $res) use ($db) {
-  // Load all available form templates for display in sidebar
   $tpls = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
   
-  // Build dynamic search query based on user-provided filters
+  // Build search query
   $params = $req->getQueryParams();
-  $where = [];  // SQL WHERE conditions
-  $binds = [];  // Prepared statement parameters for security
+  $where = [];
+  $binds = [];
   
-  // Filter by search term (checks reference number, location, and metadata JSON)
   if(!empty($params['search'])) {
     $search = '%' . $params['search'] . '%';
     $where[] = "(ref LIKE ? OR site_block LIKE ? OR metadata LIKE ?)";
@@ -60,93 +26,72 @@ $app->get('/', function(Req $req, Res $res) use ($db) {
     $binds[] = $search;
   }
   
-  // Filter by specific status (draft, pending, issued, active, expired, closed)
   if(!empty($params['status'])) {
     $where[] = "status = ?";
     $binds[] = $params['status'];
   }
   
-  // Filter by specific template/form type
   if(!empty($params['template'])) {
     $where[] = "template_id = ?";
     $binds[] = $params['template'];
   }
   
-  // Filter by start date (forms created on or after this date)
   if(!empty($params['date_from'])) {
     $where[] = "created_at >= ?";
     $binds[] = $params['date_from'];
   }
   
-  // Filter by end date (forms created on or before this date, including full day)
   if(!empty($params['date_to'])) {
     $where[] = "created_at <= ?";
     $binds[] = $params['date_to'] . ' 23:59:59';
   }
   
-  // Build final SQL query with all filters combined
   $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
   $sql = "SELECT id,template_id,site_block,ref,status,valid_to,created_at FROM forms $whereClause ORDER BY created_at DESC LIMIT 100";
-  
-  // Execute query with prepared statement parameters for security
   $stmt = $db->pdo->prepare($sql);
   $stmt->execute($binds);
   $forms = $stmt->fetchAll();
   
-  // Render homepage template with forms and filters
   ob_start(); include __DIR__ . '/../templates/layout.php'; $html = ob_get_clean();
   $res->getBody()->write($html);
   return $res;
 });
 
-/**
- * Route: GET /new/{templateId}
- * Render blank form for creating a new permit from a template
- */
+// Dashboard: statistics and overview
+$app->get('/dashboard', function(Req $req, Res $res) use ($db) {
+  $tpls = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
+  ob_start(); include __DIR__ . '/../templates/dashboard.php'; $html = ob_get_clean();
+  $res->getBody()->write($html);
+  return $res;
+});
+
+// Render a new form from a template
 $app->get('/new/{templateId}', function(Req $req, Res $res, $args) use ($db) {
   $id = $args['templateId'];
-  
-  // Load the form template definition from database
   $stmt = $db->pdo->prepare("SELECT * FROM form_templates WHERE id=?");
   $stmt->execute([$id]);
   $tpl = $stmt->fetch();
-  
-  // Return 404 if template doesn't exist
   if (!$tpl) {
     $res->getBody()->write("Template not found");
     return $res->withStatus(404);
   }
-  
-  // Extract JSON schema containing form structure, fields, and validation rules
   $schemaJson = $tpl['json_schema'];
-  
-  // Render the form creation page with empty fields
   ob_start(); include __DIR__ . '/../templates/forms/renderer.php'; $html = ob_get_clean();
   $res->getBody()->write($html);
   return $res;
 });
 
-/**
- * Route: POST /api/forms
- * Create and save a new form with submitted data
- */
+// Create/save a form (JSON body)
 $app->post('/api/forms', function(Req $req, Res $res) use ($db) {
-  // Parse JSON request body
   $raw = (string)$req->getBody();
   $b = json_decode($raw, true);
-  
-  // Fallback to parsed body if JSON decode fails
   if (!is_array($b)) { $b = $req->getParsedBody(); }
-  
-  // Validate that we have valid data
   if (!is_array($b)) {
     $res->getBody()->write(json_encode(['ok'=>false,'error'=>'Invalid JSON']));
     return $res->withHeader('Content-Type','application/json')->withStatus(400);
   }
 
-  // Generate unique identifier for the new form
   $id = Uuid::uuid4()->toString();
-  // Insert new form into database with all metadata
   $ins = $db->pdo->prepare("INSERT INTO forms (id,template_id,site_block,ref,status,holder_id,issuer_id,valid_from,valid_to,metadata)
                              VALUES (?,?,?,?,?,?,?,?,?,?)");
   $ins->execute([
@@ -159,10 +104,9 @@ $app->post('/api/forms', function(Req $req, Res $res) use ($db) {
     $b['issuer_id'] ?? null,
     $b['meta']['validFrom'] ?? null,
     $b['meta']['validTo'] ?? null,
-    json_encode($b, JSON_UNESCAPED_UNICODE)  // Store complete form data as JSON
+    json_encode($b, JSON_UNESCAPED_UNICODE)
   ]);
 
-  // Log the creation event for audit trail
   $evt = $db->pdo->prepare("INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?,?,?,?,?)");
   $evt->execute([
     Uuid::uuid4()->toString(),
@@ -172,30 +116,20 @@ $app->post('/api/forms', function(Req $req, Res $res) use ($db) {
     json_encode(['ip'=>($_SERVER['REMOTE_ADDR'] ?? '')], JSON_UNESCAPED_UNICODE)
   ]);
 
-  // Return success response with the new form ID
   $res->getBody()->write(json_encode(['ok'=>true,'id'=>$id]));
   return $res->withHeader('Content-Type','application/json');
 });
 
-/**
- * Route: GET /api/templates
- * List all available form templates (JSON API)
- */
+// List templates (JSON)
 $app->get('/api/templates', function(Req $req, Res $res) use ($db) {
-  // Retrieve all templates ordered by name and version
   $rows = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
   $res->getBody()->write(json_encode($rows));
   return $res->withHeader('Content-Type','application/json');
 });
 
-/**
- * Route: GET /form/{formId}
- * View complete details of a single form/permit
- */
+// View a single form by ID
 $app->get('/form/{formId}', function(Req $req, Res $res, $args) use ($db) {
   $formId = $args['formId'];
-  
-  // Load the form from database
   $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id=?");
   $stmt->execute([$formId]);
   $form = $stmt->fetch();
@@ -205,22 +139,21 @@ $app->get('/form/{formId}', function(Req $req, Res $res, $args) use ($db) {
     return $res->withStatus(404);
   }
   
-  // Get the template definition for this form
+  // Get the template
   $tplStmt = $db->pdo->prepare("SELECT * FROM form_templates WHERE id=?");
   $tplStmt->execute([$form['template_id']]);
   $template = $tplStmt->fetch();
   
-  // Get all file attachments for this form
+  // Get attachments
   $attStmt = $db->pdo->prepare("SELECT * FROM attachments WHERE form_id=? ORDER BY created_at DESC");
   $attStmt->execute([$formId]);
   $attachments = $attStmt->fetchAll();
   
-  // Get event history/audit trail for this form
+  // Get events/history
   $evtStmt = $db->pdo->prepare("SELECT * FROM form_events WHERE form_id=? ORDER BY at DESC");
   $evtStmt->execute([$formId]);
   $events = $evtStmt->fetchAll();
   
-  // Render the view template with all data
   ob_start(); 
   include __DIR__ . '/../templates/forms/view.php'; 
   $html = ob_get_clean();
@@ -228,10 +161,7 @@ $app->get('/form/{formId}', function(Req $req, Res $res, $args) use ($db) {
   return $res;
 });
 
-/**
- * Route: GET /form/{formId}/edit
- * Edit page for existing form/permit
- */
+// Edit form page
 $app->get('/form/{formId}/edit', function(Req $req, Res $res, $args) use ($db) {
   $formId = $args['formId'];
   $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id=?");
@@ -294,11 +224,11 @@ $app->get('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($
     $originalForm['template_id'],
     $originalForm['site_block'],
     ($originalForm['ref'] ?? 'AUTO') . '-COPY',
-    'draft',
+    'draft', // Always start as draft
     $originalForm['holder_id'],
     $originalForm['issuer_id'],
-    null,
-    null,
+    null, // Clear valid_from
+    null, // Clear valid_to
     json_encode($metadata, JSON_UNESCAPED_UNICODE)
   ]);
   
@@ -315,6 +245,7 @@ $app->get('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($
   // Redirect to edit page for the new form
   return $res->withHeader('Location', '/form/' . $newId . '/edit')->withStatus(302);
 });
+
 // Update a form
 $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db) {
   $formId = $args['formId'];
@@ -547,84 +478,3 @@ $app->post('/api/push/subscribe', function(Req $req, Res $res) use ($db) {
   $res->getBody()->write(json_encode(['ok'=>true]));
   return $res->withHeader('Content-Type','application/json');
 });
-
-// ----- Dashboard route
-$app->get('/dashboard', function(Req $req, Res $res) use ($db, $root) {
-  // Include and execute dashboard.php
-  ob_start();
-  include $root . '/dashboard.php';
-  $html = ob_get_clean();
-  $res->getBody()->write($html);
-  return $res;
-});
-
-// ----- CSV Export route
-$app->get('/api/export/csv', function(Req $req, Res $res) use ($db) {
-  $exporter = new \Permits\Export($db);
-  
-  // Get filters from query parameters
-  $params = $req->getQueryParams();
-  $filters = [];
-  
-  if (!empty($params['search'])) {
-    $filters['search'] = $params['search'];
-  }
-  if (!empty($params['status'])) {
-    $filters['status'] = $params['status'];
-  }
-  if (!empty($params['template'])) {
-    $filters['template'] = $params['template'];
-  }
-  if (!empty($params['date_from'])) {
-    $filters['date_from'] = $params['date_from'];
-  }
-  if (!empty($params['date_to'])) {
-    $filters['date_to'] = $params['date_to'];
-  }
-  
-  // Export to CSV (this will output directly and exit)
-  $exporter->exportToCSV($filters);
-  
-  return $res;
-});
-
-// ----- Authentication routes
-$app->get('/login', function(Req $req, Res $res) use ($root) {
-  ob_start();
-  include $root . '/login.php';
-  $html = ob_get_clean();
-  $res->getBody()->write($html);
-  return $res;
-});
-
-$app->post('/login', function(Req $req, Res $res) use ($root) {
-  ob_start();
-  include $root . '/login.php';
-  $html = ob_get_clean();
-  $res->getBody()->write($html);
-  return $res;
-});
-
-$app->get('/logout', function(Req $req, Res $res) use ($db) {
-  $auth = new \Permits\Auth($db);
-  $auth->logout();
-  return $res->withHeader('Location', '/login')->withStatus(302);
-});
-
-// ----- Settings route
-$app->get('/settings', function(Req $req, Res $res) use ($root) {
-  ob_start();
-  include $root . '/settings.php';
-  $html = ob_get_clean();
-  $res->getBody()->write($html);
-  return $res;
-});
-
-$app->post('/settings', function(Req $req, Res $res) use ($root) {
-  ob_start();
-  include $root . '/settings.php';
-  $html = ob_get_clean();
-  $res->getBody()->write($html);
-  return $res;
-});
-

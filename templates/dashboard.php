@@ -1,335 +1,274 @@
 <?php
 /**
- * Dashboard Template
- * 
- * Variables available:
- * - $stats: Array of statistics (total, active, draft, pending, etc.)
- * - $recentForms: Recent permit forms
- * - $recentEvents: Recent activity events
- * - $tpls: Available form templates
+ * Dashboard Template (clickable stat cards filter)
+ * Path: /templates/dashboard.php
+ * Last Modified: 26/10/2025
  */
+
+require_once __DIR__ . '/../src/cache-helper.php';
+require_once __DIR__ . '/../src/Auth.php';
+$auth = new Auth($db);
+
+/** Status filter from query ?status=pending|active|issued|expired|draft|closed */
+$validStatuses = ['draft','pending','issued','active','expired','closed'];
+$statusFilter  = isset($_GET['status']) ? strtolower(trim((string)$_GET['status'])) : 'all';
+if ($statusFilter !== 'all' && !in_array($statusFilter, $validStatuses, true)) {
+  $statusFilter = 'all';
+}
+
+/** Build self URL safely (so links always come back here) */
+$self = strtok($_SERVER['REQUEST_URI'] ?? '/templates/dashboard.php', '?');
+$self = $self ?: '/templates/dashboard.php';
+
+/** Stats */
+$stats = [];
+$stats['total']   = (int)$db->pdo->query("SELECT COUNT(*) FROM forms")->fetchColumn();
+foreach (['draft','pending','issued','active','expired','closed'] as $s) {
+  $stats[$s] = (int)$db->pdo->query("SELECT COUNT(*) FROM forms WHERE status=".$db->pdo->quote($s))->fetchColumn();
+}
+
+/** Data for lists (only fetch filtered list if a filter is active) */
+$filteredPermits = [];
+if ($statusFilter !== 'all') {
+  $stmt = $db->pdo->prepare("
+    SELECT id, ref_number, template_id, site_block, valid_to, status, updated_at
+    FROM forms
+    WHERE status = ?
+    ORDER BY updated_at DESC
+    LIMIT 100
+  ");
+  $stmt->execute([$statusFilter]);
+  $filteredPermits = $stmt->fetchAll();
+} else {
+  // Light defaults when no filter (keep dashboard feel)
+  $now   = date('Y-m-d H:i:s');
+  $soon  = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+  $expiringSoonList = $db->pdo->prepare("
+    SELECT id, ref_number, template_id, site_block, valid_to, status
+    FROM forms
+    WHERE status IN ('issued','active') AND valid_to BETWEEN ? AND ?
+    ORDER BY valid_to ASC
+    LIMIT 10
+  ");
+  $expiringSoonList->execute([$now, $soon]);
+  $expiringSoonList = $expiringSoonList->fetchAll();
+
+  $recentActivity = $db->pdo->query("
+    SELECT id, ref_number, template_id, status, updated_at
+    FROM forms
+    ORDER BY updated_at DESC
+    LIMIT 10
+  ")->fetchAll();
+}
+
+/** Helpers */
+function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8'); }
+function cardHref($self, $status){ return $status === 'all' ? $self : $self.'?status='.$status; }
+function isActive($current, $status){ return ($current === $status) ? ' active' : ''; }
+function badgeClass($status){
+  $m = [
+    'active'=>'badge-active','issued'=>'badge-issued','expired'=>'badge-expired',
+    'draft'=>'badge-draft','pending'=>'badge-pending','closed'=>'badge-closed'
+  ];
+  return $m[strtolower($status)] ?? 'badge-draft';
+}
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?php cache_meta_tags(); ?>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
-  <title>Dashboard - Permits</title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <title>Dashboard - Permits System</title>
+  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
   <style>
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      margin-bottom: 32px;
-    }
-    .stat-card {
-      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-      border: 1px solid #374151;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-      transition: all 0.2s ease;
-    }
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
-    }
-    .stat-card .icon {
-      font-size: 32px;
-      margin-bottom: 12px;
-      opacity: 0.8;
-    }
-    .stat-card .label {
-      font-size: 13px;
-      color: #9ca3af;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .stat-card .value {
-      font-size: 36px;
-      font-weight: 700;
-      color: #f9fafb;
-      line-height: 1;
-    }
-    .stat-card.accent {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      border-color: #3b82f6;
-    }
-    .stat-card.success {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      border-color: #10b981;
-    }
-    .stat-card.warning {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      border-color: #f59e0b;
-    }
-    .stat-card.danger {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      border-color: #ef4444;
-    }
-    .activity-feed {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 24px;
-    }
-    .activity-item {
-      display: flex;
-      gap: 16px;
-      padding: 12px 0;
-      border-bottom: 1px solid #1f2937;
-    }
-    .activity-item:last-child {
-      border-bottom: none;
-    }
-    .activity-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .activity-content {
-      flex: 1;
-      min-width: 0;
-    }
-    .activity-title {
-      font-weight: 500;
-      color: #f9fafb;
-      margin-bottom: 4px;
-    }
-    .activity-meta {
-      font-size: 13px;
-      color: #9ca3af;
-    }
-    .quick-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-    .section-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #f9fafb;
-      margin-bottom: 16px;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: #1f2937;
-      border-radius: 4px;
-      margin-top: 12px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #2563eb);
-      transition: width 0.3s ease;
-    }
+    .dashboard-wrap{max-width:1400px;margin:0 auto;padding:16px}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+    .stat-link{text-decoration:none}
+    .stat-card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:20px;transition:.2s}
+    .stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.25)}
+    .stat-card.active{outline:2px solid #3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,.25)}
+    .stat-label{font-size:14px;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+    .stat-value{font-size:36px;font-weight:700;color:#e5e7eb}
+    .stat-icon{font-size:24px;margin-bottom:8px;opacity:.8}
+    .lists-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:16px}
+    .list-card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:20px}
+    .list-title{font-size:18px;font-weight:600;color:#e5e7eb;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+    .list-item{padding:12px;background:#0a101a;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+    .list-item:hover{background:#1f2937}
+    .item-info{flex:1}
+    .item-ref{font-weight:600;color:#e5e7eb}
+    .item-meta{font-size:12px;color:#94a3b8;margin-top:4px}
+    .item-badge{padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase}
+    .badge-active{background:#10b981;color:#fff}
+    .badge-issued{background:#3b82f6;color:#fff}
+    .badge-expired{background:#ef4444;color:#fff}
+    .badge-draft{background:#6b7280;color:#fff}
+    .badge-pending{background:#f59e0b;color:#fff}
+    .badge-closed{background:#6b7280;color:#fff}
+    .btn-clear{background:#0b1220;border:1px solid #1f2937;padding:6px 10px;border-radius:8px;color:#e5e7eb;font-size:12px;text-decoration:none}
+    @media (max-width:768px){ .lists-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
 <header class="top">
   <h1>📊 Dashboard</h1>
-  <div style="display: flex; gap: 12px;">
+  <div style="display:flex;gap:8px">
+    <?php if($auth->isLoggedIn() && $auth->hasRole('admin')): ?>
+      <a class="btn" href="/admin.php" style="background:#f59e0b">⚙️ Admin Panel</a>
+    <?php endif; ?>
     <a class="btn" href="/">View All Permits</a>
+    <?php if($auth->isLoggedIn()): ?>
+      <a class="btn" href="/logout.php">🚪 Logout</a>
+    <?php else: ?>
+      <a class="btn" href="/login.php">🔐 Login</a>
+    <?php endif; ?>
   </div>
 </header>
 
-<section class="grid">
-  <!-- Statistics Cards -->
-  <div style="grid-column: 1/-1;">
-    <h2 class="section-title">Overview</h2>
-    <div class="dashboard-grid">
-      <div class="stat-card accent">
-        <div class="icon">📋</div>
-        <div class="label">Total Permits</div>
-        <div class="value"><?= number_format($stats['total']) ?></div>
+<div class="dashboard-wrap">
+  <!-- Stat Cards (click to filter) -->
+  <div class="stats-grid">
+    <a class="stat-link" href="<?=h(cardHref($self,'all'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'all')?>">
+        <div class="stat-icon">📋</div>
+        <div class="stat-label">Total Permits</div>
+        <div class="stat-value"><?=number_format($stats['total'])?></div>
       </div>
-      
-      <div class="stat-card success">
-        <div class="icon">✓</div>
-        <div class="label">Active Permits</div>
-        <div class="value"><?= number_format($stats['active']) ?></div>
+    </a>
+
+    <a class="stat-link" href="<?=h(cardHref($self,'pending'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'pending')?>">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" style="color:#f59e0b"><?=number_format($stats['pending'])?></div>
       </div>
-      
-      <div class="stat-card warning">
-        <div class="icon">⏰</div>
-        <div class="label">Expiring (7 days)</div>
-        <div class="value"><?= number_format($stats['expiring_7days']) ?></div>
+    </a>
+
+    <a class="stat-link" href="<?=h(cardHref($self,'active'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'active')?>">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Active</div>
+        <div class="stat-value" style="color:#10b981"><?=number_format($stats['active'])?></div>
       </div>
-      
-      <div class="stat-card">
-        <div class="icon">📝</div>
-        <div class="label">Pending Review</div>
-        <div class="value"><?= number_format($stats['pending']) ?></div>
+    </a>
+
+    <a class="stat-link" href="<?=h(cardHref($self,'issued'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'issued')?>">
+        <div class="stat-icon">📄</div>
+        <div class="stat-label">Issued</div>
+        <div class="stat-value" style="color:#3b82f6"><?=number_format($stats['issued'])?></div>
       </div>
-    </div>
+    </a>
+
+    <a class="stat-link" href="<?=h(cardHref($self,'expired'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'expired')?>">
+        <div class="stat-icon">❌</div>
+        <div class="stat-label">Expired</div>
+        <div class="stat-value" style="color:#ef4444"><?=number_format($stats['expired'])?></div>
+      </div>
+    </a>
+
+    <a class="stat-link" href="<?=h(cardHref($self,'draft'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'draft')?>">
+        <div class="stat-icon">📝</div>
+        <div class="stat-label">Draft</div>
+        <div class="stat-value" style="color:#6b7280"><?=number_format($stats['draft'])?></div>
+      </div>
+    </a>
+
+    <a class="stat-link" href="<?=h(cardHref($self,'closed'))?>">
+      <div class="stat-card<?=isActive($statusFilter,'closed')?>">
+        <div class="stat-icon">✓</div>
+        <div class="stat-label">Closed</div>
+        <div class="stat-value" style="color:#6b7280"><?=number_format($stats['closed'])?></div>
+      </div>
+    </a>
   </div>
 
-  <!-- Status Breakdown -->
-  <div style="grid-column: 1/-1;">
-    <h2 class="section-title">Status Breakdown</h2>
-    <div class="dashboard-grid">
-      <div class="stat-card">
-        <div class="label">Draft</div>
-        <div class="value"><?= number_format($stats['draft']) ?></div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: <?= $stats['total'] > 0 ? ($stats['draft'] / $stats['total'] * 100) : 0 ?>%; background: #6b7280;"></div>
+  <?php if ($statusFilter !== 'all'): ?>
+    <!-- Filtered view only -->
+    <div class="lists-grid">
+      <div class="list-card" style="grid-column:1/-1">
+        <div class="list-title">
+          🔎 Permits — <?=strtoupper(h($statusFilter))?> (<?=count($filteredPermits)?>)
+          <a class="btn-clear" href="<?=h($self)?>">Clear filter</a>
         </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="label">Issued</div>
-        <div class="value"><?= number_format($stats['issued']) ?></div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: <?= $stats['total'] > 0 ? ($stats['issued'] / $stats['total'] * 100) : 0 ?>%; background: #3b82f6;"></div>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="label">Expired</div>
-        <div class="value"><?= number_format($stats['expired']) ?></div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: <?= $stats['total'] > 0 ? ($stats['expired'] / $stats['total'] * 100) : 0 ?>%; background: #ef4444;"></div>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="label">Closed</div>
-        <div class="value"><?= number_format($stats['closed']) ?></div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: <?= $stats['total'] > 0 ? ($stats['closed'] / $stats['total'] * 100) : 0 ?>%; background: #6b7280;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick Actions -->
-  <div style="grid-column: 1/-1;">
-    <h2 class="section-title">Quick Actions</h2>
-    <div class="quick-actions">
-      <?php foreach($tpls as $t): ?>
-        <a href="/new/<?= htmlspecialchars($t['id']) ?>" class="btn btn-accent">
-          + Create <?= htmlspecialchars($t['name']) ?>
-        </a>
-      <?php endforeach; ?>
-      <a href="/?status=pending" class="btn">View Pending</a>
-      <a href="/?status=active" class="btn">View Active</a>
-      <a href="/api/export/csv" class="btn">Export CSV</a>
-    </div>
-  </div>
-
-  <!-- Recent Activity -->
-  <div style="grid-column: 1/-1;">
-    <h2 class="section-title">Recent Activity</h2>
-    <div class="activity-feed">
-      <?php if (empty($recentEvents)): ?>
-        <p style="color: #9ca3af; text-align: center; padding: 20px;">No recent activity</p>
-      <?php else: ?>
-        <?php foreach(array_slice($recentEvents, 0, 10) as $event): ?>
-          <div class="activity-item">
-            <div class="activity-icon" style="background: <?php
-              echo match($event['type']) {
-                'created' => '#3b82f6',
-                'updated' => '#10b981',
-                'status_changed' => '#f59e0b',
-                'attachment_added' => '#8b5cf6',
-                'attachment_removed' => '#ef4444',
-                default => '#6b7280'
-              };
-            ?>;">
-              <?php
-              echo match($event['type']) {
-                'created' => '➕',
-                'updated' => '✏️',
-                'status_changed' => '🔄',
-                'attachment_added' => '📎',
-                'attachment_removed' => '🗑️',
-                default => '📋'
-              };
-              ?>
+        <?php if (empty($filteredPermits)): ?>
+          <div class="item-meta">No permits found for this status.</div>
+        <?php else: ?>
+          <?php foreach ($filteredPermits as $f): ?>
+            <div class="list-item">
+              <div class="item-info">
+                <div class="item-ref"><?=h($f['ref_number'])?></div>
+                <div class="item-meta">
+                  <?=h($f['template_id'])?> • <?=h($f['site_block'] ?? 'N/A')?> •
+                  Status: <?=strtoupper(h($f['status']))?> •
+                  Updated: <?=date('d/m/Y H:i', strtotime((string)$f['updated_at']))?>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="item-badge <?=badgeClass($f['status'])?>"><?=strtoupper(h($f['status']))?></span>
+                <a href="/form/<?=h($f['id'])?>" class="btn" style="font-size:12px;padding:6px 12px">View</a>
+              </div>
             </div>
-            <div class="activity-content">
-              <div class="activity-title">
-                <?php
-                echo match($event['type']) {
-                  'created' => 'Permit created',
-                  'updated' => 'Permit updated',
-                  'status_changed' => 'Status changed',
-                  'attachment_added' => 'Attachment added',
-                  'attachment_removed' => 'Attachment removed',
-                  default => ucfirst($event['type'])
-                };
-                ?>
-                <?php if(!empty($event['ref'])): ?>
-                  - <a href="/form/<?= htmlspecialchars($event['form_id']) ?>" style="color: #3b82f6;"><?= htmlspecialchars($event['ref']) ?></a>
-                <?php endif; ?>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php else: ?>
+    <!-- Normal dashboard (no filter) -->
+    <div class="lists-grid">
+      <?php if (!empty($expiringSoonList)): ?>
+      <div class="list-card">
+        <div class="list-title">⚠️ Expiring Soon (Next 7 Days)</div>
+        <?php foreach($expiringSoonList as $form): ?>
+          <div class="list-item">
+            <div class="item-info">
+              <div class="item-ref"><?=h($form['ref_number'])?></div>
+              <div class="item-meta">
+                <?=h($form['template_id'])?> • <?=h($form['site_block'] ?? 'N/A')?> •
+                Expires: <?=date('d/m/Y H:i', strtotime((string)$form['valid_to']))?>
               </div>
-              <div class="activity-meta">
-                <?= date('M d, Y g:i A', strtotime($event['at'])) ?>
-                <?php if ($event['by_user']): ?>
-                  by <?= htmlspecialchars($event['by_user']) ?>
-                <?php endif; ?>
-              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="item-badge <?=badgeClass($form['status'])?>"><?=strtoupper(h($form['status']))?></span>
+              <a href="/form/<?=h($form['id'])?>" class="btn" style="font-size:12px;padding:6px 12px">View</a>
             </div>
           </div>
         <?php endforeach; ?>
+      </div>
       <?php endif; ?>
-    </div>
-  </div>
 
-  <!-- Recent Permits -->
-  <div style="grid-column: 1/-1;">
-    <h2 class="section-title">Recent Permits</h2>
-    <div class="activity-feed">
-      <?php if (empty($recentForms)): ?>
-        <p style="color: #9ca3af; text-align: center; padding: 20px;">No permits yet</p>
-      <?php else: ?>
-        <?php foreach($recentForms as $form): ?>
-          <div class="activity-item">
-            <div class="activity-icon" style="background: <?php
-              echo match($form['status']) {
-                'active' => '#10b981',
-                'issued' => '#3b82f6',
-                'pending' => '#f59e0b',
-                'expired' => '#ef4444',
-                'draft' => '#6b7280',
-                default => '#6b7280'
-              };
-            ?>;">
-              📋
-            </div>
-            <div class="activity-content">
-              <div class="activity-title">
-                <a href="/form/<?= htmlspecialchars($form['id']) ?>" style="color: #f9fafb;">
-                  <?= htmlspecialchars($form['ref']) ?>
-                </a>
-                <span style="padding: 2px 8px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 11px; margin-left: 8px;">
-                  <?= strtoupper($form['status']) ?>
-                </span>
+      <div class="list-card">
+        <div class="list-title">📌 Recent Activity</div>
+        <?php if (empty($recentActivity)): ?>
+          <div class="item-meta">No recent updates yet.</div>
+        <?php else: ?>
+          <?php foreach($recentActivity as $form): ?>
+            <div class="list-item">
+              <div class="item-info">
+                <div class="item-ref"><?=h($form['ref_number'])?></div>
+                <div class="item-meta">
+                  <?=h($form['template_id'])?> •
+                  Updated: <?=date('d/m/Y H:i', strtotime((string)$form['updated_at']))?>
+                </div>
               </div>
-              <div class="activity-meta">
-                <?= htmlspecialchars($form['site_block']) ?> •
-                Updated <?= date('M d, Y', strtotime($form['updated_at'])) ?>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="item-badge <?=badgeClass($form['status'])?>"><?=strtoupper(h($form['status']))?></span>
+                <a href="/form/<?=h($form['id'])?>" class="btn" style="font-size:12px;padding:6px 12px">View</a>
               </div>
             </div>
-          </div>
-        <?php endforeach; ?>
-      <?php endif; ?>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
     </div>
-  </div>
-</section>
+  <?php endif; ?>
+</div>
 
-<script src="/assets/app.js"></script>
+<script src="<?=asset('/assets/app.js')?>"></script>
 </body>
 </html>

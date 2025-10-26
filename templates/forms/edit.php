@@ -1,33 +1,4 @@
 <?php
-/**
- * Permits System - Form Edit Template
- * 
- * Description: Edit interface for existing permits with pre-populated data
- * Name: edit.php
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
- * 
- * Purpose:
- * - Edit existing permit forms
- * - Pre-fill fields with saved data
- * - Update permit status (draft, pending, issued, active, expired, closed)
- * - Preserve and re-sign signatures if needed
- * - Save changes with audit trail
- * 
- * Features:
- * - Status selector dropdown
- * - Pre-populated form fields from existing data
- * - Signature preservation and re-capture
- * - Client-side validation
- * - API integration for updates
- * 
- * Expected Variables:
- * - $schemaJson: JSON string containing form template definition
- * - $existingData: Array of current form data
- * - $form: Database record of the form
- */
-
-// Parse schema and existing data
 $schema = json_decode($schemaJson, true);
 $title  = $schema['title'] ?? 'Form';
 $meta = $existingData['meta'] ?? [];

@@ -1,39 +1,106 @@
-# ===================================================================
-# Permits System - Apache Configuration
-# 
-# Description: Apache URL rewriting and security configuration
-# Name: .htaccess
-# Last Updated: 21/10/2025 19:22:30 (UK)
-# Author: irlam
-# 
-# Purpose:
-# - Enable clean URLs without .php extensions
-# - Route all requests through index.php front controller
-# - Serve static files (CSS, JS, images) directly
-# - Block access to sensitive directories
-# - Improve security and SEO
-# 
-# Features:
-# - Front controller pattern for Slim Framework routing
-# - Static asset bypass for performance
-# - Directory access protection
-# - Query string preservation
-# ===================================================================
-
-# Enable URL rewriting module
+# --- Core: enable rewriting ---
 RewriteEngine On
 
-# Serve existing files and directories directly (CSS, JS, images, etc.)
-# This improves performance by not routing static assets through PHP
+# 1) Serve existing files/directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Route all other requests through index.php (front controller)
-# QSA = Query String Append (preserves GET parameters)
-# L = Last rule (stop processing if this matches)
+# 2) Front controller: send everything else to index.php
 RewriteRule ^ index.php [QSA,L]
 
-# Block direct access to sensitive directories for security
-# Returns 404 for any attempts to access these folders
-RedirectMatch 404 ^/(bin|data|src|templates|vendor)/
+
+# --- Protect sensitive files & folders ---
+
+# Return 404 for private directories if requested directly
+RedirectMatch 404 ^/(bin|data|src|templates|vendor|backups)/
+
+# Deny access to .env and other dotfiles
+<FilesMatch "^\.env">
+  Require all denied
+</FilesMatch>
+<FilesMatch "^\.(?!well-known/)">
+  Require all denied
+</FilesMatch>
+
+# Block common VCS dirs
+RedirectMatch 404 ^/(\.git|\.svn|\.hg)/
+
+# Hide project meta / lockfiles / SQL dumps from the web
+<FilesMatch "(^composer\.(json|lock)$|\.sql(\.gz)?$|^README(\.md)?$|^LICENSE(\.txt)?$)">
+  Require all denied
+</FilesMatch>
+
+
+# --- MIME types for modern assets (safer PWAs) ---
+AddType application/manifest+json .webmanifest
+AddType text/javascript .mjs
+
+
+# --- Caching policy ---
+# Long-cache for static assets (hashed filenames recommended)
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Images & icons
+  ExpiresByType image/avif "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+
+  # Fonts
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff  "access plus 1 year"
+  ExpiresByType font/ttf   "access plus 1 year"
+
+  # Static JS/CSS
+  ExpiresByType text/css        "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+
+  # Web manifest
+  ExpiresByType application/manifest+json "access plus 7 days"
+</IfModule>
+
+# Honor immutable cache for common static extensions
+<FilesMatch "\.(css|js|mjs|png|jpg|jpeg|gif|svg|webp|avif|woff2?)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </IfModule>
+</FilesMatch>
+
+# Service worker should not be aggressively cached
+<Files "sw.js">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </IfModule>
+</Files>
+
+# Avoid caching dynamic PHP
+<FilesMatch "\.php$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+  </IfModule>
+</FilesMatch>
+
+
+# --- Light security headers (best-effort) ---
+<IfModule mod_headers.c>
+  # Don’t sniff content types
+  Header set X-Content-Type-Options "nosniff"
+
+  # Clickjacking protection (adjust if you need to embed this app elsewhere)
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # Basic referrer privacy
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Minimal Permissions-Policy (allow what PWAs usually need; tweak as required)
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), display-capture=(), fullscreen=(self)"
+</IfModule>

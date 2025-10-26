@@ -1,24 +1,19 @@
 <?php
 /**
- * Permits System - Homepage Layout Template
+ * Main Layout Template
  * 
- * Description: Main layout template for the permits homepage with search and form listing
- * Name: layout.php
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
- * 
- * Purpose:
- * - Display homepage with permit listing
- * - Provide search and filter interface
- * - Show available form templates
- * - Enable quick access to create new permits
- * 
- * Features:
- * - Advanced search functionality (by text, status, template, date range)
- * - Responsive grid layout for forms
- * - Modern dark theme with improved aesthetics
- * - Mobile-friendly interface
+ * File Path: /templates/layout.php
+ * Description: Main permits list with search/filter and navigation
+ * Created: 21/10/2025
+ * Last Modified: 21/10/2025
  */
+
+// Load cache helper for preventing browser caching
+require_once __DIR__ . '/../src/cache-helper.php';
+
+// Load Auth class for admin button
+require_once __DIR__ . '/../src/Auth.php';
+$auth = new Auth($db);
 
 $base = $_ENV['APP_URL'] ?? '/';
 $params = $_GET ?? [];
@@ -27,10 +22,11 @@ $params = $_GET ?? [];
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?php cache_meta_tags(); ?>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
   <title>Permits</title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
   <style>
     .search-panel{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:16px;grid-column:1/-1}
     .search-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end}
@@ -42,9 +38,17 @@ $params = $_GET ?? [];
 <body>
 <header class="top">
   <h1>Permits & Registers</h1>
-  <div style="display: flex; gap: 12px;">
-    <a class="btn" href="/dashboard">Dashboard</a>
+  <div style="display:flex;gap:8px">
+    <?php if($auth->isLoggedIn() && $auth->hasRole('admin')): ?>
+      <a class="btn" href="/admin.php" style="background:#f59e0b">⚙️ Admin Panel</a>
+    <?php endif; ?>
+    <a class="btn" href="/dashboard">📊 Dashboard</a>
     <a class="btn" href="/">Home</a>
+    <?php if($auth->isLoggedIn()): ?>
+      <a class="btn" href="/logout.php">🚪 Logout</a>
+    <?php else: ?>
+      <a class="btn" href="/login.php">🔐 Login</a>
+    <?php endif; ?>
   </div>
 </header>
 
@@ -88,18 +92,6 @@ $params = $_GET ?? [];
       <div class="search-actions">
         <button type="submit" class="btn">🔍 Search</button>
         <a href="/" class="btn">Clear</a>
-        <?php
-        // Build export URL with current filters
-        $exportParams = array_filter([
-          'search' => $params['search'] ?? '',
-          'status' => $params['status'] ?? '',
-          'template' => $params['template'] ?? '',
-          'date_from' => $params['date_from'] ?? '',
-          'date_to' => $params['date_to'] ?? '',
-        ]);
-        $exportUrl = '/api/export/csv' . (!empty($exportParams) ? '?' . http_build_query($exportParams) : '');
-        ?>
-        <a href="<?=htmlspecialchars($exportUrl)?>" class="btn btn-accent">📥 Export CSV</a>
       </div>
     </form>
   </div>
@@ -135,6 +127,6 @@ $params = $_GET ?? [];
   </div>
 </section>
 
-<script src="/assets/app.js"></script>
+<script src="<?=asset('/assets/app.js')?>"></script>
 </body>
 </html>

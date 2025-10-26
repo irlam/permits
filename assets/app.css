@@ -1,228 +1,183 @@
 /**
- * Permits System - Main Stylesheet
+ * Mobile-Optimized App CSS
  * 
- * Description: Modern dark theme styling for the permits application
- * Name: app.css
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
+ * File Path: /assets/app.css
+ * Description: Responsive styles optimized for mobile permit forms
+ * Created: 23/10/2025
+ * Last Modified: 23/10/2025
  * 
- * Purpose:
- * - Provide cohesive, professional dark theme design
- * - Ensure responsive layouts for all screen sizes
- * - Improve readability and user experience
- * - Support print/PDF export with optimized styling
- * 
- * Color Scheme (Modern Dark Theme):
- * - Background: #0a0f1a (deep dark blue-black)
- * - Cards/Panels: #111827 (dark slate)
- * - Borders: #1f2937 (subtle borders)
- * - Text Primary: #f9fafb (almost white)
- * - Text Secondary: #9ca3af (muted gray)
- * - Accent: #3b82f6 (modern blue)
- * - Success: #10b981 (green)
- * - Warning: #f59e0b (amber)
- * - Danger: #ef4444 (red)
- * 
- * Design Features:
- * - Border radius: 8px-12px (smooth rounded corners)
- * - Box shadows for depth and hierarchy
- * - Smooth transitions (0.2s ease)
- * - Consistent spacing (12px, 16px, 24px)
- * - Improved button hover effects
- * - Better form input styling
+ * Features:
+ * - Mobile-first responsive design
+ * - Touch-friendly buttons and inputs
+ * - Larger tap targets (minimum 44x44px)
+ * - Optimized for small screens
+ * - Easy-to-read text sizes
+ * - Improved spacing on mobile
  */
 
-/* ==================== Base Styles ==================== */
+/* Base Styles */
 * {
   box-sizing: border-box;
 }
 
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Arial, sans-serif;
-  background: #0a0f1a;
-  color: #f9fafb;
+  background: #0b1220;
+  color: #e5e7eb;
   margin: 0;
   padding: 0;
-  line-height: 1.6;
+  font-size: 16px; /* Base size for mobile */
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape */
 }
 
-/* ==================== Top Navigation Bar ==================== */
+/* Top Bar */
 .top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px 16px;
   border-bottom: 1px solid #1f2937;
-  background: #111827;
+  background: #0a101a;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  min-height: 60px; /* Touch-friendly height */
 }
 
-.top h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #f9fafb;
-}
-
-/* ==================== Buttons ==================== */
-.btn {
-  display: inline-block;
-  padding: 10px 16px;
-  border: 1px solid #1f2937;
-  border-radius: 8px;
-  background: #111827;
-  color: #f9fafb;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.btn:hover {
-  background: #1f2937;
-  border-color: #374151;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  transform: translateY(-1px);
-}
-
-.btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.btn-accent {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #ffffff;
-}
-
-.btn-accent:hover {
-  background: #2563eb;
-  border-color: #2563eb;
-}
-
-/* ==================== Grid Layout ==================== */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 16px;
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
-    padding: 16px;
-  }
-}
-
-/* ==================== Cards ==================== */
-.card {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.2s ease;
-}
-
-.card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-}
-
-.card h2 {
-  margin: 0 0 16px 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #f9fafb;
-}
-
-.card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.card li {
-  margin-bottom: 12px;
-}
-
-/* ==================== Tables ==================== */
-.tbl {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-}
-
-.tbl th,
-.tbl td {
-  border: 1px solid #1f2937;
-  padding: 12px 16px;
-  text-align: left;
-}
-
-.tbl th {
-  background: #0a0f1a;
-  color: #9ca3af;
-  font-weight: 600;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.tbl td {
-  color: #f9fafb;
-}
-
-.tbl tbody tr {
-  transition: background 0.2s ease;
-}
-
-.tbl tbody tr:hover {
-  background: #0a0f1a;
-}
-
-/* ==================== Form Wrapper ==================== */
-.wrap {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
+/* Page Header */
 .page-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 16px 0;
+  gap: 12px;
+  flex-wrap: wrap; /* Wrap on small screens */
 }
 
 .page-head h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
-  color: #f9fafb;
+  flex: 1;
+  min-width: 200px;
 }
 
-/* ==================== Form Fields ==================== */
-.meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* Touch-friendly */
+  min-width: 44px;
+  padding: 12px 16px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  background: #111827;
+  color: #e5e7eb;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.btn:hover, .btn:active {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.btn-accent {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #fff;
+}
+
+.btn-accent:hover, .btn-accent:active {
+  background: #0284c7;
+  border-color: #0284c7;
+}
+
+/* Wrap / Container */
+.wrap {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+/* Desktop: increase max-width and padding */
+@media (min-width: 768px) {
+  .wrap {
+    max-width: 1100px;
+    padding: 24px;
+  }
+}
+
+/* Card/Section */
+.card {
   background: #111827;
   border: 1px solid #1f2937;
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
+.card summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  font-size: 17px;
+  font-weight: 600;
+  list-style: none; /* Hide default arrow */
+}
+
+.card summary::-webkit-details-marker {
+  display: none;
+}
+
+.card summary::before {
+  content: '▼ ';
+  display: inline-block;
+  transition: transform 0.2s;
+  margin-right: 8px;
+}
+
+.card[open] summary::before {
+  transform: rotate(0deg);
+}
+
+.card:not([open]) summary::before {
+  transform: rotate(-90deg);
+}
+
+.card strong.cp {
+  font-size: 17px;
+}
+
+/* Meta Section - Form Fields */
+.meta {
+  display: grid;
+  grid-template-columns: 1fr; /* Single column on mobile */
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* 2 columns on tablets */
+@media (min-width: 640px) {
+  .meta {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 4 columns on desktop */
+@media (min-width: 1024px) {
+  .meta {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Form Fields */
 .field {
   display: flex;
   flex-direction: column;
@@ -230,34 +185,24 @@ body {
 
 .field label {
   font-size: 13px;
-  color: #9ca3af;
-  font-weight: 500;
+  color: #94a3b8;
   display: block;
   margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-weight: 500;
 }
 
 .field input,
 .field select,
 .field textarea {
   width: 100%;
-  background: #0a0f1a;
-  color: #f9fafb;
+  min-height: 44px; /* Touch-friendly */
+  background: #0a101a;
+  color: #e5e7eb;
   border: 1px solid #1f2937;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 12px;
-  font-size: 15px;
+  font-size: 16px; /* Prevent zoom on iOS */
   font-family: inherit;
-  transition: all 0.2s ease;
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .field textarea {
@@ -265,214 +210,255 @@ body {
   resize: vertical;
 }
 
-/* ==================== Checklist Items ==================== */
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* Checklist Items */
 .items {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px 0;
 }
 
 .item {
-  border: 1px solid #1f2937;
-  border-radius: 10px;
-  padding: 16px;
-  background: #0a0f1a;
-  transition: all 0.2s ease;
-}
-
-.item:hover {
-  background: #111827;
-  border-color: #374151;
+  border: 1px dashed #1f2937;
+  border-radius: 12px;
+  padding: 12px;
+  background: #0a101a;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 24px 1fr auto;
+  grid-template-columns: 32px 1fr; /* Checkbox + text on mobile */
   gap: 12px;
-  align-items: center;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.row input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  cursor: pointer;
 }
 
 .label-text {
-  color: #f9fafb;
   font-size: 15px;
   line-height: 1.5;
+  word-break: break-word;
 }
 
+/* Status Pills */
 .status {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .pill {
   display: inline-flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   border: 1px solid #1f2937;
-  background: #0a0f1a;
+  background: #0a101a;
   border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  min-height: 40px; /* Touch-friendly */
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
 }
 
-.pill:hover {
-  background: #111827;
+.pill:has(input:checked) {
+  background: #1f2937;
   border-color: #374151;
 }
 
 .pill input[type="radio"] {
-  margin: 0;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
+  margin: 0;
 }
 
+/* Desktop: row layout */
+@media (min-width: 640px) {
+  .row {
+    grid-template-columns: 32px 1fr auto;
+    align-items: center;
+  }
+  
+  .status {
+    margin-top: 0;
+  }
+}
+
+/* Notes */
 .note {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .note textarea {
   width: 100%;
+  min-height: 60px;
   background: #111827;
-  color: #f9fafb;
+  color: #e5e7eb;
   border: 1px solid #1f2937;
   border-radius: 8px;
   padding: 10px;
   font-size: 14px;
   font-family: inherit;
-  min-height: 60px;
   resize: vertical;
 }
 
-/* ==================== Details/Collapsible Sections ==================== */
-details.card {
-  margin-bottom: 16px;
+.note textarea:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
 }
 
-details summary {
-  cursor: pointer;
-  user-select: none;
-  padding: 4px 0;
-  list-style: none;
-}
-
-details summary::-webkit-details-marker {
-  display: none;
-}
-
-details summary::before {
-  content: '▶';
-  display: inline-block;
-  margin-right: 8px;
-  transition: transform 0.2s ease;
-  color: #3b82f6;
-}
-
-details[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.cp {
-  font-size: 18px;
-  color: #f9fafb;
-}
-
-/* ==================== Signatures ==================== */
+/* Signatures */
 .sig-wrap {
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .sig {
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .sigtitle {
   font-size: 16px;
   font-weight: 600;
-  color: #f9fafb;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .siggrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr; /* Single column on mobile */
   gap: 16px;
 }
 
+/* 2 columns on tablet and up */
+@media (min-width: 640px) {
+  .siggrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .sigbox {
-  background: #0a0f1a;
-  border: 1px solid #1f2937;
-  border-radius: 8px;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sigbox .sigtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-bottom: 4px;
 }
 
 .sig canvas {
   width: 100%;
-  height: 180px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  height: 200px; /* Taller for mobile */
+  background: #fff;
+  border: 2px solid #1f2937;
+  border-radius: 8px;
   cursor: crosshair;
-  touch-action: none;
+  touch-action: none; /* Prevent scroll while signing */
 }
 
 .rowish {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
+  gap: 12px;
 }
 
 .muted {
-  color: #9ca3af;
-  font-size: 14px;
+  font-size: 13px;
+  color: #6b7280;
 }
 
-/* ==================== Tools/Actions ==================== */
+/* Tools / Action Buttons */
 .tools {
   display: flex;
   gap: 12px;
   margin-top: 24px;
-  padding-top: 24px;
+  padding: 16px 0;
+  position: sticky;
+  bottom: 0;
+  background: #0b1220;
   border-top: 1px solid #1f2937;
+  margin-left: -12px;
+  margin-right: -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  z-index: 50;
 }
 
-/* ==================== Responsive Design ==================== */
-@media (max-width: 768px) {
-  .top {
-    padding: 12px 16px;
-  }
-  
-  .top h1 {
-    font-size: 20px;
-  }
-  
-  .wrap {
-    padding: 16px;
-  }
-  
-  .meta {
-    grid-template-columns: 1fr;
-  }
-  
-  .siggrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .row {
-    grid-template-columns: 20px 1fr;
-  }
-  
-  .status {
-    grid-column: 1 / -1;
-    margin-top: 8px;
+.tools .btn {
+  flex: 1;
+  min-height: 52px; /* Extra touch-friendly */
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Table */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Single column on mobile */
+  gap: 12px;
+  padding: 12px 0;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* ==================== Print Styles ==================== */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tbl th,
+.tbl td {
+  border: 1px solid #1f2937;
+  padding: 8px;
+  text-align: left;
+}
+
+.tbl th {
+  background: #111827;
+  font-weight: 600;
+}
+
+/* Responsive table on small screens */
+@media (max-width: 639px) {
+  .tbl {
+    font-size: 13px;
+  }
+  
+  .tbl th,
+  .tbl td {
+    padding: 6px;
+  }
+}
+
+/* Print Styles */
 @media print {
-  html,
-  body {
+  html, body {
     background: #fff !important;
     color: #111 !important;
     -webkit-print-color-adjust: exact;
@@ -480,10 +466,15 @@ details[open] summary::before {
     font-size: 12px;
   }
   
+  .page-head,
   .top,
   .btn,
   .tools {
     display: none !important;
+  }
+  
+  .wrap {
+    padding: 0;
   }
   
   .card,
@@ -492,163 +483,45 @@ details[open] summary::before {
   .tbl th,
   .tbl td {
     background: #fff !important;
-    border-color: #999 !important;
-    box-shadow: none !important;
+    border-color: #bbb !important;
   }
   
   .row {
     grid-template-columns: 18px 1fr auto !important;
   }
   
-  .page-head {
-    border-bottom: 2px solid #111;
-    padding-bottom: 12px;
-    margin-bottom: 16px;
+  .label-text,
+  th,
+  td,
+  textarea {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    hyphens: auto !important;
+  }
+  
+  .sig canvas {
+    background: #fff !important;
+    border: 1px solid #bbb !important;
   }
 }
 
-/* ==================== Mobile Enhancements ==================== */
-
-/* Mobile-specific styles for touch devices */
-@media (max-width: 768px) {
-  /* Touch-friendly buttons - minimum 44x44px tap targets */
-  .btn {
-    min-height: 44px;
-    padding: 12px 16px;
-    font-size: 15px;
-  }
-  
-  /* Mobile navigation */
-  .top {
-    flex-wrap: wrap;
-    padding: 12px 16px;
-  }
-  
-  .top h1 {
-    font-size: 20px;
-  }
-  
-  /* Stack buttons vertically on very small screens */
-  .top > div {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  
-  /* Mobile-optimized forms */
-  .field input,
-  .field select,
-  .field textarea {
-    font-size: 16px; /* Prevent zoom on iOS */
-    padding: 14px;
-    min-height: 44px;
-  }
-  
-  /* Mobile grid layout */
-  .grid {
-    padding: 12px;
-    gap: 16px;
-  }
-  
-  /* Single column on mobile */
-  .dashboard-grid {
-    grid-template-columns: 1fr !important;
-  }
-  
-  /* Touch-friendly cards */
-  .card {
-    padding: 16px;
-  }
-  
-  /* Mobile table improvements */
-  .tbl {
-    font-size: 14px;
-  }
-  
-  .tbl th,
-  .tbl td {
-    padding: 10px 8px;
-  }
-  
-  /* Hide less important columns on mobile */
-  .tbl .hide-mobile {
-    display: none;
-  }
-  
-  /* Mobile search panel */
-  .search-panel {
-    padding: 12px;
-  }
-  
-  .search-form {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .search-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .search-actions .btn {
-    width: 100%;
-    justify-content: center;
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-/* Swipe gesture indicators */
-.swipe-indicator {
-  position: relative;
-  overflow: hidden;
-}
-
-.swipe-indicator::after {
-  content: '←  →';
-  position: absolute;
-  top: 50%;
-  right: 16px;
-  transform: translateY(-50%);
-  color: #6b7280;
-  font-size: 12px;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* Touch feedback for interactive elements */
-@media (hover: none) {
-  .btn:active,
-  .card:active {
-    opacity: 0.8;
-  }
-}
-
-/* Landscape mobile adjustments */
-@media (max-width: 896px) and (orientation: landscape) {
-  .top {
-    padding: 8px 16px;
-  }
-  
-  .grid {
-    padding: 8px;
-  }
-}
-
-/* Extra small devices */
-@media (max-width: 375px) {
+/* Dark mode support (already dark, but good practice) */
+@media (prefers-color-scheme: dark) {
   body {
-    font-size: 14px;
-  }
-  
-  .top h1 {
-    font-size: 18px;
-  }
-  
-  .btn {
-    font-size: 14px;
-    padding: 10px 14px;
-  }
-  
-  .card {
-    padding: 12px;
+    background: #0b1220;
+    color: #e5e7eb;
   }
 }

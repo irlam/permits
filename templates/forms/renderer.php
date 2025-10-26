@@ -1,32 +1,4 @@
 <?php
-/**
- * Permits System - Form Renderer Template
- * 
- * Description: Dynamic form renderer that creates interactive permit forms from JSON schemas
- * Name: renderer.php
- * Last Updated: 21/10/2025 19:22:30 (UK)
- * Author: irlam
- * 
- * Purpose:
- * - Render blank forms for creating new permits
- * - Generate form fields dynamically from JSON schema
- * - Handle multiple input types (text, select, textarea, datetime)
- * - Provide signature capture functionality
- * - Support print/PDF export
- * 
- * Features:
- * - Schema-driven form generation
- * - Collapsible sections for better UX
- * - Digital signature capture on HTML5 canvas
- * - Pass/Fail/N/A status for checklist items
- * - Client-side validation before submission
- * - Responsive design for mobile devices
- * 
- * Expected Variables:
- * - $schemaJson: JSON string containing form template definition
- */
-
-// Parse the JSON schema to extract form structure
 $schema = json_decode($schemaJson, true);
 $title  = $schema['title'] ?? 'Form';
 ?><!doctype html>
