@@ -7,9 +7,7 @@
  */
 declare(strict_types=1);
 
-use PDO;
 use Permits\Db;
-use Throwable;
 
 /**
  * Start secure session
@@ -53,7 +51,7 @@ function getCurrentUser() {
     try {
         $stmt = $db->pdo->prepare("SELECT id, email, name, role, status, last_login FROM users WHERE id = ?");
         $stmt->execute([$_SESSION['user_id']]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
         
         return $user ?: null;
     } catch (Exception $e) {
@@ -79,7 +77,7 @@ function login($email, $password) {
         // Get user from database
         $stmt = $db->pdo->prepare("SELECT * FROM users WHERE email = ? AND status = 'active'");
         $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
         
         // Check if user exists
         if (!$user) {
@@ -293,10 +291,10 @@ class Auth
         try {
             $stmt = $this->db->pdo->prepare('SELECT id, email, name, role, status, last_login FROM users WHERE id = ?');
             $stmt->execute([$_SESSION['user_id']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $user = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
             $this->userCache = $user;
             return $user;
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             error_log('Auth getCurrentUser error: ' . $e->getMessage());
             return null;
         }

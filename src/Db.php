@@ -7,11 +7,24 @@ use PDO;
 use PDOException;
 use RuntimeException;
 
+/**
+ * Database connection manager
+ * 
+ * Provides a secure PDO connection to MySQL or SQLite databases
+ * with proper configuration and error handling.
+ * 
+ * @package Permits
+ */
 final class Db
 {
     /** Public for convenience DI in legacy code */
     public PDO $pdo;
 
+    /**
+     * Initialize database connection based on DB_DRIVER environment variable
+     * 
+     * @throws RuntimeException If database driver is unsupported or connection fails
+     */
     public function __construct()
     {
         $driver = strtolower((string)($_ENV['DB_DRIVER'] ?? 'mysql'));
@@ -38,6 +51,10 @@ final class Db
 
     /**
      * Connect to MySQL using .env settings.
+     * 
+     * @param array<int,int> $opts PDO options
+     * @return PDO Configured MySQL PDO connection
+     * @throws RuntimeException If MySQL configuration is incomplete or connection fails
      */
     private function connectMySql(array $opts): PDO
     {
@@ -79,6 +96,10 @@ final class Db
 
     /**
      * Connect to SQLite using .env settings. Creates folder/file if missing.
+     * 
+     * @param array<int,int> $opts PDO options
+     * @return PDO Configured SQLite PDO connection
+     * @throws RuntimeException If SQLite directory/file is not writable or connection fails
      */
     private function connectSqlite(array $opts): PDO
     {

@@ -9,9 +9,19 @@ use Ramsey\Uuid\Uuid;
  *   [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
  */
 
+// Simple in-memory cache for frequently accessed data (templates list)
+$templateCache = null;
+function getTemplates($db) {
+    global $templateCache;
+    if ($templateCache === null) {
+        $templateCache = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
+    }
+    return $templateCache;
+}
+
 // Home: list templates + recent forms
 $app->get('/', function(Req $req, Res $res) use ($db) {
-  $tpls = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
+  $tpls = getTemplates($db);
   
   // Build search query
   $params = $req->getQueryParams();
@@ -59,7 +69,7 @@ $app->get('/', function(Req $req, Res $res) use ($db) {
 
 // Dashboard: statistics and overview
 $app->get('/dashboard', function(Req $req, Res $res) use ($db) {
-  $tpls = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
+  $tpls = getTemplates($db);
   ob_start(); include __DIR__ . '/../templates/dashboard.php'; $html = ob_get_clean();
   $res->getBody()->write($html);
   return $res;
@@ -122,7 +132,7 @@ $app->post('/api/forms', function(Req $req, Res $res) use ($db) {
 
 // List templates (JSON)
 $app->get('/api/templates', function(Req $req, Res $res) use ($db) {
-  $rows = $db->pdo->query("SELECT id,name,version FROM form_templates ORDER BY name,version DESC")->fetchAll();
+  $rows = getTemplates($db);
   $res->getBody()->write(json_encode($rows));
   return $res->withHeader('Content-Type','application/json');
 });
