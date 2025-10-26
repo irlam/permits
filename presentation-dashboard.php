@@ -471,10 +471,11 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
     </style>
     <script>
         (function () {
-            if (!('WebSocket' in window)) {
+            const nativeWs = window.WebSocket || window.MozWebSocket;
+            if (!nativeWs) {
                 return;
             }
-            const NativeWebSocket = window.WebSocket;
+            const NativeWebSocket = nativeWs;
             const blockedPattern = /\/ws\/ws(\/|$)/i;
 
             function makeEvent(type, detail) {
@@ -560,6 +561,9 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
             }
 
             function createNativeSocket(url, protocols) {
+                if (NativeWebSocket.length === 1) {
+                    return new NativeWebSocket(url);
+                }
                 if (protocols !== undefined) {
                     return new NativeWebSocket(url, protocols);
                 }
@@ -577,6 +581,9 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
             WrappedWebSocket.prototype = NativeWebSocket.prototype;
             Object.setPrototypeOf(WrappedWebSocket, NativeWebSocket);
             window.WebSocket = WrappedWebSocket;
+            if ('MozWebSocket' in window) {
+                window.MozWebSocket = WrappedWebSocket;
+            }
         })();
     </script>
 </head>
