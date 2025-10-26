@@ -1,0 +1,104 @@
+{
+  "id": "confined-space-v1",
+  "title": "Confined Space Entry Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text", "placeholder": "Auto or manual reference" },
+      { "key": "site", "label": "Project / Site", "type": "text" },
+      { "key": "spaceId", "label": "Confined Space ID", "type": "text", "placeholder": "Tank / chamber / void ref" },
+      { "key": "location", "label": "Exact Location", "type": "text" },
+      { "key": "description", "label": "Task Description", "type": "textarea" },
+      { "key": "supervisor", "label": "Entry Supervisor", "type": "text" },
+      { "key": "entrantTeam", "label": "Authorised Entrants", "type": "textarea", "placeholder": "List names" },
+      { "key": "attendant", "label": "Top Person / Attendant", "type": "text" },
+      { "key": "gasTester", "label": "Competent Gas Tester", "type": "text" },
+      { "key": "validFrom", "label": "Permit Start", "type": "datetime" },
+      { "key": "validTo", "label": "Permit Expiry", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-ENTRY CONTROLS",
+      "items": [
+        "Confined space isolated from services (mechanical, electrical, hydraulic)",
+        "Atmosphere tested and recorded – safe oxygen level confirmed",
+        "Ventilation in place and functioning",
+        "Entrants briefed on hazards, method statement and emergency arrangements",
+        "Rescue plan reviewed, equipment on site and competent team available",
+        "Communication method agreed and tested",
+        "Permit and signage posted at point of entry"
+      ],
+      "fields": [
+        {
+          "label": "Initial Gas Test Reading",
+          "type": "textarea",
+          "placeholder": "Record O2 %, flammable %, toxic gases"
+        },
+        {
+          "label": "Isolation Method",
+          "type": "select",
+          "options": [
+            { "value": "mechanical", "label": "Mechanical lock-off" },
+            { "value": "electrical", "label": "Electrical isolation" },
+            { "value": "blanking", "label": "Blanking/ spading" },
+            { "value": "other", "label": "Other" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ENTRY & MONITORING",
+      "items": [
+        "Continuous gas monitoring in place (alarms tested)",
+        "Harnesses and retrieval lines fitted where required",
+        "Attendant in position for duration of entry",
+        "Hot work / ignition sources controlled or prohibited",
+        "Tools and equipment intrinsically safe where needed",
+        "Atmospheric readings logged per schedule"
+      ],
+      "fields": [
+        {
+          "label": "Ventilation Type",
+          "type": "text",
+          "placeholder": "e.g. Forced air, natural"
+        },
+        {
+          "label": "Monitoring Frequency (mins)",
+          "type": "number",
+          "min": 5,
+          "step": 5,
+          "default": 30
+        }
+      ]
+    },
+    {
+      "title": "EXIT & CLOSE-OUT",
+      "items": [
+        "Space reinspected post-entry – no tools or materials left inside",
+        "Isolation removed and systems reinstated safely",
+        "Atmospheric conditions verified safe before handback",
+        "All documentation completed and filed",
+        "Permit cancelled and entry log updated"
+      ],
+      "fields": [
+        {
+          "label": "Final Gas Test Reading",
+          "type": "textarea",
+          "placeholder": "Record closing readings"
+        },
+        {
+          "label": "Handback To",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "entrant_lead",
+    "attendant",
+    "rescuer",
+    "issuer_return"
+  ]
+}

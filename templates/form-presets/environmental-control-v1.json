@@ -1,0 +1,90 @@
+{
+  "id": "environmental-control-v1",
+  "title": "Environmental Protection Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Project", "type": "text" },
+      { "key": "activity", "label": "Activity", "type": "textarea", "placeholder": "Describe works with environmental risk" },
+      { "key": "location", "label": "Location / Chainage", "type": "text" },
+      { "key": "sensitiveReceptors", "label": "Nearby Sensitive Receptors", "type": "textarea", "placeholder": "Watercourses, habitats, neighbours" },
+      { "key": "environmentLead", "label": "Environmental Lead", "type": "text" },
+      { "key": "validFrom", "label": "Start", "type": "datetime" },
+      { "key": "validTo", "label": "Finish", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-WORK CONTROLS",
+      "items": [
+        "Environmental risk assessment reviewed",
+        "Permits/consents checked (EA, LLFA, local authority)",
+        "Weather forecast assessed (heavy rain / wind conditions)",
+        "Spill response and pollution control equipment on site",
+        "Silt control measures installed",
+        "Fuel/chemical storage bunded and 10m from watercourses",
+        "Briefing delivered to workforce"
+      ],
+      "fields": [
+        {
+          "label": "Consent / Licence Numbers",
+          "type": "textarea"
+        },
+        {
+          "label": "Met Office Alert Level",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "WORK EXECUTION",
+      "items": [
+        "Run-off directed to settlement / treatment",
+        "Wheel wash / road cleaning in operation",
+        "Noise and vibration monitoring conducted when required",
+        "Dust suppression deployed (mist, damping)",
+        "Waste segregated and stored appropriately",
+        "Vehicle refuelling controlled and drip trays used"
+      ],
+      "fields": [
+        {
+          "label": "Monitoring Frequency",
+          "type": "number",
+          "placeholder": "Checks per shift",
+          "min": 1
+        },
+        {
+          "label": "Control Measures in Use",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "POST-WORK & INCIDENTS",
+      "items": [
+        "Anchorage points for controls removed when no longer needed",
+        "Site inspected for contamination / debris",
+        "Incident reports completed (pollution, complaints)",
+        "Control measures maintained until risk has passed",
+        "Records filed with environmental manager"
+      ],
+      "fields": [
+        {
+          "label": "Residual Risks / Actions",
+          "type": "textarea"
+        },
+        {
+          "label": "Follow-up Inspection Date",
+          "type": "date"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "environment_lead",
+    "site_manager",
+    "client_representative",
+    "environment_lead_close"
+  ]
+}

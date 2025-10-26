@@ -1,0 +1,95 @@
+{
+  "id": "electrical-isolation-v1",
+  "title": "Electrical Isolation & Energisation Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Project", "type": "text" },
+      { "key": "plantRef", "label": "Plant / Circuit Reference", "type": "text" },
+      { "key": "location", "label": "Location", "type": "text" },
+      { "key": "workScope", "label": "Scope of Work", "type": "textarea" },
+      { "key": "voltageLevel", "label": "Voltage Level", "type": "select", "options": ["LV", "HV", "ELV"] },
+      { "key": "competentPerson", "label": "Senior Authorised / Competent Person", "type": "text" },
+      { "key": "responsiblePerson", "label": "Person in Charge of Work", "type": "text" },
+      { "key": "validFrom", "label": "Isolation Start", "type": "datetime" },
+      { "key": "validTo", "label": "Expected Completion", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "ISOLATION STEPS",
+      "items": [
+        "Equipment identified and verified against drawings / labels",
+        "Load disconnected and controls secured",
+        "Isolation devices applied (LOTO / fuses withdrawn / links removed)",
+        "All energy sources considered (electrical, mechanical, stored)",
+        "Locks and tags applied with contact details",
+        "Test for dead carried out using proved tester",
+        "Test equipment proved before and after test"
+      ],
+      "fields": [
+        {
+          "label": "Isolation Points",
+          "type": "textarea",
+          "placeholder": "List isolators, breakers, fuses removed"
+        },
+        {
+          "label": "Lock Numbers",
+          "type": "text",
+          "placeholder": "Record lock or tag references"
+        }
+      ]
+    },
+    {
+      "title": "WORK IN PROGRESS",
+      "items": [
+        "Permit displayed at point of isolation",
+        "Barriers / screens in place around work area",
+        "Tools inspected and suitable for voltage category",
+        "Test instruments within calibration date",
+        "Live work authorisation obtained where applicable",
+        "Work team briefed on isolation boundaries"
+      ],
+      "fields": [
+        {
+          "label": "Live Working Justification",
+          "type": "textarea",
+          "placeholder": "If live testing required, detail controls"
+        },
+        {
+          "label": "Test Equipment Serial",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "RE-ENERGISATION",
+      "items": [
+        "Work area inspected and tools cleared",
+        "All guards, covers and interlocks reinstated",
+        "All persons withdrawn and accounted for",
+        "Locks / tags removed by person who applied them",
+        "Warning notices removed",
+        "Equipment tested / proved operational",
+        "Permit cancelled and records updated"
+      ],
+      "fields": [
+        {
+          "label": "Energisation Time",
+          "type": "time"
+        },
+        {
+          "label": "Functional Test Results",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "recipient",
+    "competent_person",
+    "issuer_return"
+  ]
+}

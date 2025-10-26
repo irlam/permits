@@ -1,0 +1,93 @@
+{
+  "id": "roof-access-v1",
+  "title": "Roof Access Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Building", "type": "text" },
+      { "key": "roofArea", "label": "Roof Area / Elevation", "type": "text" },
+      { "key": "accessReason", "label": "Reason for Roof Access", "type": "textarea" },
+      { "key": "accessMethod", "label": "Access Method", "type": "select", "options": ["Fixed Ladder", "Portable Ladder", "MEWP", "Internal Stair", "Other"] },
+      { "key": "supervisor", "label": "Permit Issuer", "type": "text" },
+      { "key": "workingParty", "label": "Persons Accessing Roof", "type": "textarea" },
+      { "key": "validFrom", "label": "Access Start", "type": "datetime" },
+      { "key": "validTo", "label": "Access End", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-ACCESS SAFETY",
+      "items": [
+        "Roof structure assessed and safe for access",
+        "Weather conditions suitable – no high winds, ice or lightning",
+        "Edge protection / guardrails in place or alternative fall protection arranged",
+        "Fragile surfaces identified and controlled",
+        "Access equipment inspected and fit for purpose",
+        "Permits for adjacent works reviewed (e.g. craning, hot works)",
+        "Emergency rescue arrangements in place"
+      ],
+      "fields": [
+        {
+          "label": "Wind Speed at Time of Access (mph)",
+          "type": "number",
+          "step": 0.1
+        },
+        {
+          "label": "Fall Protection Method",
+          "type": "select",
+          "options": ["Guardrails", "Safety Line", "Harness", "Air Bag", "None"]
+        }
+      ]
+    },
+    {
+      "title": "DURING WORK CONTROLS",
+      "items": [
+        "Warning signs and exclusion zones in place below roof edge",
+        "Materials secured against wind uplift",
+        "No lone working – buddy system maintained",
+        "Tools tethered where risk of falling items",
+        "Lightning risk monitored (stop work if thunder observed)",
+        "Waste managed to prevent slips / trip hazards"
+      ],
+      "fields": [
+        {
+          "label": "Communications Method",
+          "type": "text",
+          "placeholder": "Radio channel / phone contact"
+        },
+        {
+          "label": "Spotter / Banksman",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "POST-ACCESS CLOSE OUT",
+      "items": [
+        "Roof checked for loose materials or damage",
+        "Access hatch / door secured after use",
+        "Fall protection removed or reinstated as required",
+        "Weather coverings reinstated",
+        "Incident / near miss reports completed if applicable",
+        "Permit closed and handed back"
+      ],
+      "fields": [
+        {
+          "label": "Access Closed At",
+          "type": "time"
+        },
+        {
+          "label": "Condition on Handover",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "roof_team_lead",
+    "safety_observer",
+    "issuer_return"
+  ]
+}

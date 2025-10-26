@@ -1,4 +1,9 @@
 <?php
+declare(strict_types=1);
+
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+
 /**
  * QR Codes Display Page - Simple Version
  * 
@@ -47,8 +52,18 @@ try {
     }
 }
 
+// QR generator reused for each template
+$qrOptions = new QROptions([
+    'outputType'   => QRCode::OUTPUT_IMAGE_PNG,
+    'eccLevel'     => QRCode::ECC_Q,
+    'scale'        => 8,
+    'quietzoneSize'=> 4,
+    'imageBase64'  => false,
+]);
+$qrCode = new QRCode($qrOptions);
+
 // Get base URL
-$baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
+$baseUrl = rtrim($_ENV['APP_URL'] ?? ($app->config('APP_URL') ?? ('https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'))), '/');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -245,13 +260,25 @@ $baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
             <?php foreach ($templates as $template): ?>
                 <?php
                 $createUrl = $baseUrl . '/create-permit-public.php?template=' . urlencode($template['id']);
+                $qrError = null;
+                try {
+                    $qrBinary = $qrCode->render($createUrl);
+                    $qrDataUri = 'data:image/png;base64,' . base64_encode($qrBinary);
+                } catch (Throwable $e) {
+                    $qrDataUri = null;
+                    $qrError = $e->getMessage();
+                }
                 ?>
                 <div class="qr-card">
                     <h3><?php echo htmlspecialchars($template['name']); ?></h3>
                     
                     <div class="qr-code-container">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?php echo urlencode($createUrl); ?>" 
-                             alt="QR Code for <?php echo htmlspecialchars($template['name']); ?>">
+                        <?php if ($qrDataUri): ?>
+                            <img src="<?php echo $qrDataUri; ?>"
+                                 alt="QR Code for <?php echo htmlspecialchars($template['name']); ?>">
+                        <?php else: ?>
+                            <div style="color:#ef4444;font-size:14px;">QR unavailable<?php echo $qrError ? ': ' . htmlspecialchars($qrError) : ''; ?></div>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="qr-url">

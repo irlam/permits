@@ -1,0 +1,99 @@
+{
+  "id": "hazardous-substances-v1",
+  "title": "Hazardous Substances Handling Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Project", "type": "text" },
+      { "key": "substance", "label": "Substance Name", "type": "text" },
+      { "key": "casNumber", "label": "CAS / UN Number", "type": "text" },
+      { "key": "quantity", "label": "Quantity / Volume", "type": "text" },
+      { "key": "workArea", "label": "Work Area", "type": "text" },
+      { "key": "taskDescription", "label": "Task Description", "type": "textarea" },
+      { "key": "msdsRef", "label": "Safety Data Sheet Ref", "type": "text" },
+      { "key": "supervisor", "label": "Responsible Person", "type": "text" },
+      { "key": "validFrom", "label": "Start", "type": "datetime" },
+      { "key": "validTo", "label": "Expected Finish", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PREPARATION & CONTROLS",
+      "items": [
+        "COSHH assessment completed and briefed",
+        "Safety Data Sheet available at point of work",
+        "Storage / segregation arrangements confirmed",
+        "Ventilation / extraction in place",
+        "PPE requirements briefed and available",
+        "Emergency procedures (spill, exposure) communicated",
+        "Monitoring requirements identified (e.g. air quality)"
+      ],
+      "fields": [
+        {
+          "label": "PPE Required",
+          "type": "multiselect",
+          "options": [
+            { "value": "respirator", "label": "Respirator" },
+            { "value": "eye", "label": "Eye Protection" },
+            { "value": "gloves", "label": "Chemical Gloves" },
+            { "value": "coveralls", "label": "Coveralls" },
+            { "value": "footwear", "label": "Chemical Boots" }
+          ]
+        },
+        {
+          "label": "Ventilation Type",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "DURING HANDLING",
+      "items": [
+        "Spill kits and neutralising agents on hand",
+        "Waste containers labelled and available",
+        "Work area access controlled",
+        "No eating or drinking within controlled zone",
+        "Exposure times monitored / job rotation considered",
+        "Environmental protection measures in place"
+      ],
+      "fields": [
+        {
+          "label": "Exposure Limit (8hr TWA)",
+          "type": "text"
+        },
+        {
+          "label": "Monitoring Method",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "POST-TASK",
+      "items": [
+        "Containers sealed and labelled for storage / disposal",
+        "Waste transfer documentation completed",
+        "PPE inspected and disposed / decontaminated",
+        "Area cleaned and returned to safe state",
+        "Any incidents / exposures reported and recorded",
+        "Permit closed and filed"
+      ],
+      "fields": [
+        {
+          "label": "Waste Disposal Route",
+          "type": "text"
+        },
+        {
+          "label": "Decontamination Notes",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "task_supervisor",
+    "hse_advisor",
+    "issuer_return"
+  ]
+}

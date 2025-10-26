@@ -1,0 +1,93 @@
+{
+  "id": "noise-vibration-v1",
+  "title": "Noise & Vibration Control Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Project", "type": "text" },
+      { "key": "workArea", "label": "Work Area", "type": "text" },
+      { "key": "activity", "label": "High-Risk Activity", "type": "textarea" },
+      { "key": "sensitiveReceptors", "label": "Nearby Sensitive Receptors", "type": "textarea" },
+      { "key": "monitoringPlan", "label": "Monitoring Plan Ref", "type": "text" },
+      { "key": "supervisor", "label": "Supervisor", "type": "text" },
+      { "key": "validFrom", "label": "Start", "type": "datetime" },
+      { "key": "validTo", "label": "End", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-WORK CONTROLS",
+      "items": [
+        "Noise & vibration assessment completed",
+        "Local authority / client restrictions identified",
+        "Programme scheduled to avoid quiet hours / sensitive times",
+        "Briefing delivered to workforce and subcontractors",
+        "Equipment maintained and fitted with suppression",
+        "Hearing protection available and controls defined",
+        "Dust mitigation aligned if breaking / cutting"
+      ],
+      "fields": [
+        {
+          "label": "Permitted Working Hours",
+          "type": "text",
+          "placeholder": "e.g. 08:00-18:00 Mon-Fri"
+        },
+        {
+          "label": "Noise Limit (dB LAeq)",
+          "type": "number",
+          "step": 0.1
+        }
+      ]
+    },
+    {
+      "title": "MONITORING & CONTROL",
+      "items": [
+        "Baseline readings taken prior to works",
+        "Monitoring equipment calibrated and deployed",
+        "Breaks / rotation for operatives exceeding exposure limits",
+        "Complaints procedure briefed and logged",
+        "Structural vibration limits agreed with client / engineer",
+        "Interface with neighbours / occupiers managed"
+      ],
+      "fields": [
+        {
+          "label": "Monitoring Equipment ID",
+          "type": "text"
+        },
+        {
+          "label": "Vibration Limit (mm/s PPV)",
+          "type": "number",
+          "step": 0.1
+        }
+      ]
+    },
+    {
+      "title": "POST-WORK",
+      "items": [
+        "Results reviewed against trigger limits",
+        "Complaints recorded and closed out",
+        "Equipment inspected / demobilised",
+        "Follow-up monitoring arranged if required",
+        "Permit closed and records retained"
+      ],
+      "fields": [
+        {
+          "label": "Peak Reading (dB)",
+          "type": "number",
+          "step": 0.1
+        },
+        {
+          "label": "Follow-up Actions",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "environment_lead",
+    "site_manager",
+    "client_representative",
+    "environment_lead_close"
+  ]
+}

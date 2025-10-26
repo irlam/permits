@@ -1,0 +1,93 @@
+{
+  "id": "traffic-management-v1",
+  "title": "Traffic Management Interface Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Project", "type": "text" },
+      { "key": "location", "label": "Location / Road Reference", "type": "text" },
+      { "key": "workDescription", "label": "Works Description", "type": "textarea" },
+      { "key": "trafficManagementPlan", "label": "Traffic Management Plan Ref", "type": "text" },
+      { "key": "permitAuthority", "label": "Permit Authority", "type": "select", "options": ["Local Highway Authority", "National Highways", "Private Estate", "Other"] },
+      { "key": "noticeNumber", "label": "Permit / Notice Number", "type": "text" },
+      { "key": "startDate", "label": "Start Date", "type": "date" },
+      { "key": "startTime", "label": "Start Time", "type": "time" },
+      { "key": "endDate", "label": "End Date", "type": "date" },
+      { "key": "endTime", "label": "End Time", "type": "time" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-DEPLOYMENT",
+      "items": [
+        "Traffic Management plan approved by competent person",
+        "Permit / noticing confirmed with authority",
+        "Underground and overhead services checked",
+        "Chapter 8 signage available and inspected",
+        "Diversion / escort arrangements agreed",
+        "Site specific risk assessment communicated",
+        "Emergency contact list displayed"
+      ],
+      "fields": [
+        {
+          "label": "Authority Contact",
+          "type": "text"
+        },
+        {
+          "label": "TTRO / TTN Reference",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "LIVE WORKS CONTROLS",
+      "items": [
+        "Traffic control operatives briefed and competent",
+        "Pedestrian routes maintained and segregated",
+        "Works vehicles marshalled when reversing",
+        "Speed control measures in place",
+        "Public information boards displayed",
+        "Out-of-hours inspection arrangements confirmed"
+      ],
+      "fields": [
+        {
+          "label": "Traffic Management Provider",
+          "type": "text"
+        },
+        {
+          "label": "Inspection Frequency (per day)",
+          "type": "number",
+          "min": 1
+        }
+      ]
+    },
+    {
+      "title": "DEMOBILISATION",
+      "items": [
+        "All signage removed or covered",
+        "Road surface inspected and defects repaired",
+        "Authority notified of completion",
+        "Public complaints logged and closed",
+        "Plant and materials removed",
+        "Permit closed and records archived"
+      ],
+      "fields": [
+        {
+          "label": "Authority Completion Reference",
+          "type": "text"
+        },
+        {
+          "label": "Snagging Actions",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "traffic_manager",
+    "site_manager",
+    "client_representative",
+    "traffic_manager_close"
+  ]
+}

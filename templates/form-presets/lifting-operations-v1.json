@@ -1,0 +1,95 @@
+{
+  "id": "lifting-operations-v1",
+  "title": "Lifting Operations Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Project / Site", "type": "text" },
+      { "key": "liftLocation", "label": "Lift Location", "type": "text" },
+      { "key": "liftDescription", "label": "Load Description", "type": "textarea" },
+      { "key": "liftDate", "label": "Lift Date", "type": "date" },
+      { "key": "liftTime", "label": "Planned Start Time", "type": "time" },
+      { "key": "craneType", "label": "Crane / Equipment", "type": "select", "options": ["Mobile Crane", "Tower Crane", "Crawler", "MEWP", "Forklift", "Other"] },
+      { "key": "appointee", "label": "Appointed Person", "type": "text" },
+      { "key": "craneSupervisor", "label": "Crane Supervisor", "type": "text" },
+      { "key": "slinger", "label": "Slinger / Signaller", "type": "text" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-LIFT PLANNING",
+      "items": [
+        "Appointed Person lift plan reviewed and available on site",
+        "Risk assessment and method statement briefed to all personnel",
+        "Ground conditions assessed and matting / outrigger support confirmed",
+        "Weather conditions within limits (wind speed, lightning, visibility)",
+        "Equipment certification, LOLER thorough examination in date",
+        "Lift route surveyed – overhead obstructions, exclusion zones established",
+        "Load weight, centre of gravity and lifting points confirmed"
+      ],
+      "fields": [
+        {
+          "label": "Wind Speed Limit",
+          "type": "number",
+          "placeholder": "Max m/s or mph",
+          "step": 0.1
+        },
+        {
+          "label": "Ground Bearing Pressure",
+          "type": "text",
+          "placeholder": "kN/m² or notes"
+        }
+      ]
+    },
+    {
+      "title": "LIFT EXECUTION CONTROLS",
+      "items": [
+        "Exclusion zone barriers in place and marshalled",
+        "Communication method agreed (radios, hand signals)",
+        "Test lift carried out to confirm rigging and balance",
+        "Tag lines fitted where necessary",
+        "Public interface managed (if near footpaths / highways)",
+        "No personnel under suspended loads",
+        "Emergency arrangements briefed (e.g. crane failure, dropped load)"
+      ],
+      "fields": [
+        {
+          "label": "Radio Channel / Call Sign",
+          "type": "text"
+        },
+        {
+          "label": "Banksman Name",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "POST-LIFT & HANDOVER",
+      "items": [
+        "Load landed safely and secured",
+        "Rigging gear inspected for damage post-use",
+        "Equipment demobilised and stowed correctly",
+        "Area returned to normal condition, barriers removed",
+        "Any incidents / near misses reported",
+        "Permit closed and records updated"
+      ],
+      "fields": [
+        {
+          "label": "Lift Completion Time",
+          "type": "time"
+        },
+        {
+          "label": "Notes / Deviations",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "appointee",
+    "crane_supervisor",
+    "slinger",
+    "issuer_return"
+  ]
+}

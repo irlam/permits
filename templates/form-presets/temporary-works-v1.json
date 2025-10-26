@@ -1,0 +1,99 @@
+{
+  "id": "temporary-works-v1",
+  "title": "Temporary Works Permit",
+  "version": 1,
+  "meta": {
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text" },
+      { "key": "site", "label": "Site / Project", "type": "text" },
+      { "key": "twCategory", "label": "Temporary Works Class", "type": "select", "options": ["Category 0", "Category 1", "Category 2", "Category 3"] },
+      { "key": "twDesignRef", "label": "Design Reference", "type": "text", "placeholder": "TW design number / drawing" },
+      { "key": "location", "label": "Location / Grid", "type": "text" },
+      { "key": "description", "label": "Description of Temporary Works", "type": "textarea" },
+      { "key": "designer", "label": "Temporary Works Designer", "type": "text" },
+      { "key": "coordinator", "label": "TWS / TWC", "type": "text" },
+      { "key": "erectionSupervisor", "label": "Erection Supervisor", "type": "text" },
+      { "key": "validFrom", "label": "Erection Start", "type": "datetime" },
+      { "key": "validTo", "label": "Planned Removal", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-CONSTRUCTION",
+      "items": [
+        "Design risk register reviewed and communicated",
+        "Design drawings and calculations checked / approved",
+        "Materials inspected on delivery (certificates available)",
+        "Temporary works set out checked against design",
+        "Stability during erection considered",
+        "Interfaces with permanent works coordinated",
+        "Permit-to-load requirements identified"
+      ],
+      "fields": [
+        {
+          "label": "Design Check Level",
+          "type": "select",
+          "options": ["Check 1", "Check 2", "Independent", "Peer"],
+          "placeholder": "Select design check level"
+        },
+        {
+          "label": "Inspection Frequency",
+          "type": "number",
+          "placeholder": "Inspections per week",
+          "min": 1
+        }
+      ]
+    },
+    {
+      "title": "ERECTION & USE",
+      "items": [
+        "Erection method statement followed",
+        "Access / egress provided and maintained",
+        "Exclusion zones established where required",
+        "Weather monitoring in place if wind sensitive",
+        "Loading limits displayed and briefed",
+        "Monitoring regime in place (settlement, movement)",
+        "Changes to design authorised by TWC"
+      ],
+      "fields": [
+        {
+          "label": "Monitoring Method",
+          "type": "textarea",
+          "placeholder": "e.g. Survey points, tell-tales"
+        },
+        {
+          "label": "Maximum Imposed Load (kN/m²)",
+          "type": "number",
+          "step": 0.1
+        }
+      ]
+    },
+    {
+      "title": "HANDOVER & REMOVAL",
+      "items": [
+        "Temporary works inspected by competent person",
+        "Permit-to-load issued prior to use",
+        "Monitoring records reviewed and acceptable",
+        "Dismantling method statement briefed",
+        "Area cleared of debris and reinstated",
+        "Records updated and filed"
+      ],
+      "fields": [
+        {
+          "label": "Permit to Load Issued By",
+          "type": "text"
+        },
+        {
+          "label": "Removal Date",
+          "type": "date"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "twc_issue",
+    "erection_supervisor",
+    "twc_load",
+    "twc_return"
+  ]
+}

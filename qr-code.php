@@ -4,8 +4,8 @@
 //   /qr-code.php?id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 //   /qr-code.php?link=PUBLIC_UNIQUE_TOKEN
 //
-// Requires composer library endroid/qr-code.
-//   composer require endroid/qr-code:^5
+// Uses chillerlan/php-qrcode for generation. Install/update via:
+//   composer require chillerlan/php-qrcode:^5
 //
 // Notes:
 // - Uses APP_URL from .env as base (e.g., https://permits.defecttracker.uk)
@@ -13,17 +13,15 @@
 
 declare(strict_types=1);
 
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+
 date_default_timezone_set('Europe/London');
 
 // Bootstrap app (PDO + ENV)
 $root = __DIR__;
 require_once $root . '/vendor/autoload.php';
 [$app, $db] = require $root . '/src/bootstrap.php';
-
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
-use Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeMargin;
 
 // --- Helpers ---
 function app_base_url(): string {
@@ -77,17 +75,25 @@ $permitUrl = $base . '/view-permit-public.php?link=' . rawurlencode($permit['uni
 
 // --- Generate QR ---
 try {
-    // Important: do NOT send any output before headers (no BOM / echo / whitespace)
-    $builder = Builder::create()
-        ->data($permitUrl)
-        ->encoding(new Encoding('UTF-8'))
-        ->errorCorrectionLevel(new ErrorCorrectionLevelHigh())
-        ->roundBlockSizeMode(new RoundBlockSizeModeMargin())
-        ->size(512)           // overall image size in px
-        ->margin(16)          // white border around the QR
-        ->build();
+    $sizeParam = isset($_GET['size']) ? (int)$_GET['size'] : 512;
+    $sizeParam = max(120, min(1600, $sizeParam));
 
-    $png = $builder->getString(); // PNG binary
+    // Each module gets scaled; this keeps the final bitmap within ~requested size.
+    $scale = max(2, min(40, (int)round($sizeParam / 45)));
+    $quietzone = max(4, (int)round($scale));
+
+    $options = new QROptions([
+        'outputType'   => QRCode::OUTPUT_IMAGE_PNG,
+        'eccLevel'     => QRCode::ECC_H,
+        'scale'        => $scale,
+        'quietzoneSize'=> $quietzone,
+        'imageBase64'  => false,
+    ]);
+
+    $png = (new QRCode($options))->render($permitUrl);
+
+    $download = isset($_GET['download']) && $_GET['download'] !== '0';
+    $filename = 'permit-' . preg_replace('/[^a-z0-9]+/i', '-', $permit['ref_number'] ?? $permit['id']) . '.png';
 
     // Caching headers (immutable — change URL or bust cache when contents change)
     header('Content-Type: image/png');
@@ -95,6 +101,9 @@ try {
     header('Cache-Control: public, max-age=31536000, immutable');
     $lastMod = gmdate('D, d M Y H:i:s') . ' GMT';
     header('Last-Modified: ' . $lastMod);
+    if ($download) {
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+    }
 
     echo $png;
     exit;
@@ -103,7 +112,7 @@ try {
     // Library not installed or other render error
     fail(
         "QR generation error: " . $e->getMessage() .
-        "\nHint: install the QR library with:\n  composer require endroid/qr-code:^5\n\n" .
+        "\nHint: install/update with:\n  composer require chillerlan/php-qrcode:^5\n\n" .
         "You can still use this URL directly:\n" . $permitUrl,
         500
     );
