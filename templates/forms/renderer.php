@@ -46,7 +46,7 @@ $title  = $schema['title'] ?? 'Form';
     </section>
 
     <?php foreach(($schema['sections']??[]) as $sIdx=>$sec): ?>
-      <details class="card" <?= $sIdx<2?'open':''?>>
+      <details class="card" open>
         <summary><strong class="cp"><?=htmlspecialchars($sec['title'])?></strong></summary>
         <div class="items">
           <?php foreach(($sec['items']??[]) as $i=>$txt): $id="s{$sIdx}_$i"; ?>
