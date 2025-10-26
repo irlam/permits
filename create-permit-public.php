@@ -41,6 +41,26 @@ try {
     die("Error loading template: " . $e->getMessage());
 }
 
+$formStructure = [];
+
+try {
+    if (!empty($template['form_structure'])) {
+        $decodedStructure = json_decode((string)$template['form_structure'], true);
+        if (is_array($decodedStructure)) {
+            $formStructure = $decodedStructure;
+        }
+    }
+
+    if ((empty($formStructure) || !is_array($formStructure)) && !empty($template['json_schema'])) {
+        $schemaDecoded = json_decode((string)$template['json_schema'], true);
+        if (is_array($schemaDecoded)) {
+            $formStructure = \Permits\FormTemplateSeeder::buildPublicFormStructure($schemaDecoded);
+        }
+    }
+} catch (\Throwable $e) {
+    $formStructure = [];
+}
+
 // Handle form submission
 $success = false;
 $error = null;
@@ -64,15 +84,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Invalid email address");
         }
         
-        // Decode form structure
-        $form_structure = json_decode($template['form_structure'], true);
-        
-        // Collect permit data
+        // Collect permit data using the parsed structure
         $permit_data = [];
-        foreach ($form_structure as $section) {
+        foreach ($formStructure as $section) {
+            if (!isset($section['fields']) || !is_array($section['fields'])) {
+                continue;
+            }
+
             foreach ($section['fields'] as $field) {
-                $field_name = $field['name'];
-                $permit_data[$field_name] = $_POST[$field_name] ?? '';
+                if (!is_array($field) || empty($field['name'])) {
+                    continue;
+                }
+
+                $fieldName = (string)$field['name'];
+                $rawValue = $_POST[$fieldName] ?? '';
+
+                if (is_array($rawValue)) {
+                    $rawValue = array_values(array_filter(array_map('trim', $rawValue), static function ($value) {
+                        return $value !== '' && $value !== null;
+                    }));
+                    $value = implode(', ', $rawValue);
+                } else {
+                    $value = trim((string)$rawValue);
+                }
+
+                $permit_data[$fieldName] = $value;
             }
         }
         
@@ -367,60 +403,145 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <!-- Dynamic Form Fields -->
-                    <?php
-                    $form_structure = json_decode($template['form_structure'], true);
-                    
-                    foreach ($form_structure as $section):
+                    <?php foreach ($formStructure as $section):
+                        if (!isset($section['fields']) || !is_array($section['fields'])) {
+                            continue;
+                        }
                     ?>
                         <div class="section-title"><?php echo htmlspecialchars($section['title']); ?></div>
                         
-                        <?php foreach ($section['fields'] as $field): ?>
+                        <?php foreach ($section['fields'] as $field):
+                            if (!is_array($field) || empty($field['name'])) {
+                                continue;
+                            }
+
+                            $fieldType = $field['type'] ?? 'text';
+                            $fieldName = (string)$field['name'];
+                            $fieldLabel = (string)($field['label'] ?? $fieldName);
+                            $fieldRequired = !empty($field['required']);
+                            $fieldPlaceholder = (string)($field['placeholder'] ?? '');
+                            $fieldOptions = $field['options'] ?? [];
+                        ?>
                             <div class="form-group">
                                 <label>
-                                    <?php echo htmlspecialchars($field['label']); ?>
-                                    <?php if ($field['required']): ?>
+                                    <?php echo htmlspecialchars($fieldLabel); ?>
+                                    <?php if ($fieldRequired): ?>
                                         <span class="required">*</span>
                                     <?php endif; ?>
                                 </label>
                                 
-                                <?php if ($field['type'] === 'text'): ?>
-                                    <input 
-                                        type="text" 
-                                        name="<?php echo htmlspecialchars($field['name']); ?>"
-                                        <?php echo $field['required'] ? 'required' : ''; ?>
-                                    >
-                                    
-                                <?php elseif ($field['type'] === 'textarea'): ?>
+                                <?php if ($fieldType === 'textarea'): ?>
                                     <textarea 
-                                        name="<?php echo htmlspecialchars($field['name']); ?>"
-                                        <?php echo $field['required'] ? 'required' : ''; ?>
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                     ></textarea>
-                                    
-                                <?php elseif ($field['type'] === 'select'): ?>
+                                <?php elseif ($fieldType === 'select'): ?>
                                     <select 
-                                        name="<?php echo htmlspecialchars($field['name']); ?>"
-                                        <?php echo $field['required'] ? 'required' : ''; ?>
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
                                     >
                                         <option value="">Select...</option>
-                                        <?php foreach ($field['options'] as $option): ?>
-                                            <option value="<?php echo htmlspecialchars($option); ?>">
-                                                <?php echo htmlspecialchars($option); ?>
+                                        <?php foreach ($fieldOptions as $option):
+                                            if (!is_array($option)) {
+                                                $optionValue = $optionLabel = (string)$option;
+                                            } else {
+                                                $optionValue = (string)($option['value'] ?? ($option[0] ?? ''));
+                                                $optionLabel = (string)($option['label'] ?? ($option[1] ?? $optionValue));
+                                            }
+                                            if ($optionValue === '') { continue; }
+                                        ?>
+                                            <option value="<?php echo htmlspecialchars($optionValue); ?>">
+                                                <?php echo htmlspecialchars($optionLabel); ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    
-                                <?php elseif ($field['type'] === 'date'): ?>
+                                <?php elseif ($fieldType === 'select_multiple'): ?>
+                                    <select 
+                                        name="<?php echo htmlspecialchars($fieldName); ?>[]"
+                                        multiple
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                    >
+                                        <?php foreach ($fieldOptions as $option):
+                                            if (!is_array($option)) {
+                                                $optionValue = $optionLabel = (string)$option;
+                                            } else {
+                                                $optionValue = (string)($option['value'] ?? ($option[0] ?? ''));
+                                                $optionLabel = (string)($option['label'] ?? ($option[1] ?? $optionValue));
+                                            }
+                                            if ($optionValue === '') { continue; }
+                                        ?>
+                                            <option value="<?php echo htmlspecialchars($optionValue); ?>">
+                                                <?php echo htmlspecialchars($optionLabel); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                <?php elseif ($fieldType === 'radio'): ?>
+                                    <div style="display:flex;flex-direction:column;gap:8px;">
+                                        <?php foreach ($fieldOptions as $option):
+                                            if (!is_array($option)) {
+                                                $optionValue = $optionLabel = (string)$option;
+                                            } else {
+                                                $optionValue = (string)($option['value'] ?? ($option[0] ?? ''));
+                                                $optionLabel = (string)($option['label'] ?? ($option[1] ?? $optionValue));
+                                            }
+                                            if ($optionValue === '') { continue; }
+                                            $optionId = $fieldName . '_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower($optionValue));
+                                        ?>
+                                            <label style="display:flex;align-items:center;gap:8px;">
+                                                <input type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo $fieldRequired ? 'required' : ''; ?>>
+                                                <span><?php echo htmlspecialchars($optionLabel); ?></span>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php elseif ($fieldType === 'date'): ?>
                                     <input 
                                         type="date" 
-                                        name="<?php echo htmlspecialchars($field['name']); ?>"
-                                        <?php echo $field['required'] ? 'required' : ''; ?>
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                     >
-                                    
-                                <?php elseif ($field['type'] === 'time'): ?>
+                                <?php elseif ($fieldType === 'time'): ?>
                                     <input 
                                         type="time" 
-                                        name="<?php echo htmlspecialchars($field['name']); ?>"
-                                        <?php echo $field['required'] ? 'required' : ''; ?>
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                    >
+                                <?php elseif ($fieldType === 'datetime'): ?>
+                                    <input 
+                                        type="datetime-local" 
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                    >
+                                <?php elseif ($fieldType === 'number'): ?>
+                                    <input 
+                                        type="number" 
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                    >
+                                <?php elseif ($fieldType === 'email'): ?>
+                                    <input 
+                                        type="email" 
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                    >
+                                <?php elseif ($fieldType === 'tel'): ?>
+                                    <input 
+                                        type="tel" 
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                    >
+                                <?php else: ?>
+                                    <input 
+                                        type="text" 
+                                        name="<?php echo htmlspecialchars($fieldName); ?>"
+                                        <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                     >
                                 <?php endif; ?>
                             </div>
