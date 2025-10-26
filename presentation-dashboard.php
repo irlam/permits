@@ -562,7 +562,7 @@ $templateValues = array_map('intval', array_column($topTemplates, 'total'));
         Narrating insights&hellip;
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-qiWs4V/mQJu1WDVYj1WFJsbgx5caX5/Cgtiw55GaRLM/J7rnNdw1JkiNeVYwMy3p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" referrerpolicy="no-referrer"></script>
     <script>
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const observerSupported = 'IntersectionObserver' in window;
