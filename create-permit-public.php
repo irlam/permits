@@ -295,6 +295,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #667eea;
             border: 2px solid #667eea;
         }
+        /* Choice button group (Yes / No / N/A) */
+        .choice-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .choice-input { position: absolute; opacity: 0; width: 0; height: 0; }
+        .choice-pill {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 2px solid #e5e7eb;
+            background: #ffffff;
+            color: #374151;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: all .15s ease;
+        }
+        .choice-pill:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(102,126,234,.15); }
+        .choice-input:focus + .choice-pill { outline: 2px solid #a5b4fc; outline-offset: 2px; }
+        .choice-input:checked + .choice-pill {
+            border-color: #6366f1;
+            color: #ffffff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 6px 18px rgba(102,126,234,.35);
+        }
         .success-message {
             background: #d1fae5;
             border: 2px solid #10b981;
@@ -477,22 +500,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <?php endforeach; ?>
                                     </select>
                                 <?php elseif ($fieldType === 'radio'): ?>
-                                    <div style="display:flex;flex-direction:column;gap:8px;">
-                                        <?php foreach ($fieldOptions as $option):
-                                            if (!is_array($option)) {
-                                                $optionValue = $optionLabel = (string)$option;
-                                            } else {
-                                                $optionValue = (string)($option['value'] ?? ($option[0] ?? ''));
-                                                $optionLabel = (string)($option['label'] ?? ($option[1] ?? $optionValue));
-                                            }
-                                            if ($optionValue === '') { continue; }
-                                            $optionId = $fieldName . '_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower($optionValue));
+                                    <div class="choice-group" role="radiogroup" aria-label="<?php echo htmlspecialchars($fieldLabel); ?>">
+                                        <?php 
+                                            $firstOption = true; 
+                                            foreach ($fieldOptions as $option):
+                                                if (!is_array($option)) {
+                                                    $optionValue = $optionLabel = (string)$option;
+                                                } else {
+                                                    $optionValue = (string)($option['value'] ?? ($option[0] ?? ''));
+                                                    $optionLabel = (string)($option['label'] ?? ($option[1] ?? $optionValue));
+                                                }
+                                                if ($optionValue === '') { continue; }
+                                                $optionId = $fieldName . '_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower($optionValue));
                                         ?>
-                                            <label style="display:flex;align-items:center;gap:8px;">
-                                                <input type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo $fieldRequired ? 'required' : ''; ?>>
-                                                <span><?php echo htmlspecialchars($optionLabel); ?></span>
-                                            </label>
-                                        <?php endforeach; ?>
+                                            <input class="choice-input" type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo ($fieldRequired && $firstOption) ? 'required' : ''; ?>>
+                                            <label class="choice-pill" for="<?php echo htmlspecialchars($optionId); ?>"><?php echo htmlspecialchars($optionLabel); ?></label>
+                                        <?php $firstOption = false; endforeach; ?>
                                     </div>
                                 <?php elseif ($fieldType === 'date'): ?>
                                     <input 
