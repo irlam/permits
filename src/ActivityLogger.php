@@ -9,21 +9,68 @@ use Permits\Db;
 function log_activity(Db $db, string $user_id, string $type, string $description): bool
 {
     try {
-        $stmt = $db->pdo->prepare('
-            INSERT INTO activity_log (user_id, type, description, ip_address, user_agent, created_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ');
+        static $columnCache = null;
 
-        $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
-        $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        if ($columnCache === null) {
+            $driver = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'mysql') {
+                $rows = $db->pdo->query('SHOW COLUMNS FROM activity_log')->fetchAll(\PDO::FETCH_ASSOC);
+                $columnCache = array_map(static fn($row) => strtolower((string)$row['Field']), $rows);
+            } else {
+                $rows = $db->pdo->query('PRAGMA table_info(activity_log)')->fetchAll(\PDO::FETCH_ASSOC);
+                $columnCache = array_map(static fn($row) => strtolower((string)$row['name']), $rows);
+            }
+        }
 
-        $stmt->execute([
-            $user_id,
-            $type,
-            $description,
-            $ip_address,
-            $user_agent,
-        ]);
+        $columns = $columnCache ?? [];
+        $insertColumns = [];
+        $placeholders = [];
+        $params = [];
+
+        $insertColumns[] = 'user_id';
+        $placeholders[] = '?';
+        $params[] = $user_id;
+
+        $recordDescription = $description;
+
+        if (in_array('type', $columns, true)) {
+            $insertColumns[] = 'type';
+            $placeholders[] = '?';
+            $params[] = $type;
+        } elseif (in_array('action', $columns, true)) {
+            $insertColumns[] = 'action';
+            $placeholders[] = '?';
+            $params[] = $type;
+        } else {
+            $recordDescription = trim($type . ' ' . $recordDescription);
+        }
+
+        if (in_array('description', $columns, true)) {
+            $insertColumns[] = 'description';
+            $placeholders[] = '?';
+            $params[] = $recordDescription;
+        } elseif (in_array('details', $columns, true)) {
+            $insertColumns[] = 'details';
+            $placeholders[] = '?';
+            $params[] = $recordDescription;
+        }
+
+        if (in_array('ip_address', $columns, true)) {
+            $insertColumns[] = 'ip_address';
+            $placeholders[] = '?';
+            $params[] = $_SERVER['REMOTE_ADDR'] ?? null;
+        }
+
+        if (in_array('user_agent', $columns, true)) {
+            $insertColumns[] = 'user_agent';
+            $placeholders[] = '?';
+            $params[] = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        }
+
+        $sql = 'INSERT INTO activity_log (' . implode(', ', $insertColumns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+
+        $stmt = $db->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return true;
     } catch (\Throwable $e) {
