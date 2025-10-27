@@ -154,77 +154,51 @@ function formatDateUK($date) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Permit System - Check Status & Create Permits</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#667eea">
     <meta name="description" content="Create and manage work permits easily">
+    <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icon-192.png">
-    
+    <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+      .home-grid{display:grid;grid-template-columns:1fr;gap:16px}
+      @media(min-width:900px){.home-grid{grid-template-columns:1.2fr .8fr}}
+      .section-title{font-size:18px;color:#e5e7eb;margin:0 0 8px;font-weight:600}
+      .muted{color:#94a3b8}
+    </style>
 
         /* Header */
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 32px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .header-content h1 {
-            font-size: 32px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Remove large inline styles; rely on app.css cards/buttons */
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 8px;
-        }
+                </head>
+        <body class="theme-dark">
+            <header class="site-header">
+                <h1 class="site-header__title">🛡️ Permit System</h1>
+                <div class="site-header__actions">
+                    <?php if ($isLoggedIn && $currentUser): ?>
+                        <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('dashboard.php'))?>">📊 Dashboard</a>
+                        <?php if (($currentUser['role'] ?? '') === 'admin'): ?>
+                            <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('admin.php'))?>">⚙️ Admin</a>
+                        <?php endif; ?>
+                        <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('logout.php'))?>">🚪 Logout</a>
+                    <?php else: ?>
+                        <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('dashboard.php'))?>">📊 Dashboard</a>
+                        <a class="btn btn-primary" href="<?=htmlspecialchars($app->url('login.php'))?>">🔐 Manager Login</a>
+                    <?php endif; ?>
+                </div>
+            </header>
+            <main class="site-container">
+                <section class="hero-card">
+                    <h2>Check status or create a new permit</h2>
+                    <p class="muted">Fast, simple and mobile-friendly.</p>
+                </section>
 
-        .header-content p {
-            color: #6b7280;
-            font-size: 16px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border: none;
+                <div class="home-grid">
+                    <section class="surface-card">
+                        <div class="card-header"><h3 class="section-title">📧 Check Permit Status</h3></div>
+                        <p class="muted">Enter your email to see your recent permits.</p>
             border-radius: 8px;
             font-size: 15px;
             font-weight: 600;

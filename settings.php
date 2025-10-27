@@ -106,11 +106,7 @@ $base = $_ENV['APP_URL'] ?? '/';
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
   <title>Settings - Permits</title>
-  <?php 
-    $cssPath = $root . '/assets/app.css';
-    $cssVer  = @filemtime($cssPath) ?: time();
-  ?>
-  <link rel="stylesheet" href="<?php echo htmlspecialchars($app->url('assets/app.css')); ?>?v=<?php echo urlencode((string)$cssVer); ?>">
+  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
 </head>
 <body>
 <header class="top">

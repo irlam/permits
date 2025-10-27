@@ -79,169 +79,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Permit System</title>
+    <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
+    <meta name="theme-color" content="#0f172a">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        
-        .login-container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 400px;
-            overflow: hidden;
-        }
-        
-        .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 32px;
-            text-align: center;
-        }
-        
-        .login-header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        
-        .login-header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-        
-        .login-body {
-            padding: 32px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #374151;
-        }
-        
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 15px;
-            transition: border-color 0.2s;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .error-message {
-            background: #fee2e2;
-            border: 1px solid #ef4444;
-            color: #991b1b;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .login-footer {
-            text-align: center;
-            padding: 20px 32px 32px;
-            color: #6b7280;
-            font-size: 14px;
-        }
-        
-        .login-footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .login-footer a:hover {
-            text-decoration: underline;
-        }
+      /* Minimal input styling to blend with dark theme */
+      .form-group label{display:block;font-weight:600;margin:0 0 6px;color:#cbd5e1}
+      .form-group input{width:100%;padding:10px 12px;background:#0b1220;border:1px solid #334155;border-radius:8px;color:#e5e7eb}
+      .form-group input:focus{outline:none;border-color:#3b82f6}
+      .login-card{max-width:420px;margin:0 auto}
     </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>🛡️ Permit System</h1>
-            <p>Manager Login</p>
-        </div>
-        
-        <div class="login-body">
-            <?php if ($error): ?>
-                <div class="error-message">
-                    <?php echo htmlspecialchars($error); ?>
-                </div>
-            <?php endif; ?>
-            
-            <form method="POST" action="<?php echo htmlspecialchars($app->url('login.php')); ?>">
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        required 
-                        autofocus
-                        value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
-                    >
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        required
-                    >
-                </div>
-                
-                <button type="submit" class="btn">
-                    Login
-                </button>
-            </form>
-        </div>
-        
-        <div class="login-footer">
-            <a href="<?php echo htmlspecialchars($app->url('/')); ?>">← Back to Homepage</a>
-        </div>
+    </head>
+<body class="theme-dark">
+  <header class="site-header">
+    <h1 class="site-header__title">🛡️ Permit System</h1>
+    <div class="site-header__actions">
+      <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('/'))?>">🏠 Home</a>
     </div>
+  </header>
+  <main class="site-container">
+    <section class="surface-card login-card">
+      <div class="card-header">
+        <h3>🔐 Manager Login</h3>
+      </div>
+
+      <?php if ($error): ?>
+        <div class="alert alert-error" role="alert">
+          <?php echo htmlspecialchars($error); ?>
+        </div>
+      <?php endif; ?>
+
+      <form method="POST" action="<?php echo htmlspecialchars($app->url('login.php')); ?>">
+        <div class="form-group" style="margin-bottom:14px;">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" required autofocus value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+        </div>
+        <div class="form-group" style="margin-bottom:18px;">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">Login</button>
+      </form>
+    </section>
+
+    <div style="text-align:center;color:#94a3b8;margin-top:16px;">
+      <a class="btn btn-ghost" href="<?=htmlspecialchars($app->url('/'))?>">← Back to Homepage</a>
+    </div>
+  </main>
 </body>
 </html>

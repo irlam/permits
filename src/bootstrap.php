@@ -24,6 +24,9 @@ $root = \realpath(__DIR__ . '/..') ?: __DIR__ . '/..';
 /** 1) Composer autoload */
 require_once $root . '/vendor/autoload.php';
 
+/** 1b) Cache helper (no-cache headers + asset() helper) */
+require_once __DIR__ . '/cache-helper.php';
+
 /** 2) Load environment (.env) early */
 try {
     if (\is_file($root . '/.env')) {
