@@ -19,12 +19,28 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
-// Get template ID from query string
+// Get template ID from query string or resume an existing draft via unique link
 $template_id = $_GET['template'] ?? null;
+$draft_link = $_GET['draft'] ?? null;
 
-if (!$template_id) {
+if (!$template_id && !$draft_link) {
     header('Location: ' . $app->url('/'));
     exit;
+}
+
+// Load existing draft if present
+$existingPermit = null;
+if ($draft_link) {
+    try {
+        $st = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? AND status = 'draft' LIMIT 1");
+        $st->execute([$draft_link]);
+        $existingPermit = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($existingPermit) {
+            $template_id = $existingPermit['template_id'];
+        }
+    } catch (Exception $e) {
+        // Ignore; we'll fall back to normal flow
+    }
 }
 
 // Get template details
@@ -66,6 +82,13 @@ $success = false;
 $error = null;
 $permit_id = null;
 $unique_link = null;
+// Prefill data when editing a draft
+$existingData = [];
+if ($existingPermit) {
+    $permit_id = $existingPermit['id'];
+    $unique_link = $existingPermit['unique_link'];
+    $existingData = json_decode((string)($existingPermit['form_data'] ?? ''), true) ?: [];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -79,20 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($holder_name) || empty($holder_email)) {
             throw new Exception("Name and email are required");
         }
-        
-        if (!filter_var($holder_email, FILTER_VALIDATE_EMAIL)) {
-            throw new Exception("Invalid email address");
-        }
         // Generate IDs early so we can store media predictably
-        $permit_id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
-        $unique_link = md5($permit_id . time() . $holder_email);
-        $ref_number = 'PTW-' . date('Y') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        if (!$isUpdate) {
+            $permit_id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0x0fff) | 0x4000,
+                mt_rand(0, 0x3fff) | 0x8000,
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            );
+            $unique_link = md5($permit_id . time() . $holder_email);
+        }
+        $ref_number = $existingPermit['ref_number'] ?? ('PTW-' . date('Y') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT));
 
         // Collect permit data using the parsed structure (values + optional notes)
         $permit_data = [];
@@ -107,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $fieldName = (string)$field['name'];
-                $rawValue = $_POST[$fieldName] ?? '';
+                $rawValue = $_POST[$fieldName] ?? ($existingData[$fieldName] ?? '');
 
                 if (is_array($rawValue)) {
                     $rawValue = array_values(array_filter(array_map('trim', $rawValue), static function ($value) {
@@ -124,6 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $noteKey = $fieldName . '_note';
                 if (isset($_POST[$noteKey])) {
                     $permit_data[$noteKey] = trim((string)$_POST[$noteKey]);
+                } elseif (isset($existingData[$noteKey])) {
+                    $permit_data[$noteKey] = trim((string)$existingData[$noteKey]);
                 }
             }
         }
@@ -164,6 +187,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 if (!empty($paths)) {
                     $permit_data[$mediaKey] = implode(', ', $paths);
+                } elseif (!empty($existingData[$mediaKey])) {
+                    // Preserve previously uploaded media when editing and no new files were added
+                    $permit_data[$mediaKey] = (string)$existingData[$mediaKey];
                 }
             }
         }
@@ -218,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Permit - <?php echo htmlspecialchars($template['name']); ?></title>
+    <title><?php echo $existingPermit ? 'Edit Draft' : 'Create Permit'; ?> - <?php echo htmlspecialchars($template['name']); ?></title>
     <style>
         * {
             margin: 0;
@@ -417,13 +443,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php if ($success): ?>
                 <!-- Success Message -->
                 <div class="success-message">
-                    <h2>✅ Permit Submitted Successfully!</h2>
-                    <p><strong>Reference:</strong> #<?php echo htmlspecialchars($ref_number ?? 'N/A'); ?></p>
-                    <p>Your permit is now awaiting manager approval.</p>
+                    <?php if (!empty($isDraftAction)): ?>
+                        <h2>📝 Draft Saved</h2>
+                        <p>You can resume editing this permit using the link below.</p>
+                    <?php else: ?>
+                        <h2>✅ Permit Submitted Successfully!</h2>
+                        <p><strong>Reference:</strong> #<?php echo htmlspecialchars($ref_number ?? 'N/A'); ?></p>
+                        <p>Your permit is now awaiting manager approval.</p>
+                    <?php endif; ?>
                     <p style="margin-top: 16px;">
                         You can check the status anytime on the homepage<br>
                         by entering your email address.
                     </p>
+                    <?php if (!empty($unique_link)): ?>
+                        <div style="margin-top: 12px; font-size: 14px; color:#374151;">
+                            <div><strong>Edit Link:</strong> <a href="<?php echo htmlspecialchars($app->url('create-permit-public.php?draft=' . urlencode($unique_link))); ?>">Resume editing</a></div>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($notification_enabled)): ?>
                         <p style="margin-top: 16px; font-size: 14px;">
                             🔔 We'll send you a notification when your permit is approved!
@@ -448,23 +484,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
                 
                 <form method="POST" id="permitForm" enctype="multipart/form-data">
+                    <?php if ($existingPermit): ?>
+                        <input type="hidden" name="permit_id" value="<?php echo htmlspecialchars($existingPermit['id']); ?>">
+                    <?php endif; ?>
                     
                     <!-- Your Information Section -->
                     <div class="section-title">Your Information</div>
                     
                     <div class="form-group">
                         <label>Your Name <span class="required">*</span></label>
-                        <input type="text" name="holder_name" required placeholder="John Smith">
+                        <input type="text" name="holder_name" required placeholder="John Smith" value="<?php echo htmlspecialchars($existingPermit['holder_name'] ?? ''); ?>">
                     </div>
                     
                     <div class="form-group">
                         <label>Your Email <span class="required">*</span></label>
-                        <input type="email" name="holder_email" required placeholder="john@example.com">
+                        <input type="email" name="holder_email" required placeholder="john@example.com" value="<?php echo htmlspecialchars($existingPermit['holder_email'] ?? ''); ?>">
                     </div>
                     
                     <div class="form-group">
                         <label>Your Phone Number</label>
-                        <input type="tel" name="holder_phone" placeholder="+44 7700 900000">
+                        <input type="tel" name="holder_phone" placeholder="+44 7700 900000" value="<?php echo htmlspecialchars($existingPermit['holder_phone'] ?? ''); ?>">
                     </div>
                     
                     <!-- Push Notifications -->
@@ -513,7 +552,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
-                                    ></textarea>
+                                    ><?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?></textarea>
                                 <?php elseif ($fieldType === 'select'): ?>
                                     <select 
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
@@ -529,7 +568,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             }
                                             if ($optionValue === '') { continue; }
                                         ?>
-                                            <option value="<?php echo htmlspecialchars($optionValue); ?>">
+                                            <option value="<?php echo htmlspecialchars($optionValue); ?>" <?php echo ((string)($existingData[$fieldName] ?? '') === (string)$optionValue) ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($optionLabel); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -540,6 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         multiple
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                     >
+                                        <?php $existingVals = array_values(array_filter(array_map('trim', explode(',', (string)($existingData[$fieldName] ?? ''))))); ?>
                                         <?php foreach ($fieldOptions as $option):
                                             if (!is_array($option)) {
                                                 $optionValue = $optionLabel = (string)$option;
@@ -549,7 +589,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             }
                                             if ($optionValue === '') { continue; }
                                         ?>
-                                            <option value="<?php echo htmlspecialchars($optionValue); ?>">
+                                            <option value="<?php echo htmlspecialchars($optionValue); ?>" <?php echo in_array((string)$optionValue, $existingVals, true) ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($optionLabel); ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -559,6 +599,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="choice-group <?php echo $isScoreItem ? 'vertical' : ''; ?>" role="radiogroup" aria-label="<?php echo htmlspecialchars($fieldLabel); ?>">
                                         <?php 
                                             $firstOption = true; 
+                                            $existingVal = (string)($existingData[$fieldName] ?? '');
                                             foreach ($fieldOptions as $option):
                                                 if (!is_array($option)) {
                                                     $optionValue = $optionLabel = (string)$option;
@@ -570,7 +611,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 $optionId = $fieldName . '_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower($optionValue));
                                                 $variant = in_array(strtolower($optionValue), ['yes','no','na'], true) ? 'choice-' . strtolower($optionValue) : '';
                                         ?>
-                                            <input class="choice-input" type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo ($fieldRequired && $firstOption) ? 'required' : ''; ?>>
+                                            <input class="choice-input" type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo ($fieldRequired && $firstOption) ? 'required' : ''; ?> <?php echo ($existingVal !== '' && (string)$existingVal === (string)$optionValue) ? 'checked' : ''; ?>>
                                             <label class="choice-pill <?php echo htmlspecialchars($variant); ?>" for="<?php echo htmlspecialchars($optionId); ?>"><?php echo htmlspecialchars($optionLabel); ?></label>
                                         <?php $firstOption = false; endforeach; ?>
                                     </div>
@@ -580,7 +621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <button type="button" class="tool-link toggle-media" data-for="<?php echo htmlspecialchars($fieldName); ?>">🖼️ Media</button>
                                         </div>
                                         <div class="note-box" id="note_<?php echo htmlspecialchars($fieldName); ?>">
-                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>_note" placeholder="Add a note..."></textarea>
+                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>_note" placeholder="Add a note..."><?php echo htmlspecialchars((string)($existingData[$fieldName . '_note'] ?? '')); ?></textarea>
                                         </div>
                                         <div class="media-box" id="media_<?php echo htmlspecialchars($fieldName); ?>">
                                             <input type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple>
@@ -593,6 +634,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php elseif ($fieldType === 'time'): ?>
                                     <input 
@@ -600,6 +642,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php elseif ($fieldType === 'datetime'): ?>
                                     <input 
@@ -607,6 +650,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php elseif ($fieldType === 'number'): ?>
                                     <input 
@@ -614,6 +658,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php elseif ($fieldType === 'email'): ?>
                                     <input 
@@ -621,6 +666,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php elseif ($fieldType === 'tel'): ?>
                                     <input 
@@ -628,6 +674,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php else: ?>
                                     <input 
@@ -635,6 +682,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
+                                        value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
                                 <?php endif; ?>
                             </div>
@@ -643,9 +691,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <!-- Submit -->
                     <div style="margin-top: 32px;">
-                        <button type="submit" class="btn btn-primary">
-                            ✅ Submit Permit for Approval
-                        </button>
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <button type="submit" name="action" value="save_draft" class="btn btn-secondary" style="flex:1; min-width:200px;">
+                                📝 Save Draft
+                            </button>
+                            <button type="submit" name="action" value="submit" class="btn btn-primary" style="flex:2; min-width:240px;">
+                                ✅ Submit Permit for Approval
+                            </button>
+                        </div>
                     </div>
                     
                     <div style="margin-top: 16px; text-align: center;">
@@ -667,6 +720,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 });
             }
+        });
+        // Save Draft should bypass HTML5 required on dynamic fields
+        (function(){
+            var form = document.getElementById('permitForm');
+            if (!form) return;
+            var saveBtn = form.querySelector('button[name="action"][value="save_draft"]');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function(){
+                    form.dataset.draft = '1';
+                });
+            }
+            form.addEventListener('submit', function(){
+                if (form.dataset.draft === '1') {
+                    var nodes = form.querySelectorAll('[required]');
+                    nodes.forEach(function(el){
+                        if (el.name !== 'holder_name' && el.name !== 'holder_email') {
+                            el.removeAttribute('required');
+                        }
+                    });
+                }
+            });
+        })();
+        // Toggle Note/Media per score item
+        document.addEventListener('click', function(e){
+            var t = e.target;
+            if (t && t.classList && t.classList.contains('toggle-note')) {
+                var name = t.getAttribute('data-for');
+                var box = document.getElementById('note_' + name);
+                if (box) { box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+                    if (box.style.display === 'block') { var ta = box.querySelector('textarea'); if (ta) ta.focus(); }
+                }
+            }
+            if (t && t.classList && t.classList.contains('toggle-media')) {
+                var name2 = t.getAttribute('data-for');
+                var box2 = document.getElementById('media_' + name2);
+                if (box2) { box2.style.display = (box2.style.display === 'block') ? 'none' : 'block';
+                    if (box2.style.display === 'block') { var fi = box2.querySelector('input[type=file]'); if (fi) fi.focus(); }
+                }
+            }
+        });
+        // Auto-open note box when there's existing content
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('.note-box').forEach(function(box){
+                var ta = box.querySelector('textarea');
+                if (ta && ta.value.trim() !== '') { box.style.display = 'block'; }
+            });
         });
     </script>
 </body>

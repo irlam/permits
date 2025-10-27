@@ -637,8 +637,26 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
     <?php endif; ?>
 	<script>
 function startWork(){
+    var btns = document.getElementsByClassName('btn btn-success');
     var score = <?php echo json_encode($overallPercent); ?>;
-    alert('Start Work\n\nScore: ' + (score === null ? 'N/A' : (score + '%')) + '\n\nThis button can be wired to record a work-start event server-side.');
+    var BASE_URL = <?php echo json_encode(rtrim($app->url(''), '/').'/'); ?>;
+    var link = <?php echo json_encode($permit['unique_link']); ?>;
+    fetch(BASE_URL + 'api/start-work.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: link })
+    }).then(function(res){
+        if (!res.ok) throw new Error('Request failed: ' + res.status);
+        return res.json();
+    }).then(function(payload){
+        if (payload && payload.success) {
+            alert('▶️ Work started' + (score !== null ? ('\nScore: ' + score + '%') : '') );
+        } else {
+            throw new Error(payload && payload.message ? payload.message : 'Unknown error');
+        }
+    }).catch(function(err){
+        alert('Could not record start: ' + err.message);
+    });
 }
 function closePermit() {
     if (!confirm('Are you sure you want to close this permit? This action cannot be undone.')) {
