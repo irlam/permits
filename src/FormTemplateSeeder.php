@@ -144,14 +144,34 @@ class FormTemplateSeeder
                 }
                 $sectionFields = $section['fields'] ?? [];
                 if (!is_array($sectionFields) || empty($sectionFields)) {
-                    continue;
+                    // Even if there are no fields, we may still want to surface checklist items
+                    $sectionFields = [];
                 }
 
                 $title = (string)($section['title'] ?? ('Section ' . ($index + 1)));
-                $structure[] = [
+                $entry = [
                     'title' => $title,
                     'fields' => self::mapFieldsForPublicForm($sectionFields, 'section' . ($index + 1)),
                 ];
+
+                // Carry over static checklist items (if present) so public view can render them
+                if (!empty($section['items']) && is_array($section['items'])) {
+                    $items = [];
+                    foreach ($section['items'] as $item) {
+                        $text = is_array($item)
+                            ? (string)($item['text'] ?? ($item['label'] ?? ($item[0] ?? '')))
+                            : (string)$item;
+                        $text = trim($text);
+                        if ($text !== '') {
+                            $items[] = $text;
+                        }
+                    }
+                    if (!empty($items)) {
+                        $entry['items'] = $items;
+                    }
+                }
+
+                $structure[] = $entry;
             }
         }
 

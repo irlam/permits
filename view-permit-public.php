@@ -437,6 +437,13 @@ function formatDateUK($date) {
             <?php foreach ($form_structure as $section): ?>
                 <div class="section">
                     <h2 class="section-title"><?php echo htmlspecialchars($section['title']); ?></h2>
+                    <?php if (!empty($section['items']) && is_array($section['items'])): ?>
+                        <ul style="margin: 0 0 16px 20px; color:#374151;">
+                            <?php foreach ($section['items'] as $item): ?>
+                                <li style="margin-bottom:6px;"><?php echo htmlspecialchars((string)$item); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
                     
                     <?php foreach ($section['fields'] as $field): ?>
                         <div class="field-group">

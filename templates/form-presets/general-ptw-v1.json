@@ -1,0 +1,143 @@
+{
+  "id": "general-ptw-v1",
+  "title": "General Permit to Work",
+  "version": 1,
+  "meta": {
+    "title": "Permit Details",
+    "fields": [
+      { "key": "permitNo", "label": "Permit Number", "type": "text", "placeholder": "Auto or manual reference" },
+      { "key": "site", "label": "Project / Site", "type": "text" },
+      { "key": "location", "label": "Exact Location", "type": "text" },
+      { "key": "company", "label": "Company / Contractor", "type": "text" },
+      { "key": "workType", "label": "Type of Work", "type": "select", "options": [
+        {"value": "general", "label": "General Maintenance"},
+        {"value": "excavation", "label": "Excavation / Groundworks"},
+        {"value": "hot_work", "label": "Hot Work"},
+        {"value": "height", "label": "Work at Height"},
+        {"value": "electrical", "label": "Electrical"},
+        {"value": "confined_space", "label": "Confined Space"},
+        {"value": "lifting", "label": "Lifting Operations"},
+        {"value": "demolition", "label": "Demolition"}
+      ]},
+      { "key": "description", "label": "Task Description", "type": "textarea" },
+      { "key": "supervisor", "label": "Responsible Supervisor", "type": "text" },
+      { "key": "workers", "label": "Authorised Workers (names)", "type": "textarea", "placeholder": "List names" },
+      { "key": "raRef", "label": "Risk Assessment Ref", "type": "text" },
+      { "key": "msRef", "label": "Method Statement Ref", "type": "text" },
+      { "key": "validFrom", "label": "Permit Start", "type": "datetime" },
+      { "key": "validTo", "label": "Permit Expiry", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "HAZARD IDENTIFICATION",
+      "items": [
+        "Safe access/egress and housekeeping considered",
+        "Overhead services risk assessed",
+        "Underground services located/marked",
+        "Weather conditions and lighting assessed",
+        "Public interface managed and segregated",
+        "Manual handling risks evaluated",
+        "Slips / trips / falls controls in place",
+        "Noise and vibration impacts assessed",
+        "Environmental impacts controlled (dust, runoff, spills)"
+      ],
+      "fields": [
+        { "label": "Other Significant Hazards", "type": "textarea", "placeholder": "Detail any additional hazards specific to this task" }
+      ]
+    },
+    {
+      "title": "CONTROLS AND ISOLATIONS",
+      "items": [
+        "Energy sources identified and isolated as required",
+        "Lock-out/Tag-out (LOTO) applied and verified",
+        "Required permits in place (e.g. Hot Work, Excavation)",
+        "Barriers and signage installed",
+        "Fire watch assigned where applicable",
+        "Atmospheric checks completed where relevant"
+      ],
+      "fields": [
+        { "label": "Isolation Methods Applied", "type": "multiselect", "options": [
+          {"value": "electrical", "label": "Electrical lock-off"},
+          {"value": "mechanical", "label": "Mechanical isolation"},
+          {"value": "loto", "label": "LOTO tags applied"},
+          {"value": "blanking", "label": "Blanking / spading"},
+          {"value": "other", "label": "Other"}
+        ]},
+        { "label": "Control Measures Checklist", "type": "multiselect", "options": [
+          {"value": "barriers", "label": "Barriers and signage"},
+          {"value": "extinguisher", "label": "Fire extinguisher available"},
+          {"value": "spill_kit", "label": "Spill kit available"},
+          {"value": "ventilation", "label": "Ventilation / extraction"},
+          {"value": "dust", "label": "Dust suppression"},
+          {"value": "traffic", "label": "Traffic management in place"},
+          {"value": "edge_protection", "label": "Edge protection / covers"},
+          {"value": "rescue_plan", "label": "Rescue plan in place"}
+        ]}
+      ]
+    },
+    {
+      "title": "PPE REQUIREMENTS",
+      "items": [
+        "Hard hat, Hi-vis and Safety boots",
+        "Gloves and Eye protection",
+        "Hearing protection as required",
+        "RPE where specified"
+      ],
+      "fields": [
+        { "label": "Additional PPE Required", "type": "multiselect", "options": [
+          {"value": "hard_hat", "label": "Hard hat"},
+          {"value": "hi_vis", "label": "Hi-vis"},
+          {"value": "safety_boots", "label": "Safety boots"},
+          {"value": "gloves", "label": "Gloves"},
+          {"value": "eye_protection", "label": "Eye protection"},
+          {"value": "hearing", "label": "Hearing protection"},
+          {"value": "rpe", "label": "Respiratory protection (RPE)"}
+        ]}
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        { "key": "issuerName", "label": "Permit Issuer Name", "type": "text" },
+        { "key": "issuerRole", "label": "Permit Issuer Role", "type": "text" },
+        { "key": "receiverName", "label": "Permit Receiver Name", "type": "text" },
+        { "key": "receiverCompany", "label": "Receiver Company", "type": "text" },
+        { "key": "authorizationAt", "label": "Authorization Date/Time", "type": "datetime" }
+      ]
+    },
+    {
+      "title": "VALIDITY AND REVALIDATION",
+      "fields": [
+        { "key": "revalidation1By", "label": "Revalidation 1 By", "type": "text" },
+        { "key": "revalidation1At", "label": "Revalidation 1 Date/Time", "type": "datetime" },
+        { "key": "revalidation2By", "label": "Revalidation 2 By", "type": "text" },
+        { "key": "revalidation2At", "label": "Revalidation 2 Date/Time", "type": "datetime" }
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "Work completed and area inspected",
+        "Plant and tools removed",
+        "Systems reinstated safely",
+        "Waste removed and area left tidy"
+      ],
+      "fields": [
+        { "key": "workCompletedSummary", "label": "Work Completed Summary", "type": "textarea" },
+        { "key": "areaLeftSafeBy", "label": "Area Left Safe By", "type": "text" },
+        { "key": "handBackTo", "label": "Hand-back To (Name)", "type": "text" },
+        { "key": "closedBy", "label": "Closed By", "type": "text" },
+        { "key": "closedAt", "label": "Closure Date/Time", "type": "datetime" },
+        { "key": "lessonsLearned", "label": "Lessons Learned / Issues", "type": "textarea" }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "receiver_accept",
+    "revalidator_1",
+    "revalidator_2",
+    "issuer_close"
+  ]
+}
