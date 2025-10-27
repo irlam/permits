@@ -65,17 +65,21 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Permits System</title>
-    <link rel="stylesheet" href="/assets/app.css">
+        <title>Admin Panel - Permits System</title>
+        <?php 
+            $cssPath = $root . '/assets/app.css';
+            $cssVer  = @filemtime($cssPath) ?: time();
+        ?>
+        <link rel="stylesheet" href="<?php echo htmlspecialchars($app->url('assets/app.css')); ?>?v=<?php echo urlencode((string)$cssVer); ?>">
 </head>
 <body class="theme-dark">
     <header class="site-header">
         <h1 class="site-header__title">⚙️ Admin Panel</h1>
         <div class="site-header__actions">
             <span class="user-info">👤 <?php echo htmlspecialchars($currentUser['name']); ?></span>
-            <a class="btn btn-secondary" href="/dashboard.php">📊 Dashboard</a>
-            <a class="btn btn-secondary" href="/">🏠 Home</a>
-            <a class="btn btn-secondary" href="/logout.php">🚪 Logout</a>
+            <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">📊 Dashboard</a>
+            <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/')); ?>">🏠 Home</a>
+            <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('logout.php')); ?>">🚪 Logout</a>
         </div>
     </header>
 

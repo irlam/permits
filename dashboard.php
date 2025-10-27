@@ -178,8 +178,12 @@ function getStatusBadge($status) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Permits System</title>
-    <link rel="stylesheet" href="/assets/app.css">
+        <title>Dashboard - Permits System</title>
+        <?php 
+            $cssPath = $root . '/assets/app.css';
+            $cssVer  = @filemtime($cssPath) ?: time();
+        ?>
+        <link rel="stylesheet" href="<?php echo htmlspecialchars($app->url('assets/app.css')); ?>?v=<?php echo urlencode((string)$cssVer); ?>">
 </head>
 <body class="theme-dark">
     <header class="site-header">
@@ -196,14 +200,14 @@ function getStatusBadge($status) {
                     </div>
                 </div>
                 <?php if ($currentUser['role'] === 'admin'): ?>
-                    <a href="/admin.php" class="btn btn-secondary">⚙️ Admin</a>
+                    <a href="<?php echo htmlspecialchars($app->url('admin.php')); ?>" class="btn btn-secondary">⚙️ Admin</a>
                 <?php endif; ?>
                 <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
-                    <a href="/manager-approvals.php" class="btn btn-secondary">✅ Approvals</a>
+                    <a href="<?php echo htmlspecialchars($app->url('manager-approvals.php')); ?>" class="btn btn-secondary">✅ Approvals</a>
                 <?php endif; ?>
-                <a href="/logout.php" class="btn btn-secondary">🚪 Logout</a>
+                <a href="<?php echo htmlspecialchars($app->url('logout.php')); ?>" class="btn btn-secondary">🚪 Logout</a>
             <?php else: ?>
-                <a href="/login.php" class="btn btn-primary">🔐 Login</a>
+                <a href="<?php echo htmlspecialchars($app->url('login.php')); ?>" class="btn btn-primary">🔐 Login</a>
             <?php endif; ?>
         </div>
     </header>
@@ -215,25 +219,25 @@ function getStatusBadge($status) {
         </section>
 
         <section class="stats-grid" aria-label="Permit metrics">
-            <a class="stat-card metric-total<?php echo $statusFilter === 'total' ? ' is-active' : ''; ?>" href="/dashboard.php?status=total">
+            <a class="stat-card metric-total<?php echo $statusFilter === 'total' ? ' is-active' : ''; ?>" href="<?php echo htmlspecialchars($app->url('dashboard.php?status=total')); ?>">
                 <div class="icon">📊</div>
                 <div class="label">Total Permits</div>
                 <div class="value"><?php echo number_format($metrics['total']); ?></div>
             </a>
 
-            <a class="stat-card metric-pending<?php echo $statusFilter === 'pending' ? ' is-active' : ''; ?>" href="/dashboard.php?status=pending">
+            <a class="stat-card metric-pending<?php echo $statusFilter === 'pending' ? ' is-active' : ''; ?>" href="<?php echo htmlspecialchars($app->url('dashboard.php?status=pending')); ?>">
                 <div class="icon">⏳</div>
                 <div class="label">Pending</div>
                 <div class="value"><?php echo number_format($metrics['pending']); ?></div>
             </a>
 
-            <a class="stat-card metric-active<?php echo $statusFilter === 'active' ? ' is-active' : ''; ?>" href="/dashboard.php?status=active">
+            <a class="stat-card metric-active<?php echo $statusFilter === 'active' ? ' is-active' : ''; ?>" href="<?php echo htmlspecialchars($app->url('dashboard.php?status=active')); ?>">
                 <div class="icon">✅</div>
                 <div class="label">Active</div>
                 <div class="value"><?php echo number_format($metrics['active']); ?></div>
             </a>
 
-            <a class="stat-card metric-expired<?php echo $statusFilter === 'expired' ? ' is-active' : ''; ?>" href="/dashboard.php?status=expired">
+            <a class="stat-card metric-expired<?php echo $statusFilter === 'expired' ? ' is-active' : ''; ?>" href="<?php echo htmlspecialchars($app->url('dashboard.php?status=expired')); ?>">
                 <div class="icon">❌</div>
                 <div class="label">Expired</div>
                 <div class="value"><?php echo number_format($metrics['expired']); ?></div>
@@ -265,7 +269,7 @@ function getStatusBadge($status) {
                     foreach ($templates as $template):
                         $icon = $icons[$template['name']] ?? '📋';
                     ?>
-                        <a href="/create-permit-public.php?template=<?php echo $template['id']; ?>" class="template-card">
+                        <a href="<?php echo htmlspecialchars($app->url('create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>" class="template-card">
                             <div class="icon"><?php echo $icon; ?></div>
                             <div class="name"><?php echo htmlspecialchars($template['name']); ?></div>
                             <div class="version">Version <?php echo $template['version'] ?? 1; ?></div>
@@ -284,7 +288,7 @@ function getStatusBadge($status) {
                         <span class="filter-count">(<?php echo count($permitsList); ?>)</span>
                     </span>
                     <?php if ($filterActive): ?>
-                        <a href="/dashboard.php" class="btn btn-secondary" style="margin-left:auto; padding: 8px 14px; font-size: 12px;">
+                        <a href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>" class="btn btn-secondary" style="margin-left:auto; padding: 8px 14px; font-size: 12px;">
                             ✖ Clear Filter
                         </a>
                     <?php endif; ?>
@@ -321,7 +325,7 @@ function getStatusBadge($status) {
                                     <td><?php echo isset($permit['created_at']) ? date('d/m/Y H:i', strtotime($permit['created_at'])) : 'N/A'; ?></td>
                                     <td>
                                         <?php if (!empty($permit['unique_link'])): ?>
-                                            <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>"
+                                            <a href="<?php echo htmlspecialchars($app->url('view-permit-public.php?link=' . urlencode((string)$permit['unique_link']))); ?>"
                                                class="btn btn-secondary"
                                                style="padding: 6px 12px; font-size: 12px;">
                                                 👁️ View
@@ -340,7 +344,7 @@ function getStatusBadge($status) {
                     <h3>🔒 Sign in to view permits</h3>
                 </div>
                 <p>Login to filter, browse, and manage permits from the dashboard.</p>
-                <a href="/login.php" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+                <a href="<?php echo htmlspecialchars($app->url('login.php')); ?>" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
                     🔐 Go to Login
                 </a>
             </section>
