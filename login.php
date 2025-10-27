@@ -22,7 +22,7 @@ session_start();
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-    header('Location: /dashboard.php');
+    header('Location: ' . $app->url('dashboard.php'));
     exit;
 }
 
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 // Redirect to dashboard
-                header('Location: /dashboard.php');
+                header('Location: ' . $app->url('dashboard.php'));
                 exit;
             } else {
                 $error = "Invalid email or password";
@@ -210,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
             
-            <form method="POST" action="/login.php">
+            <form method="POST" action="<?php echo htmlspecialchars($app->url('login.php')); ?>">
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input 
@@ -240,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <div class="login-footer">
-            <a href="/">← Back to Homepage</a>
+            <a href="<?php echo htmlspecialchars($app->url('/')); ?>">← Back to Homepage</a>
         </div>
     </div>
 </body>

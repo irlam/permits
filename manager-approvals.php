@@ -29,7 +29,7 @@ session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
+    header('Location: ' . $app->url('login.php'));
     exit;
 }
 
@@ -324,8 +324,8 @@ function formatDateUK($date) {
         <div class="header">
             <h1>⏳ Pending Approvals (<?php echo count($pending_permits); ?>)</h1>
             <div class="header-actions">
-                <a href="/presentation-dashboard.php" class="btn btn-secondary">🎬 Presentation Mode</a>
-                <a href="/dashboard.php" class="btn btn-secondary">← Back to Dashboard</a>
+                <a href="<?php echo htmlspecialchars($app->url('presentation-dashboard.php')); ?>" class="btn btn-secondary">🎬 Presentation Mode</a>
+                <a href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>" class="btn btn-secondary">← Back to Dashboard</a>
             </div>
         </div>
 

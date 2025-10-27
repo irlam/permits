@@ -565,7 +565,7 @@ function formatDateUK($date) {
                         </div>
                         <span><?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
                     </div>
-                    <a href="/dashboard.php" class="btn btn-primary">
+                    <a href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>" class="btn btn-primary">
                         📊 Dashboard
                     </a>
                     <a href="/logout.php" class="btn btn-secondary">
@@ -575,7 +575,7 @@ function formatDateUK($date) {
                     <button id="installButton" class="btn btn-secondary">
                         📱 Install App
                     </button>
-                    <a href="/login.php" class="btn btn-primary">
+                    <a href="<?php echo htmlspecialchars($app->url('login.php')); ?>" class="btn btn-primary">
                         🔐 Manager Login
                     </a>
                 <?php endif; ?>

@@ -242,9 +242,9 @@ $baseUrl = rtrim($_ENV['APP_URL'] ?? ($app->config('APP_URL') ?? ('https://' . (
         <div class="actions">
             <button onclick="window.print()" class="btn btn-primary">🖨️ Print All</button>
             <?php if ($isLoggedIn): ?>
-                <a href="/dashboard.php" class="btn btn-secondary">📊 Dashboard</a>
+                <a href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>" class="btn btn-secondary">📊 Dashboard</a>
             <?php else: ?>
-                <a href="/" class="btn btn-secondary">🏠 Home</a>
+                <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-secondary">🏠 Home</a>
             <?php endif; ?>
         </div>
     </div>

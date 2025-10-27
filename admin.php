@@ -41,7 +41,8 @@ $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Check if user is admin
 if (!$currentUser || $currentUser['role'] !== 'admin') {
-    die('<h1>Access Denied</h1><p>Admin access required. <a href="/dashboard.php">Back to Dashboard</a></p>');
+    $backUrl = htmlspecialchars($app->url('dashboard.php'));
+    die('<h1>Access Denied</h1><p>Admin access required. <a href="' . $backUrl . '">Back to Dashboard</a></p>');
 }
 
 // Get statistics

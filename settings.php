@@ -106,14 +106,18 @@ $base = $_ENV['APP_URL'] ?? '/';
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
   <title>Settings - Permits</title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <?php 
+    $cssPath = $root . '/assets/app.css';
+    $cssVer  = @filemtime($cssPath) ?: time();
+  ?>
+  <link rel="stylesheet" href="<?php echo htmlspecialchars($app->url('assets/app.css')); ?>?v=<?php echo urlencode((string)$cssVer); ?>">
 </head>
 <body>
 <header class="top">
   <h1>⚙️ Settings</h1>
   <div style="display: flex; gap: 12px;">
-    <a class="btn" href="/dashboard">Dashboard</a>
-    <a class="btn" href="/">Home</a>
+  <a class="btn" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">Dashboard</a>
+  <a class="btn" href="<?php echo htmlspecialchars($app->url('/')); ?>">Home</a>
   </div>
 </header>
 

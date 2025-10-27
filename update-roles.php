@@ -354,8 +354,8 @@ $action = $_GET['action'] ?? 'show';
                     </div>
                     
                     <div style="margin-top: 24px;">
-                        <a href="/dashboard.php" class="btn btn-primary">→ Go to Dashboard</a>
-                        <a href="/login.php" class="btn btn-primary" style="background: #10b981;">→ Go to Login</a>
+                        <a href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>" class="btn btn-primary">→ Go to Dashboard</a>
+                        <a href="<?php echo htmlspecialchars($app->url('login.php')); ?>" class="btn btn-primary" style="background: #10b981;">→ Go to Login</a>
                     </div>
                     
                 <?php else: ?>
