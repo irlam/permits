@@ -157,6 +157,7 @@ class FormTemplateSeeder
                 // Carry over static checklist items (if present) so public view can render them
                 if (!empty($section['items']) && is_array($section['items'])) {
                     $items = [];
+                    $itemFields = [];
                     foreach ($section['items'] as $item) {
                         $text = is_array($item)
                             ? (string)($item['text'] ?? ($item['label'] ?? ($item[0] ?? '')))
@@ -164,10 +165,28 @@ class FormTemplateSeeder
                         $text = trim($text);
                         if ($text !== '') {
                             $items[] = $text;
+                            // Create a tri-state radio field to capture compliance for scoring
+                            $itemFields[] = [
+                                'label' => $text,
+                                'name'  => 'section' . ($index + 1) . '_item_' . (count($items)),
+                                'type'  => 'radio',
+                                'options' => [
+                                    ['value' => 'yes', 'label' => 'Yes'],
+                                    ['value' => 'no',  'label' => 'No'],
+                                    ['value' => 'na',  'label' => 'N/A'],
+                                ],
+                                'required' => false,
+                                'scoreItem' => true,
+                            ];
                         }
                     }
                     if (!empty($items)) {
                         $entry['items'] = $items;
+                        // Append item-fields after existing fields for this section
+                        if (!isset($entry['fields']) || !is_array($entry['fields'])) {
+                            $entry['fields'] = [];
+                        }
+                        $entry['fields'] = array_merge($entry['fields'], $itemFields);
                     }
                 }
 

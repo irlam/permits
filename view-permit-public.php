@@ -89,6 +89,39 @@ function formatDateUK($date) {
     $timestamp = strtotime($date);
     return date('d/m/Y H:i', $timestamp);
 }
+// Compute checklist scores: Yes/(Yes+No) per section and overall
+$scoring = [
+    'overall' => ['yes' => 0, 'no' => 0],
+    'sections' => []
+];
+if (is_array($form_structure)) {
+    foreach ($form_structure as $sIdx => $section) {
+        $secKey = 'section' . ($sIdx + 1);
+        $secYes = 0; $secNo = 0;
+        $fields = $section['fields'] ?? [];
+        if (is_array($fields)) {
+            foreach ($fields as $field) {
+                if (!is_array($field)) { continue; }
+                $name = (string)($field['name'] ?? '');
+                if ($name === '' || strpos($name, $secKey . '_item_') !== 0) { continue; }
+                $value = strtolower(trim((string)($form_data[$name] ?? '')));
+                if ($value === 'yes') { $secYes++; }
+                elseif ($value === 'no') { $secNo++; }
+            }
+        }
+        $den = $secYes + $secNo;
+        $percent = $den > 0 ? round(($secYes / $den) * 100) : null;
+        $scoring['sections'][$sIdx] = [
+            'yes' => $secYes,
+            'no' => $secNo,
+            'percent' => $percent,
+        ];
+        $scoring['overall']['yes'] += $secYes;
+        $scoring['overall']['no']  += $secNo;
+    }
+}
+$overallDen = $scoring['overall']['yes'] + $scoring['overall']['no'];
+$overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overallDen) * 100) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +129,9 @@ function formatDateUK($date) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Permit #<?php echo htmlspecialchars($permit['ref_number']); ?> - <?php echo htmlspecialchars($permit['template_name']); ?></title>
+    <link rel="manifest" href="<?=htmlspecialchars($app->url('manifest.webmanifest'))?>">
+    <link rel="apple-touch-icon" sizes="192x192" href="<?=htmlspecialchars($app->url('assets/pwa/icon-192.png'))?>">
+    <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
     <style>
         * {
             margin: 0;
@@ -141,6 +177,8 @@ function formatDateUK($date) {
             font-size: 28px;
             color: #111827;
         }
+
+        .score-badge { display:inline-block; padding:6px 10px; border-radius:10px; font-weight:700; font-size:12px; background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; }
 
         .permit-ref {
             font-size: 20px;
@@ -368,14 +406,19 @@ function formatDateUK($date) {
         }
     </style>
 </head>
-<body>
+<body class="theme-dark">
     <div class="container">
         <div class="permit-card">
             <!-- Header -->
             <div class="permit-header">
                 <div class="permit-title">
                     <h1><?php echo htmlspecialchars($permit['template_name']); ?></h1>
-                    <?php echo getStatusBadge($permit['status']); ?>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <?php echo getStatusBadge($permit['status']); ?>
+                        <?php if ($overallPercent !== null): ?>
+                            <span class="score-badge" title="Yes/(Yes+No)">Score: <?php echo (int)$overallPercent; ?>%</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 
                 <div class="permit-ref">
@@ -434,9 +477,14 @@ function formatDateUK($date) {
             <?php endif; ?>
 
             <!-- Permit Details -->
-            <?php foreach ($form_structure as $section): ?>
+            <?php foreach ($form_structure as $idx => $section): ?>
                 <div class="section">
-                    <h2 class="section-title"><?php echo htmlspecialchars($section['title']); ?></h2>
+                    <h2 class="section-title" style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
+                        <span><?php echo htmlspecialchars($section['title']); ?></span>
+                        <?php $secScore = $scoring['sections'][$idx]['percent'] ?? null; if ($secScore !== null): ?>
+                            <span class="score-badge" title="Yes/(Yes+No)"><?php echo (int)$secScore; ?>%</span>
+                        <?php endif; ?>
+                    </h2>
                     <?php if (!empty($section['items']) && is_array($section['items'])): ?>
                         <ul style="margin: 0 0 16px 20px; color:#374151;">
                             <?php foreach ($section['items'] as $item): ?>
@@ -452,7 +500,8 @@ function formatDateUK($date) {
                             </div>
                             <div class="field-value">
                                 <?php 
-                                $value = $form_data[$field['name']] ?? 'N/A';
+                                $value = $form_data[$field['name']] ?? '';
+                                if ($value === '') { $value = 'N/A'; }
                                 echo nl2br(htmlspecialchars($value)); 
                                 ?>
                             </div>
@@ -467,7 +516,7 @@ function formatDateUK($date) {
                     <h3>QR Code</h3>
                     <p style="color: #6b7280; margin-bottom: 16px;">Scan to verify this permit</p>
                     <div class="qr-code">
-                        <img src="/qr-code.php?id=<?php echo urlencode($permit['id']); ?>" 
+                    <img src="<?=htmlspecialchars($app->url('qr-code.php'))?>?id=<?php echo urlencode($permit['id']); ?>" 
                              alt="QR Code" 
                              style="width: 100%; height: auto;">
                     </div>
@@ -485,14 +534,19 @@ function formatDateUK($date) {
                 🔒 Close Permit
             </button>
     <?php endif; ?>
-                <a href="/" class="btn btn-secondary">
+                <a href="<?=htmlspecialchars($app->url('/'))?>" class="btn btn-secondary">
                     ← Back to Homepage
                 </a>
                 <?php if ($permit['status'] === 'active'): ?>
-                    <a href="/qr-code.php?id=<?php echo urlencode($permit['id']); ?>&download=1" 
+                    <a href="<?=htmlspecialchars($app->url('qr-code.php'))?>?id=<?php echo urlencode($permit['id']); ?>&download=1" 
                        class="btn btn-secondary">
                         📥 Download QR Code
                     </a>
+                <?php endif; ?>
+                <?php if ($permit['status'] === 'active' && $overallPercent !== null): ?>
+                    <button class="btn btn-success" onclick="startWork()" <?php echo ($overallPercent >= 80 ? '' : 'disabled'); ?>>
+                        ▶️ Start Work
+                    </button>
                 <?php endif; ?>
             </div>
         </div>
@@ -551,6 +605,10 @@ function formatDateUK($date) {
     </script>
     <?php endif; ?>
 	<script>
+function startWork(){
+    var score = <?php echo json_encode($overallPercent); ?>;
+    alert('Start Work\n\nScore: ' + (score === null ? 'N/A' : (score + '%')) + '\n\nThis button can be wired to record a work-start event server-side.');
+}
 function closePermit() {
     if (!confirm('Are you sure you want to close this permit? This action cannot be undone.')) {
         return;
@@ -564,8 +622,8 @@ function closePermit() {
         formData.append('reason', reason);
     }
     
-    const BASE_URL = '<?= htmlspecialchars(rtrim((string)($_ENV['APP_URL'] ?? ''), '/') . rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/')) ?>';
-    fetch(BASE_URL + '/api/close-permit.php', {
+    const BASE_URL = <?= json_encode(rtrim($app->url(''), '/').'/') ?>;
+    fetch(BASE_URL + 'api/close-permit.php', {
         method: 'POST',
         body: formData
     })
