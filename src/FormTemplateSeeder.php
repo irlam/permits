@@ -9,6 +9,7 @@ use Throwable;
 class FormTemplateSeeder
 {
     private static ?bool $supportsFormStructure = null;
+    private static bool $forceRebuildFormStructure = false;
 
     /**
      * @return array{processed:int, imported:array<int,string>, errors:array<int,string>}
@@ -118,6 +119,14 @@ class FormTemplateSeeder
             'imported' => $imported,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Control whether to ignore existing form_structure in DB and rebuild from JSON schema.
+     */
+    public static function setForceRebuildFormStructure(bool $force): void
+    {
+        self::$forceRebuildFormStructure = $force;
     }
 
     /**
@@ -305,11 +314,13 @@ class FormTemplateSeeder
 
     private static function buildFormStructurePayload(Db $db, array $schema, string $templateId): string
     {
-        $existing = self::fetchExistingFormStructure($db, $templateId);
-        if ($existing !== null) {
-            $decoded = json_decode($existing, true);
-            if (is_array($decoded) && !empty($decoded)) {
-                return $existing;
+        if (!self::$forceRebuildFormStructure) {
+            $existing = self::fetchExistingFormStructure($db, $templateId);
+            if ($existing !== null) {
+                $decoded = json_decode($existing, true);
+                if (is_array($decoded) && !empty($decoded)) {
+                    return $existing;
+                }
             }
         }
 

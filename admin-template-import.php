@@ -36,6 +36,10 @@ $errors = [];
 $messages = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $force = !empty($_POST['force_rebuild']);
+    if ($force) {
+        FormTemplateSeeder::setForceRebuildFormStructure(true);
+    }
     // Step 1: ensure DB schema is aligned
     try {
         $columnResult = DatabaseMaintenance::ensureFormTemplateColumns($db);
@@ -156,6 +160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p>This process can be safely re-run at any time. Existing templates will be updated in place, and new ones will be created automatically.</p>
             <form method="post">
                 <input type="hidden" name="action" value="run-import">
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <input type="checkbox" name="force_rebuild" value="1">
+                    <span>Force rebuild of public form structure (refresh checklists and scoring)</span>
+                </label>
                 <button type="submit" class="btn">Run Import</button>
             </form>
             <p class="muted">
