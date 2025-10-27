@@ -13,6 +13,10 @@ use Ramsey\Uuid\Uuid;
  */
 function check_and_expire_permits(object $db): int
 {
+    if (function_exists('logActivity')) {
+        logActivity('permit_expiry_check', 'system', '', null, 'Starting automatic permit expiry check.');
+    }
+
     try {
         $driver = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ?: 'mysql';
     } catch (\Throwable $e) {
@@ -49,6 +53,14 @@ function check_and_expire_permits(object $db): int
         return 0;
     }
 
+    // Convert to array to get count for logging
+    $expiredPermitsArray = is_array($expiredPermits) ? $expiredPermits : iterator_to_array($expiredPermits);
+    $candidateCount = count($expiredPermitsArray);
+
+    if (function_exists('logActivity') && $candidateCount > 0) {
+        logActivity('permit_expiry_candidates', 'system', '', null, "Found {$candidateCount} permit(s) eligible for expiration.");
+    }
+
     $updatedCount = 0;
     $updateStatement = $db->pdo->prepare(
         "UPDATE forms SET status = 'expired', updated_at = $nowExpression WHERE id = ?"
@@ -57,7 +69,7 @@ function check_and_expire_permits(object $db): int
         'INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?, ?, ?, ?, ?)'
     );
 
-    foreach ($expiredPermits as $permit) {
+    foreach ($expiredPermitsArray as $permit) {
         if (empty($permit['id'])) {
             continue;
         }
@@ -105,6 +117,14 @@ function check_and_expire_permits(object $db): int
         }
 
         $updatedCount++;
+    }
+
+    if (function_exists('logActivity')) {
+        if ($updatedCount > 0) {
+            logActivity('permit_expiry_complete', 'system', '', null, "Automatic permit expiry completed. {$updatedCount} permit(s) expired.");
+        } else {
+            logActivity('permit_expiry_complete', 'system', '', null, 'Automatic permit expiry completed. No permits needed expiration.');
+        }
     }
 
     return $updatedCount;

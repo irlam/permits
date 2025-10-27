@@ -36,21 +36,25 @@ function log_activity(Db $db, string $user_id, string $type, string $description
 /**
  * Activity Types Reference:
  * 
- * - user_login        : User logged in
- * - user_logout       : User logged out
- * - user_created      : New user account created
- * - user_updated      : User account updated
- * - user_deleted      : User account deleted
- * - permit_created    : New permit created
- * - permit_viewed     : Permit viewed
- * - permit_approved   : Permit approved
- * - permit_rejected   : Permit rejected
- * - permit_closed     : Permit closed
- * - permit_expired    : Permit expired
- * - settings_updated  : System settings updated
- * - template_created  : Form template created
- * - template_updated  : Form template updated
- * - backup_created    : Database backup created
+ * - user_login               : User logged in
+ * - user_logout              : User logged out
+ * - user_created             : New user account created
+ * - user_updated             : User account updated
+ * - user_deleted             : User account deleted
+ * - permit_created           : New permit created
+ * - permit_viewed            : Permit viewed
+ * - permit_approved          : Permit approved
+ * - permit_rejected          : Permit rejected
+ * - permit_closed            : Permit closed
+ * - permit_expired           : Permit expired (individual permit)
+ * - permit_expiry_check      : Automatic permit expiry check started
+ * - permit_expiry_candidates : Permits found eligible for expiration
+ * - permit_expiry_complete   : Automatic permit expiry check completed
+ * - permit_expiry_failed     : Permit expiry process encountered an error
+ * - settings_updated         : System settings updated
+ * - template_created         : Form template created
+ * - template_updated         : Form template updated
+ * - backup_created           : Database backup created
  */
 
 if (!function_exists('logActivity')) {
