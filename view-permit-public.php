@@ -17,10 +17,16 @@
 
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
+
+$auth = new Auth($db);
+$currentUser = $auth->getCurrentUser();
+$canApprove = $auth->isLoggedIn() && $auth->hasAnyRole(['manager', 'admin']);
 
 // Get unique link from query string
 $unique_link = $_GET['link'] ?? null;
 $print_mode = isset($_GET['print']);
+$canClose = false;
 
 if (!$unique_link) {
     header('Location: /');
@@ -48,6 +54,19 @@ try {
     // Decode form data
     $form_data = json_decode($permit['form_data'], true) ?? [];
     $form_structure = json_decode($permit['form_structure'], true) ?? [];
+
+    // Determine if current user can close or approve
+    $canClose = false;
+    if ($currentUser) {
+        $role = strtolower($currentUser['role'] ?? '');
+        if (in_array($role, ['admin', 'manager'], true)) {
+            $canClose = true;
+        } elseif (!empty($permit['holder_id']) && $permit['holder_id'] === $currentUser['id']) {
+            $canClose = true;
+        }
+    } else {
+        $canClose = false;
+    }
     
 } catch (Exception $e) {
     die("Error loading permit: " . $e->getMessage());
@@ -261,6 +280,23 @@ function formatDateUK($date) {
             color: white;
         }
 
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-success[disabled] {
+            opacity: 0.75;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
         /* QR Code */
         .qr-section {
             text-align: center;
@@ -381,7 +417,15 @@ function formatDateUK($date) {
             <!-- Status Message -->
             <?php if ($permit['status'] === 'pending_approval'): ?>
                 <div class="status-message pending">
-                    ⏳ <strong>Pending Approval:</strong> Your permit is being reviewed by a manager. We'll notify you once it's approved!
+                    <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;">
+                        <div>⏳ <strong>Pending Approval:</strong> Your permit is being reviewed by a manager. We'll notify you once it's approved!</div>
+                        <?php if ($canApprove): ?>
+                            <button type="button" class="btn btn-success no-print" id="approve-permit-btn" data-permit-id="<?=htmlspecialchars($permit['id'])?>">
+                                ✅ Approve Permit
+                            </button>
+                            <div id="approve-feedback" style="font-size:14px;color:#047857;display:none;"></div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php elseif ($permit['status'] === 'active'): ?>
                 <div class="status-message active">
@@ -428,31 +472,12 @@ function formatDateUK($date) {
                 <button onclick="window.print()" class="btn btn-primary">
                     🖨️ Print Permit
                 </button>
-				<!-- Close Permit Button (only for active permits) -->
-<?php if ($permit['status'] === 'active'): ?>
-    <?php
-    // Check if user is logged in and has permission
-    session_start();
-    $canClose = false;
-    if (isset($_SESSION['user_id'])) {
-        $stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($user) {
-            if ($user['role'] === 'admin' || $user['role'] === 'manager' || $permit['holder_id'] === $user['id']) {
-                $canClose = true;
-            }
-        }
-    }
-    ?>
-    
-    <?php if ($canClose): ?>
-        <button onclick="closePermit()" class="btn btn-danger no-print" style="background: #ef4444;">
-            🔒 Close Permit
-        </button>
+    			<!-- Close Permit Button (only for active permits) -->
+    <?php if ($permit['status'] === 'active' && $canClose): ?>
+            <button onclick="closePermit()" class="btn btn-danger no-print" style="background: #ef4444;">
+                🔒 Close Permit
+            </button>
     <?php endif; ?>
- <?php endif; ?>
                 <a href="/" class="btn btn-secondary">
                     ← Back to Homepage
                 </a>
@@ -474,6 +499,50 @@ function formatDateUK($date) {
         }
         <?php endif; ?>
     </script>
+    <?php if ($permit['status'] === 'pending_approval' && $canApprove): ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        var approveBtn = document.getElementById('approve-permit-btn');
+        if(!approveBtn){return;}
+        var feedback = document.getElementById('approve-feedback');
+        approveBtn.addEventListener('click', function(){
+            var permitId = approveBtn.getAttribute('data-permit-id');
+            if(!permitId){return;}
+            approveBtn.disabled = true;
+            approveBtn.textContent = 'Approving...';
+            fetch('/api/approve-permit.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ permit_id: permitId })
+            }).then(function(res){
+                if(!res.ok){throw new Error('Approve request failed');}
+                return res.json();
+            }).then(function(payload){
+                if(payload && payload.success){
+                    if(feedback){
+                        feedback.textContent = 'Permit approved successfully. Reloading...';
+                        feedback.style.display = 'block';
+                        feedback.style.color = '#047857';
+                    }
+                    setTimeout(function(){ window.location.reload(); }, 1200);
+                } else {
+                    throw new Error(payload && payload.message ? payload.message : 'Approval failed');
+                }
+            }).catch(function(err){
+                if(feedback){
+                    feedback.textContent = err.message;
+                    feedback.style.display = 'block';
+                    feedback.style.color = '#b91c1c';
+                }
+                approveBtn.disabled = false;
+                approveBtn.textContent = '✅ Approve Permit';
+            });
+        });
+    });
+    </script>
+    <?php endif; ?>
 	<script>
 function closePermit() {
     if (!confirm('Are you sure you want to close this permit? This action cannot be undone.')) {
