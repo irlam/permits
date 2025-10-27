@@ -8,6 +8,7 @@
     "ramsey/uuid": "^4.7",
 	"chillerlan/php-qrcode": "^5",	
     "minishlink/web-push": "^9.0",
+    "myclabs/deep-copy": "^1.10",
     "phpmailer/phpmailer": "^6.9"
   },
   "require-dev": {
