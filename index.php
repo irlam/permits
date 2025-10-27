@@ -29,6 +29,17 @@ session_start();
 
 // Current user
 $isLoggedIn = isset($_SESSION['user_id']);
+$currentUser = null;
+if ($isLoggedIn) {
+  try {
+    $u = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+    $u->execute([$_SESSION['user_id']]);
+    $currentUser = $u->fetch(PDO::FETCH_ASSOC) ?: null;
+  } catch (Exception $e) {
+    $currentUser = null;
+    error_log('Error fetching current user: ' . $e->getMessage());
+  }
+}
                   // Status checker (by email)
                   $statusEmail = $_GET['check_email'] ?? '';
                   $userPermits = [];
@@ -70,27 +81,28 @@ $isLoggedIn = isset($_SESSION['user_id']);
                   }
 
                   // Recently approved permits
-                  try {
-                      $approvedStmt = $db->pdo->query('
-                          SELECT 
-                              f.ref_number,
-                              f.holder_name,
-                              f.unique_link,
-                              f.valid_to,
-                              f.approved_at,
-                              f.created_at,
-                              ft.name AS template_name
-                          FROM forms f
-                          JOIN form_templates ft ON f.template_id = ft.id
-                          WHERE f.status = \"active\"
-                          ORDER BY COALESCE(f.approved_at, f.created_at) DESC
-                          LIMIT 6
-                      ');
-                      $approvedPermits = $approvedStmt->fetchAll(PDO::FETCH_ASSOC);
-                  } catch (Exception $e) {
-                      $approvedPermits = [];
-                      error_log('Error fetching approved permits: ' . $e->getMessage());
-                  }
+          try {
+            $sql = '
+              SELECT 
+                f.ref_number,
+                f.holder_name,
+                f.unique_link,
+                f.valid_to,
+                f.approved_at,
+                f.created_at,
+                ft.name AS template_name
+              FROM forms f
+              JOIN form_templates ft ON f.template_id = ft.id
+              WHERE f.status = \'active\'
+              ORDER BY COALESCE(f.approved_at, f.created_at) DESC
+              LIMIT 6
+            ';
+            $approvedStmt = $db->pdo->query($sql);
+            $approvedPermits = $approvedStmt->fetchAll(PDO::FETCH_ASSOC);
+          } catch (Exception $e) {
+            $approvedPermits = [];
+            error_log('Error fetching approved permits: ' . $e->getMessage());
+          }
 
                   // Template icons mapping
                   $templateIcons = [
