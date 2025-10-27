@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use Permits\Db;
-use Throwable;
 
 /**
  * Persist a row in the activity log table.
@@ -27,7 +26,7 @@ function log_activity(Db $db, string $user_id, string $type, string $description
         ]);
 
         return true;
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
         error_log('Activity log error: ' . $e->getMessage());
         return false;
     }
