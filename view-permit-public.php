@@ -493,18 +493,49 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                         </ul>
                     <?php endif; ?>
                     
-                    <?php foreach ($section['fields'] as $field): ?>
+                                        <?php foreach ($section['fields'] as $field): ?>
                         <div class="field-group">
                             <div class="field-label">
                                 <?php echo htmlspecialchars($field['label']); ?>
                             </div>
                             <div class="field-value">
                                 <?php 
-                                $value = $form_data[$field['name']] ?? '';
-                                if ($value === '') { $value = 'N/A'; }
-                                echo nl2br(htmlspecialchars($value)); 
+                                                                $baseName = (string)$field['name'];
+                                                                $value = $form_data[$baseName] ?? '';
+                                                                if ($value === '') { $value = 'N/A'; }
+                                                                echo nl2br(htmlspecialchars($value)); 
                                 ?>
                             </div>
+                                                        <?php 
+                                                            $noteKey = $baseName . '_note';
+                                                            $mediaKey = $baseName . '_media';
+                                                            $noteVal = trim((string)($form_data[$noteKey] ?? ''));
+                                                            $mediaVal = trim((string)($form_data[$mediaKey] ?? ''));
+                                                        ?>
+                                                        <?php if ($noteVal !== ''): ?>
+                                                            <div style="margin-top:6px; font-size:14px; color:#374151; background:#f8fafc; border-left:3px solid #6366f1; padding:10px; border-radius:6px;">
+                                                                <strong>Note:</strong> <?php echo nl2br(htmlspecialchars($noteVal)); ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <?php if ($mediaVal !== ''): 
+                                                                $parts = array_values(array_filter(array_map('trim', explode(',', $mediaVal))));
+                                                        ?>
+                                                            <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                                                                <?php foreach ($parts as $path): 
+                                                                        $url = $app->url(ltrim($path, '/'));
+                                                                        $lower = strtolower($path);
+                                                                        $isImg = preg_match('/\.(png|jpg|jpeg|gif|webp)$/', $lower);
+                                                                ?>
+                                                                    <?php if ($isImg): ?>
+                                                                        <a href="<?php echo htmlspecialchars($url); ?>" target="_blank" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;">
+                                                                            <img src="<?php echo htmlspecialchars($url); ?>" alt="attachment" style="width:120px;height:80px;object-fit:cover;display:block;">
+                                                                        </a>
+                                                                    <?php else: ?>
+                                                                        <a href="<?php echo htmlspecialchars($url); ?>" target="_blank" class="btn btn-secondary">📎 Attachment</a>
+                                                                    <?php endif; ?>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                        <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>

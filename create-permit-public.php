@@ -83,8 +83,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!filter_var($holder_email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception("Invalid email address");
         }
-        
-        // Collect permit data using the parsed structure
+        // Generate IDs early so we can store media predictably
+        $permit_id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+        $unique_link = md5($permit_id . time() . $holder_email);
+        $ref_number = 'PTW-' . date('Y') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+        // Collect permit data using the parsed structure (values + optional notes)
         $permit_data = [];
         foreach ($formStructure as $section) {
             if (!isset($section['fields']) || !is_array($section['fields'])) {
@@ -109,22 +119,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $permit_data[$fieldName] = $value;
+
+                // Optional note paired with tri-state or any field
+                $noteKey = $fieldName . '_note';
+                if (isset($_POST[$noteKey])) {
+                    $permit_data[$noteKey] = trim((string)$_POST[$noteKey]);
+                }
             }
         }
-        
-        // Generate unique ID and link
-        $permit_id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
-        
-        $unique_link = md5($permit_id . time() . $holder_email);
-        
-        // Generate reference number
-        $ref_number = 'PTW-' . date('Y') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+        // Handle media uploads (images/videos) for fields ending with _media
+        $uploadErrors = [];
+        $uploadedAny = false;
+        $baseUploadDir = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $permit_id;
+        if (!is_dir($baseUploadDir)) {
+            @mkdir($baseUploadDir, 0775, true);
+        }
+        $allowedTypes = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/quicktime','video/webm'];
+        foreach ($formStructure as $section) {
+            if (empty($section['fields']) || !is_array($section['fields'])) { continue; }
+            foreach ($section['fields'] as $field) {
+                if (!is_array($field) || empty($field['name'])) { continue; }
+                $name = (string)$field['name'];
+                $mediaKey = $name . '_media';
+                if (empty($_FILES[$mediaKey]) || empty($_FILES[$mediaKey]['name'])) { continue; }
+                $files = $_FILES[$mediaKey];
+                $paths = [];
+                $count = is_array($files['name']) ? count($files['name']) : 0;
+                for ($i=0; $i<$count; $i++) {
+                    $origName = (string)$files['name'][$i];
+                    if ($origName === '') { continue; }
+                    $tmp = (string)$files['tmp_name'][$i];
+                    $type = (string)$files['type'][$i];
+                    $err = (int)$files['error'][$i];
+                    if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) { continue; }
+                    if (!in_array($type, $allowedTypes, true)) { $uploadErrors[] = 'Rejected file type for ' . $origName; continue; }
+                    $safeName = preg_replace('/[^a-zA-Z0-9._-]+/', '_', basename($origName));
+                    $target = $baseUploadDir . DIRECTORY_SEPARATOR . (time() . '_' . $i . '_' . $safeName);
+                    if (@move_uploaded_file($tmp, $target)) {
+                        $uploadedAny = true;
+                        $rel = 'uploads/' . $permit_id . '/' . basename($target);
+                        $paths[] = $rel;
+                    }
+                }
+                if (!empty($paths)) {
+                    $permit_data[$mediaKey] = implode(', ', $paths);
+                }
+            }
+        }
         
         // Insert permit
         $stmt = $db->pdo->prepare("
@@ -297,10 +339,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         /* Choice button group (Yes / No / N/A) */
         .choice-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .choice-group.vertical { flex-direction: column; gap: 10px; }
         .choice-input { position: absolute; opacity: 0; width: 0; height: 0; }
         .choice-pill {
             display: inline-block;
-            padding: 10px 14px;
+            padding: 14px 18px;
             border-radius: 999px;
             border: 2px solid #e5e7eb;
             background: #ffffff;
@@ -309,15 +352,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cursor: pointer;
             user-select: none;
             transition: all .15s ease;
+            text-align: center;
+            min-width: 90px;
         }
         .choice-pill:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(102,126,234,.15); }
         .choice-input:focus + .choice-pill { outline: 2px solid #a5b4fc; outline-offset: 2px; }
-        .choice-input:checked + .choice-pill {
-            border-color: #6366f1;
-            color: #ffffff;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 6px 18px rgba(102,126,234,.35);
-        }
+        .choice-group.vertical .choice-pill { width: 100%; border-radius: 24px; }
+        .choice-input:checked + .choice-pill { color: #ffffff; border-color: transparent; box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+        .choice-input:checked + .choice-pill.choice-yes { background: #9bb837; }
+        .choice-input:checked + .choice-pill.choice-no { background: #e24b4b; }
+        .choice-input:checked + .choice-pill.choice-na { background: #277ba6; }
+        .choice-pill.choice-yes:hover { border-color: #9bb837; }
+        .choice-pill.choice-no:hover { border-color: #e24b4b; }
+        .choice-pill.choice-na:hover { border-color: #277ba6; }
+        /* Per-question utilities */
+        .field-toolbar { display:flex; gap:12px; align-items:center; margin: 8px 0 6px; flex-wrap: wrap; }
+        .tool-link { display:inline-flex; align-items:center; gap:6px; color:#4f46e5; background:#eef2ff; border:1px solid #c7d2fe; padding:8px 12px; border-radius:10px; font-weight:600; text-decoration:none; cursor:pointer; }
+        .tool-link:hover { background:#e0e7ff; }
+        .note-box { display:none; margin-top:8px; }
+        .note-box textarea { width:100%; min-height:80px; border:2px solid #e5e7eb; border-radius:8px; padding:10px; }
+        .media-box { display:none; margin-top:8px; }
+        .media-box input[type=file] { display:block; width:100%; padding:10px; border:2px dashed #c7d2fe; border-radius:10px; background:#f8fafc; }
         .success-message {
             background: #d1fae5;
             border: 2px solid #10b981;
@@ -392,7 +447,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <?php endif; ?>
                 
-                <form method="POST" id="permitForm">
+                <form method="POST" id="permitForm" enctype="multipart/form-data">
                     
                     <!-- Your Information Section -->
                     <div class="section-title">Your Information</div>
@@ -500,7 +555,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <?php endforeach; ?>
                                     </select>
                                 <?php elseif ($fieldType === 'radio'): ?>
-                                    <div class="choice-group" role="radiogroup" aria-label="<?php echo htmlspecialchars($fieldLabel); ?>">
+                                    <?php $isScoreItem = !empty($field['scoreItem']); ?>
+                                    <div class="choice-group <?php echo $isScoreItem ? 'vertical' : ''; ?>" role="radiogroup" aria-label="<?php echo htmlspecialchars($fieldLabel); ?>">
                                         <?php 
                                             $firstOption = true; 
                                             foreach ($fieldOptions as $option):
@@ -512,11 +568,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 }
                                                 if ($optionValue === '') { continue; }
                                                 $optionId = $fieldName . '_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower($optionValue));
+                                                $variant = in_array(strtolower($optionValue), ['yes','no','na'], true) ? 'choice-' . strtolower($optionValue) : '';
                                         ?>
                                             <input class="choice-input" type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo ($fieldRequired && $firstOption) ? 'required' : ''; ?>>
-                                            <label class="choice-pill" for="<?php echo htmlspecialchars($optionId); ?>"><?php echo htmlspecialchars($optionLabel); ?></label>
+                                            <label class="choice-pill <?php echo htmlspecialchars($variant); ?>" for="<?php echo htmlspecialchars($optionId); ?>"><?php echo htmlspecialchars($optionLabel); ?></label>
                                         <?php $firstOption = false; endforeach; ?>
                                     </div>
+                                    <?php if ($isScoreItem): ?>
+                                        <div class="field-toolbar">
+                                            <button type="button" class="tool-link toggle-note" data-for="<?php echo htmlspecialchars($fieldName); ?>">📝 Note</button>
+                                            <button type="button" class="tool-link toggle-media" data-for="<?php echo htmlspecialchars($fieldName); ?>">🖼️ Media</button>
+                                        </div>
+                                        <div class="note-box" id="note_<?php echo htmlspecialchars($fieldName); ?>">
+                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>_note" placeholder="Add a note..."></textarea>
+                                        </div>
+                                        <div class="media-box" id="media_<?php echo htmlspecialchars($fieldName); ?>">
+                                            <input type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple>
+                                            <div style="font-size:12px;color:#64748b;margin-top:6px;">Tip: On mobile, use your camera or photo library.</div>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php elseif ($fieldType === 'date'): ?>
                                     <input 
                                         type="date" 
