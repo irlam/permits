@@ -8,10 +8,15 @@ use Ramsey\Uuid\Uuid;
 /**
  * Locate permits whose validity window has elapsed and update them to expired.
  *
+ * @param object{pdo: \PDO} $db Database wrapper with a public PDO instance
  * @return int Number of permits transitioned to the expired state.
  */
-function check_and_expire_permits(Db $db): int
+function check_and_expire_permits(object $db): int
 {
+    if (function_exists('logActivity')) {
+        logActivity('permit_expiry_check', 'system', '', null, 'Starting automatic permit expiry check.');
+    }
+
     try {
         $driver = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ?: 'mysql';
     } catch (\Throwable $e) {
@@ -48,6 +53,8 @@ function check_and_expire_permits(Db $db): int
         return 0;
     }
 
+    // Track count while processing to avoid loading all results into memory
+    $candidateCount = 0;
     $updatedCount = 0;
     $updateStatement = $db->pdo->prepare(
         "UPDATE forms SET status = 'expired', updated_at = $nowExpression WHERE id = ?"
@@ -59,6 +66,15 @@ function check_and_expire_permits(Db $db): int
     foreach ($expiredPermits as $permit) {
         if (empty($permit['id'])) {
             continue;
+        }
+
+        $candidateCount++;
+
+        // Log candidates found on first iteration
+        if ($candidateCount === 1 && function_exists('logActivity')) {
+            // We found at least one candidate, log it
+            // (We can't know the total count without materializing all results)
+            logActivity('permit_expiry_candidates', 'system', '', null, 'Processing permits eligible for expiration.');
         }
 
         try {
@@ -104,6 +120,16 @@ function check_and_expire_permits(Db $db): int
         }
 
         $updatedCount++;
+    }
+
+    if (function_exists('logActivity')) {
+        if ($candidateCount === 0) {
+            logActivity('permit_expiry_complete', 'system', '', null, 'Automatic permit expiry completed. No permits found requiring expiration.');
+        } elseif ($updatedCount > 0) {
+            logActivity('permit_expiry_complete', 'system', '', null, "Automatic permit expiry completed. {$updatedCount} of {$candidateCount} permit(s) expired successfully.");
+        } else {
+            logActivity('permit_expiry_complete', 'system', '', null, "Automatic permit expiry completed. {$candidateCount} permit(s) found but none could be expired due to errors.");
+        }
     }
 
     return $updatedCount;
