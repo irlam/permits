@@ -252,7 +252,7 @@ function getStatusBadge($status) {
                     <p>No permit templates available yet</p>
                 </div>
             <?php else: ?>
-                <div class="templates-grid">
+                <div class="admin-grid">
                     <?php
                     $icons = [
                         'Hot Works Permit' => '🔥',
