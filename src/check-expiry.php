@@ -8,9 +8,10 @@ use Ramsey\Uuid\Uuid;
 /**
  * Locate permits whose validity window has elapsed and update them to expired.
  *
+ * @param object{pdo: \PDO} $db Database wrapper with a public PDO instance
  * @return int Number of permits transitioned to the expired state.
  */
-function check_and_expire_permits(Db $db): int
+function check_and_expire_permits(object $db): int
 {
     try {
         $driver = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ?: 'mysql';
