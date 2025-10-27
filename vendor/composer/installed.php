@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'defecttracker/permits',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => '2519c9c0643411776726fdc6236056aee4fb4909',
+        'pretty_version' => 'dev-copilot/fix-permit-expired-function',
+        'version' => 'dev-copilot/fix-permit-expired-function',
+        'reference' => '72c9346964f514fb16f66804d970cfa65e967db3',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'defecttracker/permits' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => '2519c9c0643411776726fdc6236056aee4fb4909',
+            'pretty_version' => 'dev-copilot/fix-permit-expired-function',
+            'version' => 'dev-copilot/fix-permit-expired-function',
+            'reference' => '72c9346964f514fb16f66804d970cfa65e967db3',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
