@@ -53,14 +53,8 @@ function check_and_expire_permits(object $db): int
         return 0;
     }
 
-    // Convert to array to get count for logging
-    $expiredPermitsArray = is_array($expiredPermits) ? $expiredPermits : iterator_to_array($expiredPermits);
-    $candidateCount = count($expiredPermitsArray);
-
-    if (function_exists('logActivity') && $candidateCount > 0) {
-        logActivity('permit_expiry_candidates', 'system', '', null, "Found {$candidateCount} permit(s) eligible for expiration.");
-    }
-
+    // Track count while processing to avoid loading all results into memory
+    $candidateCount = 0;
     $updatedCount = 0;
     $updateStatement = $db->pdo->prepare(
         "UPDATE forms SET status = 'expired', updated_at = $nowExpression WHERE id = ?"
@@ -69,9 +63,18 @@ function check_and_expire_permits(object $db): int
         'INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?, ?, ?, ?, ?)'
     );
 
-    foreach ($expiredPermitsArray as $permit) {
+    foreach ($expiredPermits as $permit) {
         if (empty($permit['id'])) {
             continue;
+        }
+
+        $candidateCount++;
+
+        // Log candidates found on first iteration
+        if ($candidateCount === 1 && function_exists('logActivity')) {
+            // We found at least one candidate, log it
+            // (We can't know the total count without materializing all results)
+            logActivity('permit_expiry_candidates', 'system', '', null, 'Processing permits eligible for expiration.');
         }
 
         try {
@@ -120,10 +123,12 @@ function check_and_expire_permits(object $db): int
     }
 
     if (function_exists('logActivity')) {
-        if ($updatedCount > 0) {
-            logActivity('permit_expiry_complete', 'system', '', null, "Automatic permit expiry completed. {$updatedCount} permit(s) expired.");
+        if ($candidateCount === 0) {
+            logActivity('permit_expiry_complete', 'system', '', null, 'Automatic permit expiry completed. No permits found requiring expiration.');
+        } elseif ($updatedCount > 0) {
+            logActivity('permit_expiry_complete', 'system', '', null, "Automatic permit expiry completed. {$updatedCount} of {$candidateCount} permit(s) expired successfully.");
         } else {
-            logActivity('permit_expiry_complete', 'system', '', null, 'Automatic permit expiry completed. No permits needed expiration.');
+            logActivity('permit_expiry_complete', 'system', '', null, "Automatic permit expiry completed. {$candidateCount} permit(s) found but none could be expired due to errors.");
         }
     }
 
