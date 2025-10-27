@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../src/cache-helper.php';
 $schema = json_decode($schemaJson, true);
 $title  = $schema['title'] ?? 'Form';
 
@@ -87,7 +88,7 @@ if (!function_exists('normaliseFieldOptions')) {
   <title><?=htmlspecialchars($title)?></title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
   <style>
     @media print {
       html,body{background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12px}

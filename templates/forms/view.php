@@ -1,5 +1,6 @@
 <?php
-$base = $_ENV['APP_URL'] ?? '/';
+require_once __DIR__ . '/../../src/cache-helper.php';
+$base = rtrim((string)($_ENV['APP_URL'] ?? ''), '/') . rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/');
 $schema = json_decode($template['json_schema'], true);
 $metadata = json_decode($form['metadata'], true);
 $metaFields = $metadata['meta'] ?? [];
@@ -63,10 +64,10 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="<?=$base?>/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
   <title><?=htmlspecialchars($form['ref'] ?? 'Form')?> - <?=htmlspecialchars($title)?></title>
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
   <style>
     .view-wrap{max-width:1200px;margin:0 auto;padding:16px}
     .actions{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
@@ -101,14 +102,14 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
 <body>
 <header class="top">
   <h1>View Permit</h1>
-  <a class="btn" href="/">← Back to Home</a>
+  <a class="btn" href="<?=$base?>/">← Back to Home</a>
 </header>
 
 <div class="view-wrap">
   <div class="actions">
     <button class="btn" onclick="window.print()">🖨️ Print / PDF</button>
-    <a class="btn" href="/form/<?=htmlspecialchars($form['id'])?>/edit">✏️ Edit</a>
-    <button class="btn" onclick="if(confirm('Copy this form to create a new one?')) window.location.href='/form/<?=htmlspecialchars($form['id'])?>/duplicate'">📋 Duplicate</button>
+  <a class="btn" href="<?=$base?>/form/<?=htmlspecialchars($form['id'])?>/edit">✏️ Edit</a>
+  <button class="btn" onclick="if(confirm('Copy this form to create a new one?')) window.location.href='<?=$base?>/form/<?=htmlspecialchars($form['id'])?>/duplicate'">📋 Duplicate</button>
     <button class="btn" onclick="toggleQR()">📱 QR Code</button>
     <button class="btn" onclick="if(confirm('Delete this form?')) deleteForm('<?=htmlspecialchars($form['id'])?>')">🗑️ Delete</button>
     <span class="status-badge"><?=strtoupper(htmlspecialchars($form['status']))?></span>
@@ -119,7 +120,7 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
     <h3 style="margin:0 0 12px 0;color:#e5e7eb">📱 QR Code for this Permit</h3>
     <p style="color:#94a3b8;margin-bottom:12px;font-size:14px">Scan to view permit on mobile device</p>
     <div style="background:#fff;display:inline-block;padding:16px;border-radius:8px">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?=urlencode(($_ENV['APP_URL'] ?? 'http://localhost') . '/form/' . $form['id'])?>" 
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?=urlencode(($base ?: 'http://localhost') . '/form/' . $form['id'])?>" 
            alt="QR Code" 
            style="display:block;width:200px;height:200px">
     </div>
@@ -320,7 +321,7 @@ function toggleQR() {
 }
 
 function downloadQR() {
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=<?=urlencode(($_ENV['APP_URL'] ?? 'http://localhost') . '/form/' . $form['id'])?>';
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=<?=urlencode(($base ?: 'http://localhost') . '/form/' . $form['id'])?>';
   const a = document.createElement('a');
   a.href = qrUrl;
   a.download = 'permit-qr-<?=htmlspecialchars($form['ref'])?>.png';

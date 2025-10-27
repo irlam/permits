@@ -30,10 +30,26 @@ function set_no_cache_headers() {
 function asset($path) {
     // Version number - increment this when you update CSS/JS
     $version = defined('APP_VERSION') ? APP_VERSION : '5.0.0';
-    
-    // Add version as query string
-    $separator = strpos($path, '?') !== false ? '&' : '?';
-    return $path . $separator . 'v=' . $version;
+
+    // Absolute URLs: just append version
+    if (preg_match('#^https?://#i', $path)) {
+        $separator = strpos($path, '?') !== false ? '&' : '?';
+        return $path . $separator . 'v=' . $version;
+    }
+
+    // Build base-aware asset URL using APP_URL + APP_BASE_PATH
+    $baseUrl  = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
+    $basePath = rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/');
+    $normalized = '/' . ltrim((string)$path, '/');
+
+    $href = ($baseUrl !== '' ? $baseUrl : '') . $basePath . $normalized;
+    if ($href === '') {
+        // Fallback to original path if env not available
+        $href = $normalized;
+    }
+
+    $separator = strpos($href, '?') !== false ? '&' : '?';
+    return $href . $separator . 'v=' . $version;
 }
 
 // Get timestamp-based version (alternative method)

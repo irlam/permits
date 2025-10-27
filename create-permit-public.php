@@ -23,7 +23,7 @@
 $template_id = $_GET['template'] ?? null;
 
 if (!$template_id) {
-    header('Location: /');
+    header('Location: ' . $app->url('/'));
     exit;
 }
 
@@ -34,7 +34,7 @@ try {
     $template = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$template) {
-        header('Location: /');
+        header('Location: ' . $app->url('/'));
         exit;
     }
 } catch (Exception $e) {
@@ -352,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </p>
                     <?php endif; ?>
                     <div style="margin-top: 24px;">
-                        <a href="/" class="btn btn-primary">← Back to Homepage</a>
+                        <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-primary">← Back to Homepage</a>
                     </div>
                 </div>
                 
@@ -556,7 +556,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <div style="margin-top: 16px; text-align: center;">
-                        <a href="/" class="btn btn-secondary">← Cancel</a>
+                        <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-secondary">← Cancel</a>
                     </div>
                 </form>
             <?php endif; ?>

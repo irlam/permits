@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../src/cache-helper.php';
 $schema = json_decode($schemaJson, true);
 $title  = $schema['title'] ?? 'Form';
 $meta = $existingData['meta'] ?? [];
@@ -86,7 +87,7 @@ if (!function_exists('normaliseFieldOptions')) {
   <title>Edit: <?=htmlspecialchars($title)?></title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
-  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
   <style>
     .status-selector{margin:16px 0;padding:16px;background:#111827;border:1px solid #1f2937;border-radius:12px}
     .status-selector label{display:block;margin-bottom:8px;font-weight:600}
@@ -97,7 +98,8 @@ if (!function_exists('normaliseFieldOptions')) {
 <div class="wrap">
   <header class="page-head">
     <h1>Edit: <?=htmlspecialchars($title)?></h1>
-    <a class="btn" href="/form/<?=htmlspecialchars($form['id'])?>">← Cancel</a>
+  <?php $base = rtrim((string)($_ENV['APP_URL'] ?? ''), '/') . rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/'); ?>
+  <a class="btn" href="<?=$base?>/form/<?=htmlspecialchars($form['id'])?>">← Cancel</a>
   </header>
 
   <div class="status-selector">
@@ -385,7 +387,7 @@ async function updateForm(ev){
   const j = await r.json(); 
   if(j.ok){ 
     alert('Form updated successfully!'); 
-    location.href='/form/<?=htmlspecialchars($form['id'])?>'; 
+  location.href='<?=$base?>/form/<?=htmlspecialchars($form['id'])?>'; 
   } else { 
     alert('Update failed: ' + (j.error || 'Unknown error')); 
   }

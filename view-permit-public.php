@@ -29,7 +29,7 @@ $print_mode = isset($_GET['print']);
 $canClose = false;
 
 if (!$unique_link) {
-    header('Location: /');
+    header('Location: ' . $app->url('/'));
     exit;
 }
 
@@ -557,7 +557,8 @@ function closePermit() {
         formData.append('reason', reason);
     }
     
-    fetch('/api/close-permit.php', {
+    const BASE_URL = '<?= htmlspecialchars(rtrim((string)($_ENV['APP_URL'] ?? ''), '/') . rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/')) ?>';
+    fetch(BASE_URL + '/api/close-permit.php', {
         method: 'POST',
         body: formData
     })
