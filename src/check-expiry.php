@@ -29,8 +29,8 @@ function check_and_expire_permits(object $db): int
 
     $nowExpression = $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
     $validToCheck = $driver === 'sqlite'
-        ? "valid_to IS NOT NULL AND TRIM(valid_to) <> '' AND datetime(valid_to) <= $nowExpression"
-        : "valid_to IS NOT NULL AND valid_to <> '0000-00-00 00:00:00' AND valid_to <= $nowExpression";
+        ? "valid_to IS NOT NULL AND TRIM(valid_to) <> ''"
+        : "valid_to IS NOT NULL";
 
     $sql = <<<SQL
         SELECT id, status, valid_to, ref, ref_number
@@ -63,8 +63,25 @@ function check_and_expire_permits(object $db): int
         'INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?, ?, ?, ?, ?)'
     );
 
+    $now = new DateTimeImmutable('now');
     foreach ($expiredPermits as $permit) {
         if (empty($permit['id'])) {
+            continue;
+        }
+
+        $validToRaw = $permit['valid_to'] ?? null;
+        if (!is_string($validToRaw) || $validToRaw === '' || $validToRaw === '0000-00-00 00:00:00') {
+            // MySQL strict mode treats zero dates as errors, so skip them entirely
+            continue;
+        }
+
+        try {
+            $validTo = new DateTimeImmutable($validToRaw);
+        } catch (\Throwable $e) {
+            continue;
+        }
+
+        if ($validTo > $now) {
             continue;
         }
 
