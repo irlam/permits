@@ -22,8 +22,9 @@
 // Get template ID from query string or resume an existing draft via unique link
 $template_id = $_GET['template'] ?? null;
 $draft_link = $_GET['draft'] ?? null;
+$reopen_permit_id = $_GET['reopen'] ?? null;
 
-if (!$template_id && !$draft_link) {
+if (!$template_id && !$draft_link && !$reopen_permit_id) {
     header('Location: ' . $app->url('/'));
     exit;
 }
@@ -34,6 +35,20 @@ if ($draft_link) {
     try {
         $st = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? AND status = 'draft' LIMIT 1");
         $st->execute([$draft_link]);
+        $existingPermit = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($existingPermit) {
+            $template_id = $existingPermit['template_id'];
+        }
+    } catch (Exception $e) {
+        // Ignore; we'll fall back to normal flow
+    }
+}
+
+// Load permit to reopen if present
+if ($reopen_permit_id) {
+    try {
+        $st = $db->pdo->prepare("SELECT * FROM forms WHERE id = ? LIMIT 1");
+        $st->execute([$reopen_permit_id]);
         $existingPermit = $st->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($existingPermit) {
             $template_id = $existingPermit['template_id'];

@@ -126,6 +126,16 @@ function formatDateUK($date) {
     $timestamp = strtotime($date);
     return date('d/m/Y H:i', $timestamp);
 }
+
+function getReopenLink($permitId) {
+    // Generate a unique token for reopening
+    $token = bin2hex(random_bytes(16));
+    $_SESSION['reopen_' . $permitId] = [
+        'token' => $token,
+        'created_at' => time(),
+    ];
+    return '/create-permit-public.php?reopen=' . urlencode($permitId);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -198,6 +208,7 @@ function formatDateUK($date) {
                                         <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" class="btn">👁️ View Details</a>
                                         <?php if ($permit['status'] === 'active'): ?>
                                             <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1" class="btn btn-secondary">🖨️ Print</a>
+                                            <a href="<?php echo getReopenLink($permit['id']); ?>" class="btn btn-secondary">🔄 Reopen</a>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -230,6 +241,7 @@ function formatDateUK($date) {
                                 <div class="tab-actions" style="margin-top:8px">
                                     <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
                                     <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
+                                    <a class="btn btn-secondary" href="/create-permit-public.php?reopen=<?php echo urlencode($permit['id'] ?? ''); ?>">🔄 Reopen</a>
                                 </div>
                             </div>
                         <?php endforeach; ?>
