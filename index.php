@@ -195,9 +195,9 @@ function formatDateUK($date) {
                 </div>
 
                 <div class="surface-section">
-                        <div class="grid-two">
-                                <!-- Left: Status Checker -->
-                                                <section class="surface-card">
+                                        <div class="grid-two">
+                                                <!-- Status Checker -->
+                                                <section class="surface-card" style="grid-column:1/-1">
                                         <div class="card-header"><h3>🔍 Check Your Permit Status</h3></div>
                                         <p class="muted">Enter your email to see all your permits and their current status</p>
                                                         <form action="/" method="GET" class="status-row">
@@ -242,38 +242,38 @@ function formatDateUK($date) {
                                                 </div>
                                         <?php endif; ?>
                                         <?php endif; ?>
-                                </section>
+                                                </section>
+                                        </div>
 
-                                <!-- Right: Recently Approved -->
-                                                <section class="surface-card" id="approved-permits">
-                                        <div class="card-header"><h3>✅ Recently Approved</h3></div>
-                                        <?php if (empty($approvedPermits)): ?>
-                                                <div class="muted">No approved permits yet.</div>
-                                        <?php else: ?>
-                                                                <div class="permit-list permit-list-scroll">
-                                                        <?php foreach ($approvedPermits as $permit): ?>
-                                                                                <div class="mini-card">
-                                                                        <div class="card-header">
-                                                                                <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                                                                <?php echo getStatusBadge('active'); ?>
+                                        <!-- Recently Approved: horizontal across the page -->
+                                        <section class="surface-card" id="approved-permits" style="margin-top:12px">
+                                                <div class="card-header"><h3>✅ Recently Approved</h3></div>
+                                                <?php if (empty($approvedPermits)): ?>
+                                                        <div class="muted">No approved permits yet.</div>
+                                                <?php else: ?>
+                                                                                                                                                                                                                                <div class="scroll-row">
+                                                                <?php foreach ($approvedPermits as $permit): ?>
+                                                                        <div class="mini-card approved-card">
+                                                                                <div class="card-header">
+                                                                                        <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
+                                                                                        <?php echo getStatusBadge('active'); ?>
+                                                                                </div>
+                                                                                <?php if (!empty($permit['holder_name'])): ?>
+                                                                                        <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
+                                                                                <?php endif; ?>
+                                                                                <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
+                                                                                <?php if (!empty($permit['valid_to'])): ?>
+                                                                                        <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
+                                                                                <?php endif; ?>
+                                                                                <div class="tab-actions" style="margin-top:8px">
+                                                                                        <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
+                                                                                        <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
+                                                                                </div>
                                                                         </div>
-                                                                        <?php if (!empty($permit['holder_name'])): ?>
-                                                                                <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
-                                                                        <?php endif; ?>
-                                                                        <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
-                                                                        <?php if (!empty($permit['valid_to'])): ?>
-                                                                                <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
-                                                                        <?php endif; ?>
-                                                                                        <div class="tab-actions" style="margin-top:8px">
-                                                                                <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View Permit</a>
-                                                                                <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
-                                                                        </div>
-                                                                </div>
-                                                        <?php endforeach; ?>
-                                                </div>
-                                        <?php endif; ?>
-                                </section>
-                        </div>
+                                                                <?php endforeach; ?>
+                                                        </div>
+                                                <?php endif; ?>
+                                        </section>
 
                 <!-- Available Permit Templates -->
                 <section class="surface-card" id="templates" style="margin-top:16px">
@@ -286,9 +286,9 @@ function formatDateUK($date) {
                                         <p class="muted">Contact your administrator to add permit templates.</p>
                                 </div>
                         <?php else: ?>
-                                                                <div class="surface-grid">
+                                                                                <div class="surface-grid">
                                         <?php foreach ($templates as $template): ?>
-                                                                                <a class="template-card template-card--home" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                                                                                                <a class="template-card template-card--home template-card--xl" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
                                                         <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
                                                         <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
                                                         <span class="version">Version <?php echo htmlspecialchars($template['version']); ?></span>
@@ -341,5 +341,54 @@ function formatDateUK($date) {
                         return output;
                       }
                     </script>
+                                                                                <script>
+                                                                                        // Auto-scroll ticker for Recently Approved on desktop (desktop only)
+                                                                                        (function(){
+                                                                                                const mq = window.matchMedia('(min-width: 900px)');
+                                                                                                function initTicker(){
+                                                                                                        const row = document.querySelector('#approved-permits .scroll-row');
+                                                                                                        if (!row || row.dataset.tickerInit === '1') return;
+                                                                                                        const originalChildren = Array.from(row.children);
+                                                                                                        if (originalChildren.length < 2) return; // need at least 2 to look like a ticker
+                                                                                                        row.dataset.tickerInit = '1';
+
+                                                                                                        // Clone once to allow seamless wrap-around
+                                                                                                        originalChildren.forEach(node => row.appendChild(node.cloneNode(true)));
+                                                                                                        const loopWidth = row.scrollWidth / 2; // width of original set
+
+                                                                                                        let x = 0;
+                                                                                                        let paused = false;
+                                                                                                        const speed = 0.45; // pixels per frame (~27px/s at 60fps)
+                                                                                                        let rafId;
+
+                                                                                                        function step(){
+                                                                                                                if (!paused) {
+                                                                                                                        x += speed;
+                                                                                                                        if (x >= loopWidth) x = 0;
+                                                                                                                        row.scrollLeft = x;
+                                                                                                                }
+                                                                                                                rafId = requestAnimationFrame(step);
+                                                                                                        }
+
+                                                                                                        // Pause when user interacts
+                                                                                                        row.addEventListener('mouseenter', () => paused = true);
+                                                                                                        row.addEventListener('mouseleave', () => paused = false);
+                                                                                                        row.addEventListener('touchstart', () => paused = true, { passive: true });
+                                                                                                        row.addEventListener('touchend', () => paused = false);
+
+                                                                                                        // Manage tab visibility
+                                                                                                        document.addEventListener('visibilitychange', () => {
+                                                                                                                if (document.hidden) cancelAnimationFrame(rafId);
+                                                                                                                else rafId = requestAnimationFrame(step);
+                                                                                                        });
+
+                                                                                                        step();
+                                                                                                }
+                                                                                                if (mq.matches) {
+                                                                                                        if (document.readyState === 'complete' || document.readyState === 'interactive') initTicker();
+                                                                                                        else window.addEventListener('load', initTicker);
+                                                                                                }
+                                                                                        })();
+                                                                                </script>
                   </body>
                   </html>

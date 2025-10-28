@@ -992,3 +992,27 @@ body.theme-dark {
 .template-card--home .icon { font-size: 52px; }
 
 .permit-list-scroll { max-height: 420px; overflow: auto; padding-right: 6px; }
+
+/* Horizontal scroller for Recently Approved */
+.scroll-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px 8px 2px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-row > * { scroll-snap-align: start; }
+.approved-card { min-width: 280px; max-width: 360px; }
+
+/* Larger, poppier template tiles */
+.template-card--xl {
+  padding: 26px;
+  border-image: linear-gradient(135deg, rgba(59,130,246,.45), rgba(34,197,94,.35), rgba(236,72,153,.35)) 1;
+  border: 1px solid #334155;
+  background: radial-gradient(1200px 200px at -200px -200px, rgba(59,130,246,.12), transparent),
+              linear-gradient(180deg, #0b1220, #111827);
+}
+.template-card--xl .icon { font-size: 56px; }
+.template-card--xl .name { font-size: 17px; }
