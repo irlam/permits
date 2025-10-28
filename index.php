@@ -27,7 +27,32 @@ if (function_exists('check_and_expire_permits')) {
 // Session for login state
 session_start();
 
-                    
+// Status checker (by email)
+$statusEmail = $_GET['check_email'] ?? '';
+$userPermits = [];
+if (!empty($statusEmail) && filter_var($statusEmail, FILTER_VALIDATE_EMAIL)) {
+        try {
+                $stmt = $db->pdo->prepare('
+                        SELECT 
+                                f.id,
+                                f.ref_number,
+                                f.status,
+                                f.valid_to,
+                                f.created_at,
+                                f.unique_link,
+                                ft.name as template_name
+                        FROM forms f
+                        JOIN form_templates ft ON f.template_id = ft.id
+                        WHERE f.holder_email = ?
+                        ORDER BY f.created_at DESC
+                        LIMIT 10
+                ');
+                $stmt->execute([$statusEmail]);
+                $userPermits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+                error_log('Error fetching user permits: ' . $e->getMessage());
+        }
+}
 
                   // Available permit templates
                   try {
@@ -261,7 +286,7 @@ function formatDateUK($date) {
         </div> <!-- /.wrap -->
 
                 <!-- Mobile Permit Picker Sheet -->
-                <div class="permit-sheet" id="permitSheet" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
+                                                                <div class="permit-sheet" id="permitSheet" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
                         <div class="permit-sheet__panel">
                                 <div class="permit-sheet__handle"></div>
                                 <div class="card-header" style="margin-bottom:12px"><h3>📋 Choose Permit Type</h3><button class="btn btn-secondary" id="closePermitSheet">Close</button></div>
@@ -273,82 +298,48 @@ function formatDateUK($date) {
                                                 </a>
                                         <?php endforeach; ?>
                                 </div>
-
-                                <!-- Floating mobile Permits button -->
-                                <button type="button" class="fab-permit mobile-only" id="fabPermit">☰ Permits</button>
                         </div>
                 </div>
-                    <script>
-                                                                                <script>
-                                                                                                                                                        <script src="/assets/app.js"></script>
-                                                                                                                                                        <script>
-                                                                                                                                                                // Mobile permit sheet open/close
-                                                                                                                                                                                                                                        (function(){
-                                                                                                                                                                                                                                                const openBtn = document.getElementById('openPermitPicker');
-                                                                                                                                                                                                                                                const fabBtn = document.getElementById('fabPermit');
-                                                                                                                                                                        const sheet = document.getElementById('permitSheet');
-                                                                                                                                                                        const closeBtn = document.getElementById('closePermitSheet');
-                                                                                                                                                                        function open(){ sheet?.setAttribute('data-open','1'); sheet?.setAttribute('aria-hidden','false'); }
-                                                                                                                                                                        function close(){ sheet?.setAttribute('data-open','0'); sheet?.setAttribute('aria-hidden','true'); }
-                                                                                                                                                                                                                                                openBtn?.addEventListener('click', open);
-                                                                                                                                                                                                                                                fabBtn?.addEventListener('click', open);
-                                                                                                                                                                        closeBtn?.addEventListener('click', close);
-                                                                                                                                                                        sheet?.addEventListener('click', (e)=>{ if (e.target === sheet) close(); });
-                                                                                                                                                                })();
-                                                                                                                                                        </script>
-                                                                                        (function(){
-                                                                                                function updateScrollRows(){
-                                                                                                        document.querySelectorAll('.scroll-row').forEach(function(row){
-                                                                                                                const overflowing = row.scrollWidth > row.clientWidth + 1; // buffer for subpixel
-                                                                                                                row.setAttribute('data-overflow', overflowing ? '1' : '0');
-                                                                                                        });
-                                                                                                }
-                                                                                                const ro = new ResizeObserver(updateScrollRows);
-                                                                                                window.addEventListener('load', function(){
-                                                                                                        document.querySelectorAll('.scroll-row').forEach(function(row){ ro.observe(row); });
-                                                                                                        updateScrollRows();
-                                                                                                });
-                                                                                                window.addEventListener('orientationchange', function(){ setTimeout(updateScrollRows, 150); });
-                                                                                        })();
-                                                                                </script>
-                      // Optional PWA install UI hook; hidden unless event fires
-                      let deferredPrompt;
-                      window.addEventListener('beforeinstallprompt', (e) => {
-                        e.preventDefault();
-                        deferredPrompt = e;
-                      });
+                                                                <!-- Floating mobile Permits button -->
+                                                                <button type="button" class="fab-permit mobile-only" id="fabPermit">☰ Permits</button>
+                                                                <script src="/assets/app.js"></script>
+                                                                <script>
+                                                                        // Mobile permit sheet open/close (no optional chaining for compatibility)
+                                                                        (function(){
+                                                                                var openBtn = document.getElementById('openPermitPicker');
+                                                                                var fabBtn = document.getElementById('fabPermit');
+                                                                                var sheet = document.getElementById('permitSheet');
+                                                                                var closeBtn = document.getElementById('closePermitSheet');
+                                                                                function open(){ if (sheet) { sheet.setAttribute('data-open','1'); sheet.setAttribute('aria-hidden','false'); } }
+                                                                                function close(){ if (sheet) { sheet.setAttribute('data-open','0'); sheet.setAttribute('aria-hidden','true'); } }
+                                                                                if (openBtn) openBtn.addEventListener('click', open);
+                                                                                if (fabBtn) fabBtn.addEventListener('click', open);
+                                                                                if (closeBtn) closeBtn.addEventListener('click', close);
+                                                                                if (sheet) sheet.addEventListener('click', function(e){ if (e.target === sheet) close(); });
+                                                                        })();
 
-                      // Register service worker (base-aware)
-                      if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.register('<?=json_encode($app->url('sw.js'))?>'.slice(1,-1))
-                          .catch(err => console.log('SW registration failed', err));
-                      }
-
-                      // Handle push subscription change -> re-subscribe at base-aware endpoint
-                      (async () => {
-                        if (!('serviceWorker' in navigator)) return;
-                        const reg = await navigator.serviceWorker.getRegistration('<?=json_encode($app->url('sw.js'))?>'.slice(1,-1)) || await navigator.serviceWorker.register('<?=json_encode($app->url('sw.js'))?>'.slice(1,-1));
-                        navigator.serviceWorker.addEventListener('message', async (evt) => {
-                          if (evt.data?.type === 'PUSH_SUBSCRIPTION_CHANGED') {
-                            try {
-                              const vapidKeyB64 = window.VAPID_PUBLIC_KEY;
-                              if (!vapidKeyB64) return;
-                              const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKeyB64) });
-                              await fetch('<?=json_encode($app->url('api/push/subscribe.php'))?>'.slice(1,-1), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
-                            } catch (e) { console.warn('Push re-subscribe failed', e); }
-                          }
-                        });
-                      })();
-
-                      function urlBase64ToUint8Array(base64String) {
-                        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-                        const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-                        const rawData = atob(base64);
-                        const output  = new Uint8Array(rawData.length);
-                        for (let i = 0; i < rawData.length; ++i) output[i] = rawData.charCodeAt(i);
-                        return output;
-                      }
-                    </script>
+                                                                        // Center align scroll rows when not overflowing
+                                                                        (function(){
+                                                                                function updateScrollRows(){
+                                                                                        var rows = document.querySelectorAll('.scroll-row');
+                                                                                        var each = rows.forEach ? rows.forEach.bind(rows) : function(cb){ Array.prototype.forEach.call(rows, cb); };
+                                                                                        each(function(row){
+                                                                                                var overflowing = row.scrollWidth > row.clientWidth + 1;
+                                                                                                row.setAttribute('data-overflow', overflowing ? '1' : '0');
+                                                                                        });
+                                                                                }
+                                                                                var ro = window.ResizeObserver ? new ResizeObserver(updateScrollRows) : null;
+                                                                                window.addEventListener('load', function(){
+                                                                                        if (ro) {
+                                                                                                var rows = document.querySelectorAll('.scroll-row');
+                                                                                                rows.forEach ? rows.forEach(function(r){ ro.observe(r); }) : Array.prototype.forEach.call(rows, function(r){ ro.observe(r); });
+                                                                                        }
+                                                                                        updateScrollRows();
+                                                                                });
+                                                                                window.addEventListener('resize', updateScrollRows);
+                                                                                window.addEventListener('orientationchange', function(){ setTimeout(updateScrollRows, 150); });
+                                                                        })();
+                                                                </script>
                                                                                 
                     
                   </body>
