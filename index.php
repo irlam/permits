@@ -313,26 +313,21 @@ function formatDateUK($date) {
                 </div>
         </div>
 
-        <!-- Floating mobile Permits button -->
-        <button type="button" class="fab-permit mobile-only" id="fabPermit">☰ Permits</button>
-
         <script src="/assets/app.js"></script>
         <script>
-        // Mobile permit sheet open/close
+        // Mobile permit sheet open/close (via header burger)
         (function(){
                 var openBtn = document.getElementById('openPermitPicker');
-                var fabBtn = document.getElementById('fabPermit');
                 var sheet = document.getElementById('permitSheet');
                 var closeBtn = document.getElementById('closePermitSheet');
                 
-                console.log('Permit sheet elements:', {openBtn: !!openBtn, fabBtn: !!fabBtn, sheet: !!sheet, closeBtn: !!closeBtn});
+                console.log('Permit sheet elements:', {openBtn: !!openBtn, sheet: !!sheet, closeBtn: !!closeBtn});
                 
                 function open(e){ 
                         if (e) e.preventDefault();
                         console.log('Opening permit sheet');
                         if (sheet) { 
                                 sheet.style.display = 'block';
-                                // Force reflow to trigger animation
                                 sheet.offsetHeight;
                                 sheet.setAttribute('data-open','1'); 
                                 sheet.setAttribute('aria-hidden','false');
@@ -352,7 +347,6 @@ function formatDateUK($date) {
                         } 
                 }
                 if (openBtn) openBtn.addEventListener('click', open);
-                if (fabBtn) fabBtn.addEventListener('click', open);
                 if (closeBtn) closeBtn.addEventListener('click', close);
                 if (sheet) sheet.addEventListener('click', function(e){ if (e.target === sheet) close(); });
         })();
