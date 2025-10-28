@@ -268,7 +268,6 @@ function getStatusBadge($status) {
                         <a href="<?php echo htmlspecialchars($app->url('create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>" class="template-card">
                             <div class="icon"><?php echo $icon; ?></div>
                             <div class="name"><?php echo htmlspecialchars($template['name']); ?></div>
-                            <div class="version">Version <?php echo $template['version'] ?? 1; ?></div>
                         </a>
                     <?php endforeach; ?>
                 </div>

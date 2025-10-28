@@ -287,7 +287,6 @@ function formatDateUK($date) {
                                                                                                 <a class="template-card template-card--home template-card--xl" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
                                                         <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
                                                         <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
-                                                        <span class="version">Version <?php echo htmlspecialchars($template['version']); ?></span>
                                                 </a>
                                         <?php endforeach; ?>
                                 </div>

@@ -366,6 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         /* Choice button group (Yes / No / N/A) */
         .choice-group { display: flex; flex-wrap: wrap; gap: 8px; }
         .choice-group.vertical { flex-direction: column; gap: 10px; }
+        /* Hide native radios by default; labels are the visual buttons */
         .choice-input { position: absolute; opacity: 0; width: 0; height: 0; }
         .choice-pill {
             display: inline-block;
@@ -381,6 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-align: center;
             min-width: 90px;
         }
+        .choice-pill:empty::before { content: attr(data-label); }
         .choice-pill:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(102,126,234,.15); }
         .choice-input:focus + .choice-pill { outline: 2px solid #a5b4fc; outline-offset: 2px; }
         .choice-group.vertical .choice-pill { width: 100%; border-radius: 24px; }
@@ -391,6 +393,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .choice-pill.choice-yes:hover { border-color: #9bb837; }
         .choice-pill.choice-no:hover { border-color: #e24b4b; }
         .choice-pill.choice-na:hover { border-color: #277ba6; }
+        /* Mobile fallback: show native radios as well for maximum compatibility */
+        @media (max-width: 640px) {
+            .choice-group { gap: 10px; }
+            .choice-input { position: static; opacity: 1; width: 18px; height: 18px; margin-right: 8px; }
+            .choice-pill { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px; }
+        }
         /* Per-question utilities */
         .field-toolbar { display:flex; gap:12px; align-items:center; margin: 8px 0 6px; flex-wrap: wrap; }
         .tool-link { display:inline-flex; align-items:center; gap:6px; color:#4f46e5; background:#eef2ff; border:1px solid #c7d2fe; padding:8px 12px; border-radius:10px; font-weight:600; text-decoration:none; cursor:pointer; }
