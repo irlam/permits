@@ -267,6 +267,9 @@ function formatDateUK($date) {
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
+        /* Ensure status card doesn't stretch to tallest sibling in grid/flex */
+        .status-card { align-self: start; }
+
         .card-title {
             font-size: 24px;
             font-weight: 700;
@@ -281,6 +284,12 @@ function formatDateUK($date) {
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 24px;
+        }
+
+        /* Make the status block compact by default; expands when showing results */
+        .status-checker.compact {
+            max-height: 280px;
+            overflow: hidden;
         }
 
         .status-checker h3 {
@@ -586,8 +595,8 @@ function formatDateUK($date) {
         </div>
 
         <!-- Status Checker -->
-        <div class="card">
-            <div class="status-checker">
+        <div class="card status-card">
+            <div class="status-checker<?php echo empty($statusEmail) ? ' compact' : ''; ?>">
                 <h3>🔍 Check Your Permit Status</h3>
                 <p style="color: #6b7280; margin-bottom: 16px;">
                     Enter your email to see all your permits and their current status
