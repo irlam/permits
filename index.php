@@ -27,45 +27,7 @@ if (function_exists('check_and_expire_permits')) {
 // Session for login state
 session_start();
 
-// Current user
-$isLoggedIn = isset($_SESSION['user_id']);
-$currentUser = null;
-if ($isLoggedIn) {
-  try {
-    $u = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-    $u->execute([$_SESSION['user_id']]);
-    $currentUser = $u->fetch(PDO::FETCH_ASSOC) ?: null;
-  } catch (Exception $e) {
-    $currentUser = null;
-    error_log('Error fetching current user: ' . $e->getMessage());
-  }
-}
-                  // Status checker (by email)
-                  $statusEmail = $_GET['check_email'] ?? '';
-                  $userPermits = [];
-                  if (!empty($statusEmail) && filter_var($statusEmail, FILTER_VALIDATE_EMAIL)) {
-                      try {
-                          $stmt = $db->pdo->prepare('
-                              SELECT 
-                                  f.id,
-                                  f.ref_number,
-                                  f.status,
-                                  f.valid_to,
-                                  f.created_at,
-                                  f.unique_link,
-                                  ft.name as template_name
-                              FROM forms f
-                              JOIN form_templates ft ON f.template_id = ft.id
-                              WHERE f.holder_email = ?
-                              ORDER BY f.created_at DESC
-                              LIMIT 10
-                          ');
-                          $stmt->execute([$statusEmail]);
-                          $userPermits = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                      } catch (Exception $e) {
-                          error_log('Error fetching user permits: ' . $e->getMessage());
-                      }
-                  }
+                    
 
                   // Available permit templates
                   try {
@@ -187,6 +149,7 @@ function formatDateUK($date) {
                                         <button id="installButton" class="btn">📱 Install App</button>
                                         <a href="/login.php" class="btn btn-accent">🔐 Manager Login</a>
                                 <?php endif; ?>
+                                <button type="button" class="btn mobile-only" id="openPermitPicker">☰ Permits</button>
                         </div>
                 </div>
 
@@ -297,9 +260,37 @@ function formatDateUK($date) {
                 </div> <!-- /.surface-section -->
         </div> <!-- /.wrap -->
 
+                <!-- Mobile Permit Picker Sheet -->
+                <div class="permit-sheet" id="permitSheet" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
+                        <div class="permit-sheet__panel">
+                                <div class="permit-sheet__handle"></div>
+                                <div class="card-header" style="margin-bottom:12px"><h3>📋 Choose Permit Type</h3><button class="btn btn-secondary" id="closePermitSheet">Close</button></div>
+                                <div class="permit-list">
+                                        <?php foreach ($templates as $template): ?>
+                                                <a class="permit-link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                                                        <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
+                                                        <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
+                                                </a>
+                                        <?php endforeach; ?>
+                                </div>
+                        </div>
+                </div>
                     <script>
                                                                                 <script>
-                                                                                        // Center align scroll rows when not overflowing
+                                                                                                                                                        <script src="/assets/app.js"></script>
+                                                                                                                                                        <script>
+                                                                                                                                                                // Mobile permit sheet open/close
+                                                                                                                                                                (function(){
+                                                                                                                                                                        const openBtn = document.getElementById('openPermitPicker');
+                                                                                                                                                                        const sheet = document.getElementById('permitSheet');
+                                                                                                                                                                        const closeBtn = document.getElementById('closePermitSheet');
+                                                                                                                                                                        function open(){ sheet?.setAttribute('data-open','1'); sheet?.setAttribute('aria-hidden','false'); }
+                                                                                                                                                                        function close(){ sheet?.setAttribute('data-open','0'); sheet?.setAttribute('aria-hidden','true'); }
+                                                                                                                                                                        openBtn?.addEventListener('click', open);
+                                                                                                                                                                        closeBtn?.addEventListener('click', close);
+                                                                                                                                                                        sheet?.addEventListener('click', (e)=>{ if (e.target === sheet) close(); });
+                                                                                                                                                                })();
+                                                                                                                                                        </script>
                                                                                         (function(){
                                                                                                 function updateScrollRows(){
                                                                                                         document.querySelectorAll('.scroll-row').forEach(function(row){

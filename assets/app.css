@@ -941,6 +941,14 @@ body.theme-dark {
   color: #cbd5f5;
 }
 
+/* Visibility helpers */
+.mobile-only { display: none !important; }
+.desktop-only { display: initial !important; }
+@media (max-width: 640px) {
+  .mobile-only { display: inline-flex !important; }
+  .desktop-only { display: none !important; }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Homepage polish                                                            */
 /* -------------------------------------------------------------------------- */
@@ -1050,3 +1058,15 @@ body.theme-dark {
 .template-card--xl .name { font-size: 17px; }
 
 /* Ticker removed: keeping .scroll-row default behavior only */
+
+/* -------------------------------------------------------------------------- */
+/*  Mobile Permit Picker Sheet                                                */
+/* -------------------------------------------------------------------------- */
+.permit-sheet { position: fixed; inset: 0; display: none; background: rgba(2,6,23,0.6); z-index: 1000; }
+.permit-sheet[data-open="1"] { display: block; }
+.permit-sheet__panel { position: absolute; left: 0; right: 0; bottom: 0; background: #0f172a; border-top-left-radius: 14px; border-top-right-radius: 14px; border: 1px solid #334155; max-height: 80vh; overflow: auto; padding: 16px; }
+.permit-sheet__handle { width: 44px; height: 4px; background: #334155; border-radius: 999px; margin: 6px auto 12px; }
+.permit-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.permit-link { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #111827; border: 1px solid #334155; border-radius: 10px; color: #e5e7eb; text-decoration: none; }
+.permit-link .icon { font-size: 22px; }
+.permit-link:active { transform: scale(0.98); }
