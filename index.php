@@ -128,12 +128,7 @@ function formatDateUK($date) {
 }
 
 function getReopenLink($permitId) {
-    // Generate a unique token for reopening
-    $token = bin2hex(random_bytes(16));
-    $_SESSION['reopen_' . $permitId] = [
-        'token' => $token,
-        'created_at' => time(),
-    ];
+    // Simply return the reopen link - the form will handle creating a new permit with copied data
     return '/create-permit-public.php?reopen=' . urlencode($permitId);
 }
 ?>

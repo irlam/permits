@@ -31,6 +31,7 @@ if (!$template_id && !$draft_link && !$reopen_permit_id) {
 
 // Load existing draft if present
 $existingPermit = null;
+$isUpdate = false;  // true = edit draft, false = create new
 if ($draft_link) {
     try {
         $st = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? AND status = 'draft' LIMIT 1");
@@ -38,13 +39,14 @@ if ($draft_link) {
         $existingPermit = $st->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($existingPermit) {
             $template_id = $existingPermit['template_id'];
+            $isUpdate = true;  // This is updating an existing draft
         }
     } catch (Exception $e) {
         // Ignore; we'll fall back to normal flow
     }
 }
 
-// Load permit to reopen if present
+// Load permit to reopen if present - creates a NEW permit based on existing data
 if ($reopen_permit_id) {
     try {
         $st = $db->pdo->prepare("SELECT * FROM forms WHERE id = ? LIMIT 1");
@@ -52,6 +54,7 @@ if ($reopen_permit_id) {
         $existingPermit = $st->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($existingPermit) {
             $template_id = $existingPermit['template_id'];
+            $isUpdate = false;  // Always create a NEW permit when reopening
         }
     } catch (Exception $e) {
         // Ignore; we'll fall back to normal flow
@@ -99,9 +102,13 @@ $permit_id = null;
 $unique_link = null;
 // Prefill data when editing a draft
 $existingData = [];
-if ($existingPermit) {
+if ($existingPermit && $isUpdate) {
+    // Only set IDs when editing an existing draft
     $permit_id = $existingPermit['id'];
     $unique_link = $existingPermit['unique_link'];
+    $existingData = json_decode((string)($existingPermit['form_data'] ?? ''), true) ?: [];
+} elseif ($existingPermit && !$isUpdate) {
+    // When reopening a permit, only use the form data, not the IDs
     $existingData = json_decode((string)($existingPermit['form_data'] ?? ''), true) ?: [];
 }
 
