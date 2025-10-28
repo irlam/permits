@@ -406,7 +406,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .note-box { display:none; margin-top:8px; }
         .note-box textarea { width:100%; min-height:80px; border:2px solid #e5e7eb; border-radius:8px; padding:10px; }
         .media-box { display:none; margin-top:8px; }
-        .media-box input[type=file] { display:block; width:100%; padding:10px; border:2px dashed #c7d2fe; border-radius:10px; background:#f8fafc; }
+    .media-box input[type=file] { display:block; width:100%; padding:10px; border:2px dashed #c7d2fe; border-radius:10px; background:#f8fafc; }
+    .media-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+    .media-note { font-size:12px;color:#64748b;margin-top:6px; }
         .success-message {
             background: #d1fae5;
             border: 2px solid #10b981;
@@ -632,8 +634,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <textarea name="<?php echo htmlspecialchars($fieldName); ?>_note" placeholder="Add a note..."><?php echo htmlspecialchars((string)($existingData[$fieldName . '_note'] ?? '')); ?></textarea>
                                         </div>
                                         <div class="media-box" id="media_<?php echo htmlspecialchars($fieldName); ?>">
-                                            <input type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple>
-                                            <div style="font-size:12px;color:#64748b;margin-top:6px;">Tip: On mobile, use your camera or photo library.</div>
+                                            <div class="media-actions">
+                                                <button type="button" class="btn media-btn" data-target="camera" data-name="<?php echo htmlspecialchars($fieldName); ?>_media">📷 Take Photo/Video</button>
+                                                <button type="button" class="btn btn-secondary media-btn" data-target="gallery" data-name="<?php echo htmlspecialchars($fieldName); ?>_media">🖼️ Choose from Gallery</button>
+                                            </div>
+                                            <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple style="display:none">
+                                            <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" multiple style="display:none">
+                                            <div class="media-note">Tip: On mobile, use your camera or photo library.</div>
                                         </div>
                                     <?php endif; ?>
                                 <?php elseif ($fieldType === 'date'): ?>
@@ -753,6 +760,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Toggle Note/Media per score item
         document.addEventListener('click', function(e){
             var t = e.target;
+            // Proxy clicks for media buttons to the appropriate hidden file inputs
+            if (t && t.closest && t.closest('.media-btn')) {
+                var btn = t.closest('.media-btn');
+                var box = btn.closest('.media-box');
+                if (box) {
+                    var inputs = box.querySelectorAll('input[type=file]');
+                    var target = btn.getAttribute('data-target');
+                    var input = Array.prototype.find.call(inputs, function(el){
+                        return target === 'camera' ? el.hasAttribute('capture') : !el.hasAttribute('capture');
+                    });
+                    if (input) { input.click(); }
+                }
+            }
             if (t && t.classList && t.classList.contains('toggle-note')) {
                 var name = t.getAttribute('data-for');
                 var box = document.getElementById('note_' + name);
