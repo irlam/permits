@@ -95,14 +95,10 @@ if ($isLoggedIn) {
               JOIN form_templates ft ON f.template_id = ft.id
               WHERE f.status = \'active\'
               ORDER BY COALESCE(f.approved_at, f.created_at) DESC
-              LIMIT 6
+                                                        LIMIT 3
             ';
                 $approvedStmt = $db->pdo->query($sql);
-                $approvedPermits = $approvedStmt->fetchAll(PDO::FETCH_ASSOC);
-                // Show only the last 3 approved permits on the homepage
-                if (count($approvedPermits) > 3) {
-                        $approvedPermits = array_slice($approvedPermits, 0, 3);
-                }
+                                                                $approvedPermits = $approvedStmt->fetchAll(PDO::FETCH_ASSOC);
           } catch (Exception $e) {
             $approvedPermits = [];
             error_log('Error fetching approved permits: ' . $e->getMessage());
@@ -245,53 +241,32 @@ function formatDateUK($date) {
                                                 </section>
                                         </div>
 
-                                        <!-- Recently Approved: horizontal across the page -->
+                                        <!-- Recently Approved: show last 3 only, no ticker -->
                                         <section class="surface-card" id="approved-permits" style="margin-top:12px">
                                                 <div class="card-header"><h3>✅ Recently Approved</h3></div>
                                                 <?php if (empty($approvedPermits)): ?>
                                                         <div class="muted">No approved permits yet.</div>
                                                 <?php else: ?>
-                                                        <div class="ticker" id="approved-ticker">
-                                                                <div class="ticker-track scroll-row">
-                                                                        <?php foreach ($approvedPermits as $permit): ?>
-                                                                                <div class="mini-card approved-card">
-                                                                                        <div class="card-header">
-                                                                                                <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                                                                                <?php echo getStatusBadge('active'); ?>
-                                                                                        </div>
-                                                                                        <?php if (!empty($permit['holder_name'])): ?>
-                                                                                                <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
-                                                                                        <?php endif; ?>
-                                                                                        <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
-                                                                                        <?php if (!empty($permit['valid_to'])): ?>
-                                                                                                <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
-                                                                                        <?php endif; ?>
-                                                                                        <div class="tab-actions" style="margin-top:8px">
-                                                                                                <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
-                                                                                                <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
-                                                                                        </div>
+                                                        <div class="scroll-row">
+                                                                <?php foreach ($approvedPermits as $permit): ?>
+                                                                        <div class="mini-card approved-card">
+                                                                                <div class="card-header">
+                                                                                        <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
+                                                                                        <?php echo getStatusBadge('active'); ?>
                                                                                 </div>
-                                                                        <?php endforeach; ?>
-                                                                        <?php foreach ($approvedPermits as $permit): ?>
-                                                                                <div class="mini-card approved-card">
-                                                                                        <div class="card-header">
-                                                                                                <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                                                                                <?php echo getStatusBadge('active'); ?>
-                                                                                        </div>
-                                                                                        <?php if (!empty($permit['holder_name'])): ?>
-                                                                                                <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
-                                                                                        <?php endif; ?>
-                                                                                        <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
-                                                                                        <?php if (!empty($permit['valid_to'])): ?>
-                                                                                                <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
-                                                                                        <?php endif; ?>
-                                                                                        <div class="tab-actions" style="margin-top:8px">
-                                                                                                <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
-                                                                                                <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
-                                                                                        </div>
+                                                                                <?php if (!empty($permit['holder_name'])): ?>
+                                                                                        <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
+                                                                                <?php endif; ?>
+                                                                                <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
+                                                                                <?php if (!empty($permit['valid_to'])): ?>
+                                                                                        <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
+                                                                                <?php endif; ?>
+                                                                                <div class="tab-actions" style="margin-top:8px">
+                                                                                        <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
+                                                                                        <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
                                                                                 </div>
-                                                                        <?php endforeach; ?>
-                                                                </div>
+                                                                        </div>
+                                                                <?php endforeach; ?>
                                                         </div>
                                                 <?php endif; ?>
                                         </section>
@@ -362,80 +337,7 @@ function formatDateUK($date) {
                         return output;
                       }
                     </script>
-                                                                                <script>
-                                                                                        // Auto-scroll ticker for Recently Approved on desktop (desktop only)
-                                                                                                                                                                (function(){
-                                                                                                                                                                        const mq = window.matchMedia('(min-width: 768px)');
-                                                                                                function initTicker(){
-                                                                                                        const row = document.querySelector('#approved-permits .scroll-row');
-                                                                                                        if (!row || row.dataset.tickerInit === '1') return;
-                                                                                                        const originalChildren = Array.from(row.children);
-                                                                                                        if (originalChildren.length < 2) return; // need at least 2 to look like a ticker
-                                                                                                        row.dataset.tickerInit = '1';
-
-                                                                                                        // Clone once to allow seamless wrap-around
-                                                                                                        originalChildren.forEach(node => row.appendChild(node.cloneNode(true)));
-                                                                                                        const loopWidth = row.scrollWidth / 2; // width of original set
-
-                                                                                                        let x = 0;
-                                                                                                        let paused = false;
-                                                                                                        const speed = 0.45; // pixels per frame (~27px/s at 60fps)
-                                                                                                        let rafId;
-
-                                                                                                        function step(){
-                                                                                                                if (!paused) {
-                                                                                                                        x += speed;
-                                                                                                                        if (x >= loopWidth) x = 0;
-                                                                                                                        row.scrollLeft = x;
-                                                                                                                }
-                                                                                                                rafId = requestAnimationFrame(step);
-                                                                                                        }
-
-                                                                                                        // Pause when user interacts
-                                                                                                        row.addEventListener('mouseenter', () => paused = true);
-                                                                                                        row.addEventListener('mouseleave', () => paused = false);
-                                                                                                        row.addEventListener('touchstart', () => paused = true, { passive: true });
-                                                                                                        row.addEventListener('touchend', () => paused = false);
-
-                                                                                                        // Manage tab visibility
-                                                                                                        document.addEventListener('visibilitychange', () => {
-                                                                                                                if (document.hidden) cancelAnimationFrame(rafId);
-                                                                                                                else rafId = requestAnimationFrame(step);
-                                                                                                        });
-
-                                                                                                        step();
-                                                                                                }
-                                                                                                                                                                        // Respect reduced motion
-                                                                                                                                                                        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                                                                                                                                                                        if (mq.matches && !reduced) {
-                                                                                                        if (document.readyState === 'complete' || document.readyState === 'interactive') initTicker();
-                                                                                                        else window.addEventListener('load', initTicker);
-                                                                                                }
-                                                                                        })();
-                                                                                </script>
-                                                                                                                                                <script>
-                                                                                                                                                        // Compute ticker duration based on content width (desktop only, respects reduced motion)
-                                                                                                                                                        (function(){
-                                                                                                                                                                const mql = window.matchMedia('(min-width: 768px)');
-                                                                                                                                                                const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-                                                                                                                                                                function init() {
-                                                                                                                                                                        if (!mql.matches || reduce.matches) return;
-                                                                                                                                                                        const ticker = document.getElementById('approved-ticker');
-                                                                                                                                                                        if (!ticker) return;
-                                                                                                                                                                        const track = ticker.querySelector('.ticker-track');
-                                                                                                                                                                        if (!track) return;
-                                                                                                                                                                        function setDuration(){
-                                                                                                                                                                                const half = track.scrollWidth / 2; // width of one set (we duplicated in PHP)
-                                                                                                                                                                                const speed = 80; // px per second
-                                                                                                                                                                                const duration = Math.max(Math.round((half / speed) * 10) / 10, 12); // min 12s, 0.1s precision
-                                                                                                                                                                                track.style.setProperty('--ticker-duration', duration + 's');
-                                                                                                                                                                        }
-                                                                                                                                                                        setDuration();
-                                                                                                                                                                        window.addEventListener('resize', setDuration);
-                                                                                                                                                                }
-                                                                                                                                                                if (document.readyState === 'complete' || document.readyState === 'interactive') init();
-                                                                                                                                                                else window.addEventListener('DOMContentLoaded', init);
-                                                                                                                                                        })();
-                                                                                                                                                </script>
+                                                                                
+                    
                   </body>
                   </html>
