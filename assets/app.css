@@ -949,6 +949,27 @@ body.theme-dark {
   .desktop-only { display: none !important; }
 }
 
+/* Floating action button (mobile) */
+.fab-permit {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 1100;
+  height: 52px;
+  min-height: 52px;
+  min-width: 52px;
+  padding: 0 16px;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(2,6,23,0.5);
+  background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+  color: #fff;
+  border: none;
+  display: none; /* default hidden; shown on mobile */
+}
+@media (max-width: 640px) {
+  .fab-permit { display: inline-flex; align-items:center; gap:8px; }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Homepage polish                                                            */
 /* -------------------------------------------------------------------------- */

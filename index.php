@@ -273,6 +273,9 @@ function formatDateUK($date) {
                                                 </a>
                                         <?php endforeach; ?>
                                 </div>
+
+                                <!-- Floating mobile Permits button -->
+                                <button type="button" class="fab-permit mobile-only" id="fabPermit">☰ Permits</button>
                         </div>
                 </div>
                     <script>
@@ -280,13 +283,15 @@ function formatDateUK($date) {
                                                                                                                                                         <script src="/assets/app.js"></script>
                                                                                                                                                         <script>
                                                                                                                                                                 // Mobile permit sheet open/close
-                                                                                                                                                                (function(){
-                                                                                                                                                                        const openBtn = document.getElementById('openPermitPicker');
+                                                                                                                                                                                                                                        (function(){
+                                                                                                                                                                                                                                                const openBtn = document.getElementById('openPermitPicker');
+                                                                                                                                                                                                                                                const fabBtn = document.getElementById('fabPermit');
                                                                                                                                                                         const sheet = document.getElementById('permitSheet');
                                                                                                                                                                         const closeBtn = document.getElementById('closePermitSheet');
                                                                                                                                                                         function open(){ sheet?.setAttribute('data-open','1'); sheet?.setAttribute('aria-hidden','false'); }
                                                                                                                                                                         function close(){ sheet?.setAttribute('data-open','0'); sheet?.setAttribute('aria-hidden','true'); }
-                                                                                                                                                                        openBtn?.addEventListener('click', open);
+                                                                                                                                                                                                                                                openBtn?.addEventListener('click', open);
+                                                                                                                                                                                                                                                fabBtn?.addEventListener('click', open);
                                                                                                                                                                         closeBtn?.addEventListener('click', close);
                                                                                                                                                                         sheet?.addEventListener('click', (e)=>{ if (e.target === sheet) close(); });
                                                                                                                                                                 })();
