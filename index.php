@@ -343,8 +343,8 @@ function formatDateUK($date) {
                     </script>
                                                                                 <script>
                                                                                         // Auto-scroll ticker for Recently Approved on desktop (desktop only)
-                                                                                        (function(){
-                                                                                                const mq = window.matchMedia('(min-width: 900px)');
+                                                                                                                                                                (function(){
+                                                                                                                                                                        const mq = window.matchMedia('(min-width: 768px)');
                                                                                                 function initTicker(){
                                                                                                         const row = document.querySelector('#approved-permits .scroll-row');
                                                                                                         if (!row || row.dataset.tickerInit === '1') return;
@@ -384,7 +384,9 @@ function formatDateUK($date) {
 
                                                                                                         step();
                                                                                                 }
-                                                                                                if (mq.matches) {
+                                                                                                                                                                        // Respect reduced motion
+                                                                                                                                                                        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                                                                                                                                                                        if (mq.matches && !reduced) {
                                                                                                         if (document.readyState === 'complete' || document.readyState === 'interactive') initTicker();
                                                                                                         else window.addEventListener('load', initTicker);
                                                                                                 }
