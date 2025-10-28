@@ -26,6 +26,17 @@ if (function_exists('check_and_expire_permits')) {
 
 // Session for login state
 session_start();
+$isLoggedIn = isset($_SESSION['user_id']);
+$currentUser = null;
+if ($isLoggedIn) {
+    try {
+        $stmt = $db->pdo->prepare('SELECT id, name, email, role FROM users WHERE id = ?');
+        $stmt->execute([$_SESSION['user_id']]);
+        $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log('Error fetching current user: ' . $e->getMessage());
+    }
+}
 
 // Status checker (by email)
 $statusEmail = $_GET['check_email'] ?? '';
