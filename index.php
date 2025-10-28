@@ -176,10 +176,10 @@ function formatDateUK($date) {
     </style>
 </head>
 <body class="theme-dark">
-        <div class="wrap">
-                <div class="surface-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div class="wrap">
+                        <div class="hero-card home-hero" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
                         <div>
-                                <h2 style="margin:0 0 6px">🛡️ Permit System</h2>
+                                        <h2 class="home-title">🛡️ Permit System</h2>
                                 <p class="muted" style="margin:0">Create permits easily, check status anytime</p>
                         </div>
                         <div class="tab-actions">
@@ -197,13 +197,13 @@ function formatDateUK($date) {
                 <div class="surface-section">
                         <div class="grid-two">
                                 <!-- Left: Status Checker -->
-                                <section class="surface-card">
+                                                <section class="surface-card">
                                         <div class="card-header"><h3>🔍 Check Your Permit Status</h3></div>
                                         <p class="muted">Enter your email to see all your permits and their current status</p>
-                                        <form action="/" method="GET" class="tab-actions" style="margin-top:12px;gap:8px">
-                                                <input type="email" name="check_email" placeholder="Enter your email address" value="<?php echo htmlspecialchars($statusEmail); ?>" required style="flex:1;min-width:220px" />
-                                                <button type="submit" class="btn btn-accent">🔍 Check Status</button>
-                                        </form>
+                                                        <form action="/" method="GET" class="status-row">
+                                                                <input type="email" name="check_email" placeholder="Enter your email address" value="<?php echo htmlspecialchars($statusEmail); ?>" required />
+                                                                <button type="submit" class="btn btn-accent" style="min-width:140px">🔍 Check Status</button>
+                                                        </form>
 
                                         <?php if (!empty($statusEmail)): ?>
                                         <?php if (empty($userPermits)): ?>
@@ -216,10 +216,10 @@ function formatDateUK($date) {
                                                                 </p>
                                                         </div>
                                         <?php else: ?>
-                                                <div class="permit-results" style="margin-top:16px">
-                                                        <h4>Your Permits (<?php echo count($userPermits); ?>)</h4>
+                                                                        <div class="permit-results" style="margin-top:16px">
+                                                                                <h4 style="margin:0 0 10px">Your Permits (<?php echo count($userPermits); ?>)</h4>
                                                         <?php foreach ($userPermits as $permit): ?>
-                                                                <div class="surface-card">
+                                                                                        <div class="mini-card">
                                                                         <div class="card-header">
                                                                                 <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
                                                                                 <?php echo getStatusBadge($permit['status']); ?>
@@ -231,7 +231,7 @@ function formatDateUK($date) {
                                                                         <?php if ($permit['status'] === 'pending_approval'): ?>
                                                                                 <div class="muted">⏳ Your permit is being reviewed by a manager</div>
                                                                         <?php endif; ?>
-                                                                        <div class="tab-actions">
+                                                                                                                <div class="tab-actions" style="margin-top:8px">
                                                                                 <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" class="btn">👁️ View Details</a>
                                                                                 <?php if ($permit['status'] === 'active'): ?>
                                                                                         <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1" class="btn btn-secondary">🖨️ Print</a>
@@ -245,14 +245,14 @@ function formatDateUK($date) {
                                 </section>
 
                                 <!-- Right: Recently Approved -->
-                                <section class="surface-card" id="approved-permits">
+                                                <section class="surface-card" id="approved-permits">
                                         <div class="card-header"><h3>✅ Recently Approved</h3></div>
                                         <?php if (empty($approvedPermits)): ?>
                                                 <div class="muted">No approved permits yet.</div>
                                         <?php else: ?>
-                                                <div class="permit-list permit-list-scroll">
+                                                                <div class="permit-list permit-list-scroll">
                                                         <?php foreach ($approvedPermits as $permit): ?>
-                                                                <div class="surface-card">
+                                                                                <div class="mini-card">
                                                                         <div class="card-header">
                                                                                 <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
                                                                                 <?php echo getStatusBadge('active'); ?>
@@ -264,7 +264,7 @@ function formatDateUK($date) {
                                                                         <?php if (!empty($permit['valid_to'])): ?>
                                                                                 <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
                                                                         <?php endif; ?>
-                                                                        <div class="tab-actions">
+                                                                                        <div class="tab-actions" style="margin-top:8px">
                                                                                 <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View Permit</a>
                                                                                 <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
                                                                         </div>
@@ -286,9 +286,9 @@ function formatDateUK($date) {
                                         <p class="muted">Contact your administrator to add permit templates.</p>
                                 </div>
                         <?php else: ?>
-                                                <div class="surface-grid">
+                                                                <div class="surface-grid">
                                         <?php foreach ($templates as $template): ?>
-                                                <a class="template-card" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                                                                                <a class="template-card template-card--home" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
                                                         <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
                                                         <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
                                                         <span class="version">Version <?php echo htmlspecialchars($template['version']); ?></span>
