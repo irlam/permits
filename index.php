@@ -285,62 +285,81 @@ function formatDateUK($date) {
                 </div> <!-- /.surface-section -->
         </div> <!-- /.wrap -->
 
-                <!-- Mobile Permit Picker Sheet -->
-                                                                <div class="permit-sheet" id="permitSheet" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
-                        <div class="permit-sheet__panel">
-                                <div class="permit-sheet__handle"></div>
-                                <div class="card-header" style="margin-bottom:12px"><h3>📋 Choose Permit Type</h3><button class="btn btn-secondary" id="closePermitSheet">Close</button></div>
-                                <div class="permit-list">
-                                        <?php foreach ($templates as $template): ?>
-                                                <a class="permit-link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
-                                                        <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
-                                                        <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
-                                                </a>
-                                        <?php endforeach; ?>
-                                </div>
+        <!-- Mobile Permit Picker Sheet -->
+        <div class="permit-sheet" id="permitSheet" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
+                <div class="permit-sheet__panel">
+                        <div class="permit-sheet__handle"></div>
+                        <div class="card-header" style="margin-bottom:12px">
+                                <h3>📋 Choose Permit Type</h3>
+                                <button class="btn btn-secondary" id="closePermitSheet">Close</button>
+                        </div>
+                        <div class="permit-list">
+                                <?php foreach ($templates as $template): ?>
+                                        <a class="permit-link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                                                <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
+                                                <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
+                                        </a>
+                                <?php endforeach; ?>
                         </div>
                 </div>
-                                                                <!-- Floating mobile Permits button -->
-                                                                <button type="button" class="fab-permit mobile-only" id="fabPermit">☰ Permits</button>
-                                                                <script src="/assets/app.js"></script>
-                                                                <script>
-                                                                        // Mobile permit sheet open/close (no optional chaining for compatibility)
-                                                                        (function(){
-                                                                                var openBtn = document.getElementById('openPermitPicker');
-                                                                                var fabBtn = document.getElementById('fabPermit');
-                                                                                var sheet = document.getElementById('permitSheet');
-                                                                                var closeBtn = document.getElementById('closePermitSheet');
-                                                                                function open(){ if (sheet) { sheet.setAttribute('data-open','1'); sheet.setAttribute('aria-hidden','false'); } }
-                                                                                function close(){ if (sheet) { sheet.setAttribute('data-open','0'); sheet.setAttribute('aria-hidden','true'); } }
-                                                                                if (openBtn) openBtn.addEventListener('click', open);
-                                                                                if (fabBtn) fabBtn.addEventListener('click', open);
-                                                                                if (closeBtn) closeBtn.addEventListener('click', close);
-                                                                                if (sheet) sheet.addEventListener('click', function(e){ if (e.target === sheet) close(); });
-                                                                        })();
+        </div>
 
-                                                                        // Center align scroll rows when not overflowing
-                                                                        (function(){
-                                                                                function updateScrollRows(){
-                                                                                        var rows = document.querySelectorAll('.scroll-row');
-                                                                                        var each = rows.forEach ? rows.forEach.bind(rows) : function(cb){ Array.prototype.forEach.call(rows, cb); };
-                                                                                        each(function(row){
-                                                                                                var overflowing = row.scrollWidth > row.clientWidth + 1;
-                                                                                                row.setAttribute('data-overflow', overflowing ? '1' : '0');
-                                                                                        });
-                                                                                }
-                                                                                var ro = window.ResizeObserver ? new ResizeObserver(updateScrollRows) : null;
-                                                                                window.addEventListener('load', function(){
-                                                                                        if (ro) {
-                                                                                                var rows = document.querySelectorAll('.scroll-row');
-                                                                                                rows.forEach ? rows.forEach(function(r){ ro.observe(r); }) : Array.prototype.forEach.call(rows, function(r){ ro.observe(r); });
-                                                                                        }
-                                                                                        updateScrollRows();
-                                                                                });
-                                                                                window.addEventListener('resize', updateScrollRows);
-                                                                                window.addEventListener('orientationchange', function(){ setTimeout(updateScrollRows, 150); });
-                                                                        })();
-                                                                </script>
-                                                                                
-                    
-                  </body>
-                  </html>
+        <!-- Floating mobile Permits button -->
+        <button type="button" class="fab-permit mobile-only" id="fabPermit">☰ Permits</button>
+
+        <script src="/assets/app.js"></script>
+        <script>
+        // Mobile permit sheet open/close
+        (function(){
+                var openBtn = document.getElementById('openPermitPicker');
+                var fabBtn = document.getElementById('fabPermit');
+                var sheet = document.getElementById('permitSheet');
+                var closeBtn = document.getElementById('closePermitSheet');
+                
+                console.log('Permit sheet elements:', {openBtn: !!openBtn, fabBtn: !!fabBtn, sheet: !!sheet, closeBtn: !!closeBtn});
+                
+                function open(){ 
+                        console.log('Opening permit sheet');
+                        if (sheet) { 
+                                sheet.setAttribute('data-open','1'); 
+                                sheet.setAttribute('aria-hidden','false'); 
+                        } 
+                }
+                function close(){ 
+                        console.log('Closing permit sheet');
+                        if (sheet) { 
+                                sheet.setAttribute('data-open','0'); 
+                                sheet.setAttribute('aria-hidden','true'); 
+                        } 
+                }
+                if (openBtn) openBtn.addEventListener('click', open);
+                if (fabBtn) fabBtn.addEventListener('click', open);
+                if (closeBtn) closeBtn.addEventListener('click', close);
+                if (sheet) sheet.addEventListener('click', function(e){ if (e.target === sheet) close(); });
+        })();
+
+        // Center align scroll rows when not overflowing
+        (function(){
+                function updateScrollRows(){
+                        var rows = document.querySelectorAll('.scroll-row');
+                        var each = rows.forEach ? rows.forEach.bind(rows) : function(cb){ Array.prototype.forEach.call(rows, cb); };
+                        each(function(row){
+                                var overflowing = row.scrollWidth > row.clientWidth + 1;
+                                row.setAttribute('data-overflow', overflowing ? '1' : '0');
+                        });
+                }
+                var ro = window.ResizeObserver ? new ResizeObserver(updateScrollRows) : null;
+                window.addEventListener('load', function(){
+                        if (ro) {
+                                var rows = document.querySelectorAll('.scroll-row');
+                                rows.forEach ? rows.forEach(function(r){ ro.observe(r); }) : Array.prototype.forEach.call(rows, function(r){ ro.observe(r); });
+                        }
+                        updateScrollRows();
+                });
+                window.addEventListener('resize', updateScrollRows);
+                window.addEventListener('orientationchange', function(){ setTimeout(updateScrollRows, 150); });
+        })();
+        </script>
+
+</body>
+</html>
