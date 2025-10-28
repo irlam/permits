@@ -251,26 +251,47 @@ function formatDateUK($date) {
                                                 <?php if (empty($approvedPermits)): ?>
                                                         <div class="muted">No approved permits yet.</div>
                                                 <?php else: ?>
-                                                                                                                                                                                                                                <div class="scroll-row">
-                                                                <?php foreach ($approvedPermits as $permit): ?>
-                                                                        <div class="mini-card approved-card">
-                                                                                <div class="card-header">
-                                                                                        <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                                                                        <?php echo getStatusBadge('active'); ?>
+                                                        <div class="ticker" id="approved-ticker">
+                                                                <div class="ticker-track scroll-row">
+                                                                        <?php foreach ($approvedPermits as $permit): ?>
+                                                                                <div class="mini-card approved-card">
+                                                                                        <div class="card-header">
+                                                                                                <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
+                                                                                                <?php echo getStatusBadge('active'); ?>
+                                                                                        </div>
+                                                                                        <?php if (!empty($permit['holder_name'])): ?>
+                                                                                                <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
+                                                                                        <?php endif; ?>
+                                                                                        <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
+                                                                                        <?php if (!empty($permit['valid_to'])): ?>
+                                                                                                <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
+                                                                                        <?php endif; ?>
+                                                                                        <div class="tab-actions" style="margin-top:8px">
+                                                                                                <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
+                                                                                                <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
+                                                                                        </div>
                                                                                 </div>
-                                                                                <?php if (!empty($permit['holder_name'])): ?>
-                                                                                        <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
-                                                                                <?php endif; ?>
-                                                                                <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
-                                                                                <?php if (!empty($permit['valid_to'])): ?>
-                                                                                        <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
-                                                                                <?php endif; ?>
-                                                                                <div class="tab-actions" style="margin-top:8px">
-                                                                                        <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
-                                                                                        <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
+                                                                        <?php endforeach; ?>
+                                                                        <?php foreach ($approvedPermits as $permit): ?>
+                                                                                <div class="mini-card approved-card">
+                                                                                        <div class="card-header">
+                                                                                                <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
+                                                                                                <?php echo getStatusBadge('active'); ?>
+                                                                                        </div>
+                                                                                        <?php if (!empty($permit['holder_name'])): ?>
+                                                                                                <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
+                                                                                        <?php endif; ?>
+                                                                                        <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
+                                                                                        <?php if (!empty($permit['valid_to'])): ?>
+                                                                                                <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
+                                                                                        <?php endif; ?>
+                                                                                        <div class="tab-actions" style="margin-top:8px">
+                                                                                                <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
+                                                                                                <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
+                                                                                        </div>
                                                                                 </div>
-                                                                        </div>
-                                                                <?php endforeach; ?>
+                                                                        <?php endforeach; ?>
+                                                                </div>
                                                         </div>
                                                 <?php endif; ?>
                                         </section>
@@ -392,5 +413,29 @@ function formatDateUK($date) {
                                                                                                 }
                                                                                         })();
                                                                                 </script>
+                                                                                                                                                <script>
+                                                                                                                                                        // Compute ticker duration based on content width (desktop only, respects reduced motion)
+                                                                                                                                                        (function(){
+                                                                                                                                                                const mql = window.matchMedia('(min-width: 768px)');
+                                                                                                                                                                const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+                                                                                                                                                                function init() {
+                                                                                                                                                                        if (!mql.matches || reduce.matches) return;
+                                                                                                                                                                        const ticker = document.getElementById('approved-ticker');
+                                                                                                                                                                        if (!ticker) return;
+                                                                                                                                                                        const track = ticker.querySelector('.ticker-track');
+                                                                                                                                                                        if (!track) return;
+                                                                                                                                                                        function setDuration(){
+                                                                                                                                                                                const half = track.scrollWidth / 2; // width of one set (we duplicated in PHP)
+                                                                                                                                                                                const speed = 80; // px per second
+                                                                                                                                                                                const duration = Math.max(Math.round((half / speed) * 10) / 10, 12); // min 12s, 0.1s precision
+                                                                                                                                                                                track.style.setProperty('--ticker-duration', duration + 's');
+                                                                                                                                                                        }
+                                                                                                                                                                        setDuration();
+                                                                                                                                                                        window.addEventListener('resize', setDuration);
+                                                                                                                                                                }
+                                                                                                                                                                if (document.readyState === 'complete' || document.readyState === 'interactive') init();
+                                                                                                                                                                else window.addEventListener('DOMContentLoaded', init);
+                                                                                                                                                        })();
+                                                                                                                                                </script>
                   </body>
                   </html>

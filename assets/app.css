@@ -1016,3 +1016,24 @@ body.theme-dark {
 }
 .template-card--xl .icon { font-size: 56px; }
 .template-card--xl .name { font-size: 17px; }
+
+/* -------------------------------------------------------------------------- */
+/*  Approved Ticker                                                           */
+/* -------------------------------------------------------------------------- */
+.ticker { overflow: hidden; }
+.ticker .scroll-row { overflow: visible; scroll-snap-type: none; }
+.ticker-track { display: flex; gap: 12px; will-change: transform; }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  #approved-ticker .ticker-track {
+    animation: ticker-scroll var(--ticker-duration, 28s) linear infinite;
+  }
+  #approved-ticker:hover .ticker-track {
+    animation-play-state: paused;
+  }
+}
