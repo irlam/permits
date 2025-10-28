@@ -31,6 +31,8 @@ body {
   -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape */
 }
 
+html, body { overflow-x: hidden; }
+
 body.theme-dark {
   background: #0f172a;
   color: #e5e7eb;
@@ -680,6 +682,11 @@ body.theme-dark {
   gap: 20px;
 }
 
+/* Tighter cards on very small screens to avoid horizontal scroll */
+@media (max-width: 480px) {
+  .surface-grid { grid-template-columns: 1fr; }
+}
+
 .admin-card,
 .surface-card {
   background: #1e293b;
@@ -1005,6 +1012,10 @@ body.theme-dark {
 }
 .scroll-row > * { scroll-snap-align: start; }
 .approved-card { min-width: 280px; max-width: 360px; }
+
+@media (max-width: 480px) {
+  .approved-card { min-width: 240px; }
+}
 
 /* Larger, poppier template tiles */
 .template-card--xl {
