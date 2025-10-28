@@ -190,31 +190,30 @@ function formatDateUK($date) {
                 </div>
 
                 <div class="surface-section">
-                                        <div class="grid-two">
-                                                <!-- Status Checker -->
-                                                <section class="surface-card" style="grid-column:1/-1">
-                                        <div class="card-header"><h3>🔍 Check Your Permit Status</h3></div>
-                                        <p class="muted">Enter your email to see all your permits and their current status</p>
-                                                        <form action="/" method="GET" class="status-row">
-                                                                <input type="email" name="check_email" placeholder="Enter your email address" value="<?php echo htmlspecialchars($statusEmail); ?>" required />
-                                                                <button type="submit" class="btn btn-accent" style="min-width:140px">🔍 Check Status</button>
-                                                        </form>
+                        <!-- Status Checker - full width -->
+                        <section class="surface-card" id="status-checker">
+                                <div class="card-header"><h3>🔍 Check Your Permit Status</h3></div>
+                                <p class="muted">Enter your email to see all your permits and their current status</p>
+                                <form action="/" method="GET" class="status-row">
+                                        <input type="email" name="check_email" placeholder="Enter your email address" value="<?php echo htmlspecialchars($statusEmail); ?>" required />
+                                        <button type="submit" class="btn btn-accent" style="min-width:140px">🔍 Check Status</button>
+                                </form>
 
-                                        <?php if (!empty($statusEmail)): ?>
+                                <?php if (!empty($statusEmail)): ?>
                                         <?php if (empty($userPermits)): ?>
-                                                        <div class="empty-state" style="padding:20px">
-                                                                <div style="font-size:36px;margin-bottom:8px">📭</div>
-                                                                <div style="font-weight:600;margin-bottom:6px">No permits found</div>
-                                                                <p class="muted">We couldn't find any permits for <strong><?php echo htmlspecialchars($statusEmail); ?></strong></p>
-                                                                <p style="margin-top: 12px;">
-                                                                        <a href="#templates">Create your first permit below</a>
-                                                                </p>
-                                                        </div>
+                                                <div class="empty-state" style="padding:20px">
+                                                        <div style="font-size:36px;margin-bottom:8px">📭</div>
+                                                        <div style="font-weight:600;margin-bottom:6px">No permits found</div>
+                                                        <p class="muted">We couldn't find any permits for <strong><?php echo htmlspecialchars($statusEmail); ?></strong></p>
+                                                        <p style="margin-top: 12px;">
+                                                                <a href="#templates">Create your first permit below</a>
+                                                        </p>
+                                                </div>
                                         <?php else: ?>
-                                                                        <div class="permit-results" style="margin-top:16px">
-                                                                                <h4 style="margin:0 0 10px">Your Permits (<?php echo count($userPermits); ?>)</h4>
+                                                <div class="permit-results" style="margin-top:16px">
+                                                        <h4 style="margin:0 0 10px">Your Permits (<?php echo count($userPermits); ?>)</h4>
                                                         <?php foreach ($userPermits as $permit): ?>
-                                                                                        <div class="mini-card">
+                                                                <div class="mini-card">
                                                                         <div class="card-header">
                                                                                 <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
                                                                                 <?php echo getStatusBadge($permit['status']); ?>
@@ -226,7 +225,7 @@ function formatDateUK($date) {
                                                                         <?php if ($permit['status'] === 'pending_approval'): ?>
                                                                                 <div class="muted">⏳ Your permit is being reviewed by a manager</div>
                                                                         <?php endif; ?>
-                                                                                                                <div class="tab-actions" style="margin-top:8px">
+                                                                        <div class="tab-actions" style="margin-top:8px">
                                                                                 <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" class="btn">👁️ View Details</a>
                                                                                 <?php if ($permit['status'] === 'active'): ?>
                                                                                         <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1" class="btn btn-secondary">🖨️ Print</a>
@@ -236,39 +235,38 @@ function formatDateUK($date) {
                                                         <?php endforeach; ?>
                                                 </div>
                                         <?php endif; ?>
-                                        <?php endif; ?>
-                                                </section>
-                                        </div>
+                                <?php endif; ?>
+                        </section>
 
-                                        <!-- Recently Approved: show last 3 only, no ticker -->
-                                        <section class="surface-card" id="approved-permits" style="margin-top:12px">
-                                                <div class="card-header"><h3>✅ Recently Approved</h3></div>
-                                                <?php if (empty($approvedPermits)): ?>
-                                                        <div class="muted">No approved permits yet.</div>
-                                                <?php else: ?>
-                                                        <div class="scroll-row">
-                                                                <?php foreach ($approvedPermits as $permit): ?>
-                                                                        <div class="mini-card approved-card">
-                                                                                <div class="card-header">
-                                                                                        <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                                                                        <?php echo getStatusBadge('active'); ?>
-                                                                                </div>
-                                                                                <?php if (!empty($permit['holder_name'])): ?>
-                                                                                        <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
-                                                                                <?php endif; ?>
-                                                                                <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
-                                                                                <?php if (!empty($permit['valid_to'])): ?>
-                                                                                        <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
-                                                                                <?php endif; ?>
-                                                                                <div class="tab-actions" style="margin-top:8px">
-                                                                                        <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
-                                                                                        <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
-                                                                                </div>
-                                                                        </div>
-                                                                <?php endforeach; ?>
+                        <!-- Recently Approved: show last 3 only -->
+                        <section class="surface-card" id="approved-permits" style="margin-top:16px">
+                                <div class="card-header"><h3>✅ Recently Approved</h3></div>
+                                <?php if (empty($approvedPermits)): ?>
+                                        <div class="muted">No approved permits yet.</div>
+                                <?php else: ?>
+                                        <div class="scroll-row">
+                                                <?php foreach ($approvedPermits as $permit): ?>
+                                                        <div class="mini-card approved-card">
+                                                                <div class="card-header">
+                                                                        <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
+                                                                        <?php echo getStatusBadge('active'); ?>
+                                                                </div>
+                                                                <?php if (!empty($permit['holder_name'])): ?>
+                                                                        <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
+                                                                <?php endif; ?>
+                                                                <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
+                                                                <?php if (!empty($permit['valid_to'])): ?>
+                                                                        <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
+                                                                <?php endif; ?>
+                                                                <div class="tab-actions" style="margin-top:8px">
+                                                                        <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
+                                                                        <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
+                                                                </div>
                                                         </div>
-                                                <?php endif; ?>
-                                        </section>
+                                                <?php endforeach; ?>
+                                        </div>
+                                <?php endif; ?>
+                        </section>
 
                 <!-- Available Permit Templates -->
                 <section class="surface-card" id="templates" style="margin-top:16px">
