@@ -1102,6 +1102,8 @@ body.theme-dark {
 /* -------------------------------------------------------------------------- */
 /*  Mobile Permit Picker Sheet                                                */
 /* -------------------------------------------------------------------------- */
+/*  Mobile Permit Picker Sheet                                                */
+/* -------------------------------------------------------------------------- */
 .permit-sheet { 
   position: fixed; 
   inset: 0; 
@@ -1110,10 +1112,16 @@ body.theme-dark {
   z-index: 1000; 
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 .permit-sheet[data-open="1"] { 
   display: block; 
   opacity: 1;
+  pointer-events: auto;
+}
+.permit-sheet[data-open="0"] {
+  display: none;
+  pointer-events: none;
 }
 .permit-sheet__panel { 
   position: absolute; 

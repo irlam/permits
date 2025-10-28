@@ -295,7 +295,7 @@ function formatDateUK($date) {
         </div> <!-- /.wrap -->
 
         <!-- Mobile Permit Picker Sheet -->
-        <div class="permit-sheet" id="permitSheet" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
+        <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true" role="dialog" aria-label="Choose a permit type">
                 <div class="permit-sheet__panel">
                         <div class="permit-sheet__handle"></div>
                         <div class="card-header" style="margin-bottom:12px">
