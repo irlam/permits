@@ -329,18 +329,28 @@ function formatDateUK($date) {
                 
                 console.log('Permit sheet elements:', {openBtn: !!openBtn, fabBtn: !!fabBtn, sheet: !!sheet, closeBtn: !!closeBtn});
                 
-                function open(){ 
+                function open(e){ 
+                        if (e) e.preventDefault();
                         console.log('Opening permit sheet');
                         if (sheet) { 
+                                sheet.style.display = 'block';
+                                // Force reflow to trigger animation
+                                sheet.offsetHeight;
                                 sheet.setAttribute('data-open','1'); 
-                                sheet.setAttribute('aria-hidden','false'); 
+                                sheet.setAttribute('aria-hidden','false');
+                                document.body.style.overflow = 'hidden';
                         } 
                 }
-                function close(){ 
+                function close(e){ 
+                        if (e) e.preventDefault();
                         console.log('Closing permit sheet');
                         if (sheet) { 
                                 sheet.setAttribute('data-open','0'); 
-                                sheet.setAttribute('aria-hidden','true'); 
+                                sheet.setAttribute('aria-hidden','true');
+                                document.body.style.overflow = '';
+                                setTimeout(function(){ 
+                                        sheet.style.display = 'none'; 
+                                }, 300);
                         } 
                 }
                 if (openBtn) openBtn.addEventListener('click', open);
