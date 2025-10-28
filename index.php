@@ -286,7 +286,7 @@ function formatDateUK($date) {
                                         <p class="muted">Contact your administrator to add permit templates.</p>
                                 </div>
                         <?php else: ?>
-                                <div class="templates-grid">
+                                                <div class="surface-grid">
                                         <?php foreach ($templates as $template): ?>
                                                 <a class="template-card" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
                                                         <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
