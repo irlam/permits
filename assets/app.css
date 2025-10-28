@@ -1017,6 +1017,27 @@ body.theme-dark {
   .approved-card { min-width: 240px; }
 }
 
+/* Center scroll rows when they don't overflow */
+.scroll-row[data-overflow="0"] {
+  justify-content: center;
+}
+
+/* Compact tweaks for narrow screens */
+@media (max-width: 360px) {
+  .wrap { padding: 8px; }
+  .surface-card { padding: 16px; }
+  .scroll-row { gap: 8px; padding: 6px 2px; }
+  .approved-card { min-width: 220px; }
+  .btn { padding: 10px 12px; min-height: 40px; }
+}
+
+/* Status form compact mode */
+@media (max-width: 480px) {
+  .status-row { gap: 8px; }
+  .status-row input[type="email"] { min-height: 42px; padding: 10px 12px; }
+  .status-row .btn { min-width: 120px; min-height: 42px; padding: 10px 12px; }
+}
+
 /* Larger, poppier template tiles */
 .template-card--xl {
   padding: 26px;

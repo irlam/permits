@@ -298,6 +298,23 @@ function formatDateUK($date) {
         </div> <!-- /.wrap -->
 
                     <script>
+                                                                                <script>
+                                                                                        // Center align scroll rows when not overflowing
+                                                                                        (function(){
+                                                                                                function updateScrollRows(){
+                                                                                                        document.querySelectorAll('.scroll-row').forEach(function(row){
+                                                                                                                const overflowing = row.scrollWidth > row.clientWidth + 1; // buffer for subpixel
+                                                                                                                row.setAttribute('data-overflow', overflowing ? '1' : '0');
+                                                                                                        });
+                                                                                                }
+                                                                                                const ro = new ResizeObserver(updateScrollRows);
+                                                                                                window.addEventListener('load', function(){
+                                                                                                        document.querySelectorAll('.scroll-row').forEach(function(row){ ro.observe(row); });
+                                                                                                        updateScrollRows();
+                                                                                                });
+                                                                                                window.addEventListener('orientationchange', function(){ setTimeout(updateScrollRows, 150); });
+                                                                                        })();
+                                                                                </script>
                       // Optional PWA install UI hook; hidden unless event fires
                       let deferredPrompt;
                       window.addEventListener('beforeinstallprompt', (e) => {
