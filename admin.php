@@ -154,6 +154,13 @@ try {
                 <p>Launch a cinematic dashboard with narration-ready stats for stakeholder demos and leadership briefings.</p>
                 <a href="/presentation-dashboard.php" class="btn">Open Showcase</a>
             </div>
+
+            <div class="admin-card">
+                <div class="icon">✉️</div>
+                <h3>Approval Notifications</h3>
+                <p>Maintain the list of people emailed as soon as a permit is submitted for approval.</p>
+                <a href="/admin-approval-notifications.php" class="btn">Manage Recipients</a>
+            </div>
             
             <!-- Email Settings -->
             <div class="admin-card">

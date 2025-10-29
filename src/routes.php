@@ -3,6 +3,8 @@ use Psr\Http\Message\ResponseInterface as Res;
 use Psr\Http\Message\ServerRequestInterface as Req;
 use Ramsey\Uuid\Uuid;
 
+require_once __DIR__ . '/approval-notifications.php';
+
 /**
  * Routes file.
  * Assumes $app, $db, $root are already in scope from index.php:
@@ -92,7 +94,7 @@ $app->get('/new/{templateId}', function(Req $req, Res $res, $args) use ($db) {
 });
 
 // Create/save a form (JSON body)
-$app->post('/api/forms', function(Req $req, Res $res) use ($db) {
+$app->post('/api/forms', function(Req $req, Res $res) use ($db, $root) {
   $raw = (string)$req->getBody();
   $b = json_decode($raw, true);
   if (!is_array($b)) { $b = $req->getParsedBody(); }
@@ -127,6 +129,15 @@ $app->post('/api/forms', function(Req $req, Res $res) use ($db) {
   ]);
 
   $res->getBody()->write(json_encode(['ok'=>true,'id'=>$id]));
+
+  if (isset($b['status']) && strtolower((string)$b['status']) === 'pending_approval') {
+    try {
+      notifyPendingApprovalRecipients($db, $root, $id);
+    } catch (\Throwable $e) {
+      error_log('Failed to queue approval notification (api/forms POST): ' . $e->getMessage());
+    }
+  }
+
   return $res->withHeader('Content-Type','application/json');
 });
 
@@ -257,7 +268,7 @@ $app->get('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($
 });
 
 // Update a form
-$app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db) {
+$app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $root) {
   $formId = $args['formId'];
   $raw = (string)$req->getBody();
   $b = json_decode($raw, true);
@@ -316,6 +327,22 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db) {
     json_encode(['ip'=>($_SERVER['REMOTE_ADDR'] ?? '')])
   ]);
   
+  if (strtolower((string)$newStatus) === 'pending_approval') {
+    if ($oldStatus !== 'pending_approval' || empty($currentForm['notified_at'])) {
+      try {
+        notifyPendingApprovalRecipients($db, $root, $formId);
+      } catch (\Throwable $e) {
+        error_log('Failed to queue approval notification (api/forms PUT): ' . $e->getMessage());
+      }
+    }
+  } elseif ($oldStatus === 'pending_approval') {
+    try {
+      clearPendingApprovalNotificationFlag($db, $formId);
+    } catch (\Throwable $e) {
+      error_log('Failed to clear approval notification flag: ' . $e->getMessage());
+    }
+  }
+
   $res->getBody()->write(json_encode(['ok'=>true]));
   return $res->withHeader('Content-Type','application/json');
 });

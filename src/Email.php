@@ -148,6 +148,28 @@ class Email {
         
         return $this->queue($recipientEmail, $subject, $body);
     }
+
+    /**
+     * Send a notification to approvers when a permit awaits approval.
+     *
+     * @param array $form Form/permit data (expects ref/ref_number, template_name, holder info)
+     * @param string $recipientEmail Approval recipient email address
+     * @param array $context Additional context such as URLs and recipient meta
+     */
+    public function sendPendingApprovalNotification(array $form, string $recipientEmail, array $context = []): string {
+        $ref = $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? 'Permit';
+        $subject = 'Permit Awaiting Approval: ' . $ref;
+
+        $body = $this->renderTemplate('permit-awaiting-approval', [
+            'form' => $form,
+            'recipient' => $context['recipient'] ?? null,
+            'approvalUrl' => $context['approvalUrl'] ?? null,
+            'viewUrl' => $context['viewUrl'] ?? null,
+            'subject' => $subject,
+        ]);
+
+        return $this->queue($recipientEmail, $subject, $body);
+    }
     
     /**
      * Render an email template with data

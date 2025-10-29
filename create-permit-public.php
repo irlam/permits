@@ -18,6 +18,7 @@
 
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/approval-notifications.php';
 
 // Get template ID from query string or resume an existing draft via unique link
 $template_id = $_GET['template'] ?? null;
@@ -242,6 +243,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $holder_phone,
             $unique_link
         ]);
+
+        try {
+            notifyPendingApprovalRecipients($db, $root, $permit_id);
+        } catch (\Throwable $notificationError) {
+            error_log('Failed to queue approval notification: ' . $notificationError->getMessage());
+        }
         
         // Log activity
         if (function_exists('logActivity')) {

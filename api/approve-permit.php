@@ -18,6 +18,7 @@ header('Content-Type: application/json');
 
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/approval-notifications.php';
 
 // Start session
 session_start();
@@ -72,6 +73,12 @@ try {
         WHERE id = ?
     ");
     $updateStmt->execute([$user['id'], $permit_id]);
+
+    try {
+        clearPendingApprovalNotificationFlag($db, $permit_id);
+    } catch (\Throwable $e) {
+        error_log('Failed to clear approval notification flag after approval: ' . $e->getMessage());
+    }
     
     // Log activity
     if (function_exists('logActivity')) {
