@@ -35,7 +35,12 @@ function resolve_asset_path(string $path): ?string
 
     $candidates = [$root . $normalized];
 
-    $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    $envPublic = $_ENV['APP_PUBLIC_PATH'] ?? $_ENV['ASSET_PUBLIC_PATH'] ?? '';
+    if ($envPublic !== '') {
+        $candidates[] = rtrim($envPublic, '/') . $normalized;
+    }
+
+    $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? ($_ENV['DOCUMENT_ROOT'] ?? '');
     if ($documentRoot !== '') {
         $candidates[] = rtrim($documentRoot, '/') . $normalized;
     }
@@ -54,24 +59,35 @@ function resolve_asset_path(string $path): ?string
  */
 function asset_version(string $path): string
 {
+    static $versionCache = [];
+
+    if (isset($versionCache[$path])) {
+        return $versionCache[$path];
+    }
+
     if (preg_match('#^https?://#i', $path)) {
-        return defined('APP_ASSET_VERSION') ? APP_ASSET_VERSION : (defined('APP_VERSION') ? APP_VERSION : (string) time());
+        $versionCache[$path] = defined('APP_ASSET_VERSION') ? APP_ASSET_VERSION : (defined('APP_VERSION') ? APP_VERSION : (string) time());
+        return $versionCache[$path];
     }
 
     $resolved = resolve_asset_path($path);
     if ($resolved) {
-        return (string) filemtime($resolved);
+        $versionCache[$path] = (string) filemtime($resolved);
+        return $versionCache[$path];
     }
 
     if (defined('APP_ASSET_VERSION')) {
-        return APP_ASSET_VERSION;
+        $versionCache[$path] = APP_ASSET_VERSION;
+        return $versionCache[$path];
     }
 
     if (defined('APP_VERSION')) {
-        return APP_VERSION;
+        $versionCache[$path] = APP_VERSION;
+        return $versionCache[$path];
     }
 
-    return (string) time();
+    $versionCache[$path] = (string) time();
+    return $versionCache[$path];
 }
 
 /**
