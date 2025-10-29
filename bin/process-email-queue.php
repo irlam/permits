@@ -17,7 +17,7 @@ $limit = isset($options['limit']) ? max(1, (int)$options['limit']) : 50;
 echo '[' . date('Y-m-d H:i:s') . "] Processing email queue (limit={$limit})...\n";
 
 $email   = new Email($db, $root);
-$mailer  = new Mailer();
+$mailer  = Mailer::fromDatabase($db);
 $worker  = new EmailQueueProcessor($email, $mailer);
 $result  = $worker->process($limit);
 

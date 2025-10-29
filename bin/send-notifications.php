@@ -26,7 +26,7 @@ use Ramsey\Uuid\Uuid;
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 
 // Initialize mailer
-$mailer = new Mailer();
+$mailer = Mailer::fromDatabase($db);
 
 // Get notification recipients from environment (comma-separated emails)
 $notificationEmails = $_ENV['NOTIFICATION_EMAILS'] ?? '';

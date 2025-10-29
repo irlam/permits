@@ -84,6 +84,18 @@ class Mailer
         $this->logDirectory = (string)($options['log_directory'] ?? $_ENV['MAIL_LOG_PATH'] ?? $defaultLogDir);
     }
 
+    /**
+     * Create a mailer instance seeded with settings stored in the database. Any
+     * options supplied explicitly will override the persisted values.
+     *
+     * @param array<string,mixed> $options
+     */
+    public static function fromDatabase(Db $db, array $options = []): self
+    {
+        $stored = SystemSettings::mailerOptions($db);
+        return new self(array_merge($stored, $options));
+    }
+
     private function discoverProjectRoot(): string
     {
         $root = realpath(__DIR__ . '/..');
