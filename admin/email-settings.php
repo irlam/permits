@@ -3,6 +3,7 @@
  * Email Settings Admin Page
  */
 
+use Permits\Mailer;
 use Permits\SystemSettings;
 
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
@@ -27,6 +28,12 @@ if (!$currentUser || $currentUser['role'] !== 'admin') {
 $feedback = [
     'success' => '',
     'error'   => '',
+];
+
+$testFeedback = [
+    'success' => '',
+    'error'   => '',
+    'details' => [],
 ];
 
 $defaults = [
@@ -107,14 +114,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (function_exists('logActivity')) {
                 logActivity('settings_updated', 'mail', 'setting', 'email', 'SMTP settings updated by ' . ($currentUser['username'] ?? 'admin'));
             }
-    } catch (\Throwable $e) {
+        } catch (\Throwable $e) {
             $feedback['error'] = 'Failed to save settings: ' . $e->getMessage();
+        }
+    } elseif ($action === 'test') {
+        try {
+            $recipient = trim((string)($_POST['test_email'] ?? ''));
+            if ($recipient === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+                throw new \InvalidArgumentException('Enter a valid email address to send the test to.');
+            }
+
+            $mailer = Mailer::fromDatabase($db);
+            $subject = 'Permits Email Test - ' . date('Y-m-d H:i:s');
+            $body = '<p>This is a test email sent from the Permits admin panel.</p>' .
+                '<p>If you are reading this, the SMTP settings saved in the admin area are working.</p>' .
+                '<p>Timestamp: ' . htmlspecialchars(date('c'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+
+            $result = $mailer->send($recipient, $subject, $body);
+
+            $mailerOptions = SystemSettings::mailerOptions($db);
+            $effectiveDriver = strtolower((string)($mailerOptions['driver'] ?? ($settings['mail_driver'] ?? 'smtp')));
+            $enabled = ($settings['email_enabled'] ?? 'false') === 'true';
+
+            if ($result) {
+                if (!$enabled || $effectiveDriver === 'log') {
+                    $testFeedback['success'] = 'Test email written to the mail log (email delivery is currently disabled). Check storage/mail for the entry.';
+                } else {
+                    $testFeedback['success'] = 'Test email dispatched successfully. Check the destination inbox in a moment.';
+                }
+            } else {
+                $testFeedback['error'] = 'Mailer returned false when attempting to send the test email.';
+            }
+
+            $testFeedback['details'] = [
+                'Recipient'      => $recipient,
+                'Driver'         => $effectiveDriver,
+                'Email enabled'  => $enabled ? 'Yes' : 'No',
+                'SMTP host'      => $settings['smtp_host'] ?: '(empty)',
+                'SMTP port'      => $settings['smtp_port'] ?: '(default)',
+                'Encryption'     => $settings['smtp_secure'] !== '' ? strtoupper($settings['smtp_secure']) : 'None',
+                'From address'   => $settings['mail_from_address'] ?: '(default)',
+                'Sent at'        => date('Y-m-d H:i:s'),
+            ];
+
+            if (function_exists('logActivity')) {
+                logActivity('settings_tested', 'mail', 'setting', 'email', 'SMTP test email triggered by ' . ($currentUser['username'] ?? 'admin'));
+            }
+        } catch (\Throwable $e) {
+            $testFeedback['error'] = 'Test email failed: ' . $e->getMessage();
+            $testFeedback['details'] = [
+                'Recipient' => trim((string)($_POST['test_email'] ?? '')),
+                'Driver'    => strtolower((string)($settings['mail_driver'] ?? 'smtp')),
+            ];
         }
     }
 }
 
 // Avoid echoing the stored password into the form field.
 $displayPassword = '';
+
+$mailerOptions = SystemSettings::mailerOptions($db);
+$emailEnabled = ($settings['email_enabled'] ?? 'false') === 'true';
+$effectiveDriver = strtolower((string)($mailerOptions['driver'] ?? ($settings['mail_driver'] ?? 'smtp')));
+$logPath = $_ENV['MAIL_LOG_PATH'] ?? ($root . '/storage/mail');
+
+$diagnostics = [
+    'Email enabled'   => $emailEnabled ? 'Yes' : 'No',
+    'Active driver'   => $emailEnabled ? $effectiveDriver : $effectiveDriver . ' (email disabled)',
+    'SMTP host'       => $settings['smtp_host'] ?: ($_ENV['SMTP_HOST'] ?? $_ENV['MAIL_HOST'] ?? '(empty)'),
+    'SMTP port'       => $settings['smtp_port'] ?: ($_ENV['SMTP_PORT'] ?? $_ENV['MAIL_PORT'] ?? '(default)'),
+    'Encryption'      => $settings['smtp_secure'] !== '' ? strtoupper($settings['smtp_secure']) : 'None',
+    'Username'        => $settings['smtp_user'] ?: '(empty)',
+    'From address'    => $settings['mail_from_address'] ?: ($_ENV['MAIL_FROM'] ?? $_ENV['MAIL_FROM_ADDRESS'] ?? '(default)'),
+    'From name'       => $settings['mail_from_name'] ?: ($_ENV['MAIL_FROM_NAME'] ?? 'Permits System'),
+    'Mail log path'   => $logPath,
+];
 
 ?><!doctype html>
 <html lang="en">
@@ -144,6 +218,11 @@ $displayPassword = '';
         .alert { padding: 14px 18px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
         .alert-success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); color: #bbf7d0; }
         .alert-error { background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
+        .card h3 { margin-top: 28px; margin-bottom: 12px; font-size: 18px; }
+        .diagnostic-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+        .diagnostic-list li { background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 12px 16px; }
+        .diagnostic-list span { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px; }
+        .log-box { margin-top: 16px; background: #101c34; border: 1px solid #1d3355; border-radius: 12px; padding: 16px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; color: #e2e8f0; }
         @media (max-width: 720px) {
             .actions { flex-direction: column; }
             .btn { width: 100%; }
@@ -233,6 +312,63 @@ $displayPassword = '';
                 <a class="btn btn-secondary" href="<?= htmlspecialchars($app->url('admin.php'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">Cancel</a>
             </div>
             </form>
+        </div>
+
+        <div class="card" style="margin-top: 32px; display: grid; gap: 20px;">
+            <div>
+                <h2 style="margin: 0 0 8px 0;">Send Test Email</h2>
+                <p style="color: #94a3b8; margin: 0;">Send a quick test message to confirm your SMTP credentials are working. The message uses the currently saved settings.</p>
+            </div>
+
+            <?php if ($testFeedback['success']): ?>
+                <div class="alert alert-success" style="margin: 0;">
+                    <?= htmlspecialchars($testFeedback['success'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($testFeedback['error']): ?>
+                <div class="alert alert-error" style="margin: 0;">
+                    <?= htmlspecialchars($testFeedback['error'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" novalidate style="display: grid; gap: 18px;">
+                <input type="hidden" name="action" value="test">
+                <div class="grid">
+                    <div>
+                        <label for="test_email">Test Recipient</label>
+                        <input id="test_email" type="email" name="test_email" value="<?= htmlspecialchars($_POST['test_email'] ?? ($settings['mail_from_address'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" placeholder="you@example.com" required>
+                    </div>
+                </div>
+                <div class="actions" style="justify-content: flex-start;">
+                    <button type="submit" class="btn btn-primary">Send Test Email</button>
+                </div>
+            </form>
+
+            <?php if (!empty($testFeedback['details'])): ?>
+                <?php
+                    $logLines = [];
+                    foreach ($testFeedback['details'] as $label => $value) {
+                        $stringValue = is_scalar($value) ? (string)$value : json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                        if ($stringValue === false || $stringValue === null) {
+                            $stringValue = '[unserialisable value]';
+                        }
+                        $logLines[] = $label . ': ' . $stringValue;
+                    }
+                    $logOutput = implode(PHP_EOL, $logLines);
+                ?>
+                <div class="log-box"><?= htmlspecialchars($logOutput, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+            <?php endif; ?>
+
+            <h3>Current Mailer Diagnostics</h3>
+            <ul class="diagnostic-list">
+                <?php foreach ($diagnostics as $label => $value): ?>
+                    <li>
+                        <span><?= htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                        <?= htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
         </div>
     </div>
 </body>
