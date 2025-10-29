@@ -31,6 +31,17 @@ Modern permits management system with dashboard, notifications, export, authenti
 - Configurable SMTP / logging drivers
 - Queue processor with retry-safe status tracking
 
+**⚠️ IMPORTANT - Setup Required:**
+Before emails will be sent, you MUST configure approval notification recipients:
+```bash
+# Add at least one recipient who will receive approval notifications
+php bin/setup-approval-recipients.php add "Manager Name" manager@company.com
+
+# Or use the web interface at /admin-approval-notifications.php
+```
+
+See [EMAIL_SETUP.md](EMAIL_SETUP.md) for complete setup instructions and troubleshooting.
+
 **Features:**
 - Email queue for reliable delivery
 - Queue worker: `*/2 * * * * php /path/permits/bin/process-email-queue.php`
@@ -38,6 +49,7 @@ Modern permits management system with dashboard, notifications, export, authenti
 - Cron job for expiry reminders: `*/5 * * * * php /path/permits/bin/send-notifications.php`
 
 **Templates:**
+- `permit-awaiting-approval.php` - Pending approval notifications
 - `permit-approved.php` - Approval notifications
 - `permit-rejected.php` - Rejection notifications
 - `permit-expiring.php` - Expiry reminders
@@ -312,11 +324,25 @@ Runs the PHPUnit suite located in `tests/` covering the mail transport and queue
 
 ## Troubleshooting
 
+## Troubleshooting
+
 ### Email Not Sending
-1. Check settings: `SELECT * FROM settings WHERE \`key\` LIKE 'smtp_%'`
-2. Verify email_enabled is 'true'
-3. Check cron job is running
-4. Review logs for errors
+**Problem:** Permits are submitted for approval but no emails are sent.
+
+**Solution:**
+1. Check if approval recipients are configured:
+   ```bash
+   php bin/setup-approval-recipients.php list
+   ```
+2. If no recipients, add at least one:
+   ```bash
+   php bin/setup-approval-recipients.php add "Manager" manager@example.com
+   ```
+3. Verify SMTP settings in `.env` file
+4. Check email queue: `SELECT * FROM email_queue WHERE status='pending'`
+5. Review logs for errors
+
+See [EMAIL_SETUP.md](EMAIL_SETUP.md) for detailed troubleshooting.
 
 ### Authentication Issues
 1. Ensure users table exists: `php bin/migrate-features.php`

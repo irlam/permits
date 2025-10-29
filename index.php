@@ -161,7 +161,6 @@ function getReopenLink($permitId) {
                     <button id="installButton" class="btn">📱 Install App</button>
                     <a href="/login.php" class="btn btn-accent">🔐 Manager Login</a>
                 <?php endif; ?>
-                <button type="button" class="btn mobile-only" id="openPermitPicker">☰ Permits</button>
             </div>
         </div>
 
@@ -270,55 +269,8 @@ function getReopenLink($permitId) {
         </div>
     </div>
 
-    <!-- Mobile Permit Picker (Hidden by default on desktop) -->
-    <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true">
-        <div class="permit-sheet__panel">
-            <div class="permit-sheet__handle"></div>
-            <div class="card-header" style="margin-bottom:12px;">
-                <h3>📋 Choose Permit Type</h3>
-                <button class="btn btn-secondary" id="closePermitSheet">Close</button>
-            </div>
-            <div class="permit-list">
-                <?php foreach ($templates as $template): ?>
-                    <a class="permit-link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
-                        <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
-                        <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-
     <script src="/assets/app.js"></script>
     <script>
-        // Mobile permit sheet toggle
-        (function() {
-            var openBtn = document.getElementById('openPermitPicker');
-            var closeBtn = document.getElementById('closePermitSheet');
-            var sheet = document.getElementById('permitSheet');
-
-            if (!sheet) return;
-
-            function open(e) {
-                if (e) e.preventDefault();
-                sheet.setAttribute('data-open', '1');
-                sheet.setAttribute('aria-hidden', 'false');
-                document.body.style.overflow = 'hidden';
-            }
-
-            function close(e) {
-                if (e) e.preventDefault();
-                sheet.setAttribute('data-open', '0');
-                sheet.setAttribute('aria-hidden', 'true');
-                document.body.style.overflow = '';
-            }
-
-            if (openBtn) openBtn.addEventListener('click', open);
-            if (closeBtn) closeBtn.addEventListener('click', close);
-            sheet.addEventListener('click', function(e) {
-                if (e.target === sheet) close();
-            });
-        })();
 
         // Center scroll rows when not overflowing
         (function() {
