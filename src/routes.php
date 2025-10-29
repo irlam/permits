@@ -174,6 +174,8 @@ $app->get('/form/{formId}', function(Req $req, Res $res, $args) use ($db) {
   $evtStmt = $db->pdo->prepare("SELECT * FROM form_events WHERE form_id=? ORDER BY at DESC");
   $evtStmt->execute([$formId]);
   $events = $evtStmt->fetchAll();
+
+  $approvalDecision = resolvePermitApprovalDecision($db, $form);
   
   ob_start(); 
   include __DIR__ . '/../templates/forms/view.php'; 

@@ -75,7 +75,8 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
     .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
     .info-item{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:12px}
     .info-label{font-size:12px;color:#94a3b8;margin-bottom:4px}
-    .info-value{font-size:16px;color:#e5e7eb;font-weight:500}
+  .info-value{font-size:16px;color:#e5e7eb;font-weight:500}
+  .info-subvalue{font-size:13px;color:#94a3b8;margin-top:4px}
     .section-card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:16px}
     .section-title{font-size:18px;font-weight:600;margin-bottom:12px;color:#e5e7eb}
     .checklist-item{border:1px solid #1f2937;border-radius:8px;padding:12px;margin-bottom:8px;background:#0a101a}
@@ -155,6 +156,20 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
         <div class="info-label">Created</div>
         <div class="info-value"><?=htmlspecialchars($form['created_at'])?></div>
       </div>
+      <?php if (!empty($approvalDecision) && ($approvalDecision['action'] ?? '') === 'approved'): ?>
+      <div class="info-item">
+        <div class="info-label">Approved By</div>
+        <div class="info-value">
+          <?=htmlspecialchars($approvalDecision['display_name'])?>
+          <?php if (!empty($approvalDecision['email']) && strcasecmp($approvalDecision['email'], $approvalDecision['display_name']) !== 0): ?>
+            <div class="info-subvalue"><?=htmlspecialchars($approvalDecision['email'])?></div>
+          <?php endif; ?>
+          <?php if (!empty($approvalDecision['decided_at_formatted'])): ?>
+            <div class="info-subvalue"><?=htmlspecialchars($approvalDecision['decided_at_formatted'])?> · <?=htmlspecialchars($approvalDecision['source_label'])?></div>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
   </div>
 

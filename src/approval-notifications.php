@@ -1034,3 +1034,89 @@ function getApprovalLinkStatusMap(Db $db, array $permitIds, ?array $configuredRe
 
     return $results;
 }
+
+/**
+ * Determine the latest approval decision for a permit (manager or email link).
+ *
+ * @param array<string,mixed> $form
+ * @return array<string,mixed>|null
+ */
+function resolvePermitApprovalDecision(Db $db, array $form): ?array
+{
+    $permitId = trim((string)($form['id'] ?? ''));
+    if ($permitId === '') {
+        return null;
+    }
+
+    $approvedBy = $form['approved_by'] ?? null;
+    $approvedAt = $form['approved_at'] ?? null;
+    $decision = null;
+
+    if (!empty($approvedBy)) {
+        $stmt = $db->pdo->prepare('SELECT id, name, email FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$approvedBy]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+        $decision = [
+            'action' => 'approved',
+            'source' => 'internal_user',
+            'name' => $user['name'] ?? null,
+            'email' => $user['email'] ?? null,
+            'decided_at' => $approvedAt,
+            'details' => $user,
+        ];
+    } else {
+        ensure_approval_links_table_exists($db);
+
+        $stmt = $db->pdo->prepare(
+            "SELECT recipient_email, recipient_name, used_action, used_at, metadata
+             FROM permit_approval_links
+             WHERE permit_id = ? AND used_at IS NOT NULL AND used_action IS NOT NULL
+             ORDER BY used_at DESC
+             LIMIT 1"
+        );
+        $stmt->execute([$permitId]);
+        $link = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($link) {
+            $meta = [];
+            if (!empty($link['metadata'])) {
+                $decoded = json_decode((string)$link['metadata'], true);
+                if (is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+
+            $decision = [
+                'action' => strtolower((string)$link['used_action']),
+                'source' => 'email_link',
+                'name' => $link['recipient_name'] ?: ($meta['recipient_name'] ?? null),
+                'email' => $link['recipient_email'] ?? ($meta['recipient_email'] ?? null),
+                'decided_at' => $link['used_at'] ?? null,
+                'details' => $meta,
+            ];
+        }
+    }
+
+    if ($decision === null) {
+        return null;
+    }
+
+    if (empty($decision['name']) && !empty($decision['details']['decision_by_name'])) {
+        $decision['name'] = $decision['details']['decision_by_name'];
+    }
+
+    if (empty($decision['email']) && !empty($decision['details']['decision_by_email'])) {
+        $decision['email'] = $decision['details']['decision_by_email'];
+    }
+
+    if (empty($decision['decided_at']) && !empty($approvedAt)) {
+        $decision['decided_at'] = $approvedAt;
+    }
+
+    $decision['display_name'] = $decision['name'] ?: ($decision['email'] ?? null) ?: 'Unknown approver';
+    $decision['source_label'] = $decision['source'] === 'internal_user' ? 'Manager dashboard' : 'Approval email';
+    $decision['decided_at_formatted'] = !empty($decision['decided_at']) ? formatApprovalStatusDate($decision['decided_at']) : null;
+
+    return $decision;
+}

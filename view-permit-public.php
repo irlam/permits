@@ -18,10 +18,12 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 require_once __DIR__ . '/src/Auth.php';
+require_once __DIR__ . '/src/approval-notifications.php';
 
 $auth = new Auth($db);
 $currentUser = $auth->getCurrentUser();
 $canApprove = $auth->isLoggedIn() && $auth->hasAnyRole(['manager', 'admin']);
+$approvalDecision = null;
 
 // Get unique link from query string
 $unique_link = $_GET['link'] ?? null;
@@ -67,6 +69,7 @@ try {
     } else {
         $canClose = false;
     }
+    $approvalDecision = resolvePermitApprovalDecision($db, $permit);
     
 } catch (Exception $e) {
     die("Error loading permit: " . $e->getMessage());
@@ -197,6 +200,12 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
             padding: 12px;
             background: #f9fafb;
             border-radius: 8px;
+        }
+
+        .info-subvalue {
+            margin-top: 6px;
+            font-size: 13px;
+            color: #4b5563;
         }
 
         .info-label {
@@ -447,6 +456,19 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                         <div class="info-label">Submitted</div>
                         <div class="info-value"><?php echo formatDateUK($permit['created_at']); ?></div>
                     </div>
+
+                    <?php if (!empty($approvalDecision) && ($approvalDecision['action'] ?? '') === 'approved'): ?>
+                    <div class="info-item">
+                        <div class="info-label">Approved By</div>
+                        <div class="info-value"><?php echo htmlspecialchars($approvalDecision['display_name']); ?></div>
+                        <?php if (!empty($approvalDecision['email']) && strcasecmp($approvalDecision['email'], $approvalDecision['display_name']) !== 0): ?>
+                            <div class="info-subvalue"><?php echo htmlspecialchars($approvalDecision['email']); ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($approvalDecision['decided_at_formatted'])): ?>
+                            <div class="info-subvalue"><?php echo htmlspecialchars($approvalDecision['decided_at_formatted']); ?> · <?php echo htmlspecialchars($approvalDecision['source_label']); ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                     
                     <?php if ($permit['status'] === 'active' && $permit['valid_to']): ?>
                     <div class="info-item">
