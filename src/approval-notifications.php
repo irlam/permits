@@ -10,6 +10,9 @@ use Permits\Db;
 use Permits\Email;
 use Ramsey\Uuid\Uuid;
 
+require_once __DIR__ . '/Auth.php';
+require_once __DIR__ . '/Roles.php';
+
 const APPROVAL_RECIPIENTS_SETTING_KEY = 'approval_notification_recipients';
 const APPROVAL_LINK_EXPIRY_DAYS = 7;
 
@@ -752,4 +755,57 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
     }
 
     return $queued;
+}
+
+/**
+ * Permanently remove a permit and its related records. Restricted to administrators.
+ */
+function deletePermit(Db $db, string $permitId): bool
+{
+    $permitId = trim($permitId);
+    if ($permitId === '') {
+        throw new InvalidArgumentException('Permit ID is required.');
+    }
+
+    if (!isLoggedIn() || !isAdmin()) {
+        throw new RuntimeException('Only administrators can delete permits.');
+    }
+
+    $pdo = $db->pdo;
+    $pdo->beginTransaction();
+
+    try {
+        cancelApprovalLinksForPermit($db, $permitId, 'permit_deleted');
+
+        $pdo->prepare('DELETE FROM attachments WHERE form_id = ?')->execute([$permitId]);
+        $pdo->prepare('DELETE FROM form_events WHERE form_id = ?')->execute([$permitId]);
+
+        $delete = $pdo->prepare('DELETE FROM forms WHERE id = ?');
+        $delete->execute([$permitId]);
+
+        if ($delete->rowCount() === 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        if (function_exists('logActivity')) {
+            $actor = getCurrentUser();
+            $actorEmail = $actor['email'] ?? 'unknown';
+            logActivity(
+                'permit_deleted',
+                'permits',
+                'form',
+                $permitId,
+                sprintf('Permit %s deleted by %s', $permitId, $actorEmail)
+            );
+        }
+
+        $pdo->commit();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }

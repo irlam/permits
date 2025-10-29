@@ -355,25 +355,29 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $
 // Delete a form
 $app->delete('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db) {
   $formId = $args['formId'];
-  
-  // Delete attachments first (foreign key constraint)
-  $db->pdo->prepare("DELETE FROM attachments WHERE form_id=?")->execute([$formId]);
-  
-  // Delete events
-  $db->pdo->prepare("DELETE FROM form_events WHERE form_id=?")->execute([$formId]);
-  
-  // Delete form
-  $stmt = $db->pdo->prepare("DELETE FROM forms WHERE id=?");
-  $stmt->execute([$formId]);
-  
-  if($stmt->rowCount() > 0) {
-    $res->getBody()->write(json_encode(['ok'=>true]));
-  } else {
-    $res->getBody()->write(json_encode(['ok'=>false,'error'=>'Form not found']));
-    return $res->withStatus(404)->withHeader('Content-Type','application/json');
+
+  try {
+    $deleted = deletePermit($db, $formId);
+  } catch (RuntimeException $e) {
+    $status = isLoggedIn() ? 403 : 401;
+    $res->getBody()->write(json_encode(['ok' => false, 'error' => $e->getMessage()]));
+    return $res->withStatus($status)->withHeader('Content-Type', 'application/json');
+  } catch (InvalidArgumentException $e) {
+    $res->getBody()->write(json_encode(['ok' => false, 'error' => $e->getMessage()]));
+    return $res->withStatus(400)->withHeader('Content-Type', 'application/json');
+  } catch (Throwable $e) {
+    error_log('Permit deletion failed: ' . $e->getMessage());
+    $res->getBody()->write(json_encode(['ok' => false, 'error' => 'Failed to delete permit']));
+    return $res->withStatus(500)->withHeader('Content-Type', 'application/json');
   }
-  
-  return $res->withHeader('Content-Type','application/json');
+
+  if (!$deleted) {
+    $res->getBody()->write(json_encode(['ok' => false, 'error' => 'Form not found']));
+    return $res->withStatus(404)->withHeader('Content-Type', 'application/json');
+  }
+
+  $res->getBody()->write(json_encode(['ok' => true]));
+  return $res->withHeader('Content-Type', 'application/json');
 });
 
 // Upload attachment to a form
