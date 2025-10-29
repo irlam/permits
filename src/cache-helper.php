@@ -1,23 +1,18 @@
 <?php
 /**
  * Cache Busting Helper
- * 
- * File Path: /src/cache-helper.php
- * Description: Helper functions to prevent browser caching issues
- * Created: 21/10/2025
- * Last Modified: 21/10/2025
- * 
- * Usage:
- * Include at top of any page:
- * require_once __DIR__ . '/src/cache-helper.php';
- * 
- * Then use in HTML:
- * <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
- * <script src="<?=asset('/assets/app.js')?>"></script>
+ *
+ * Provides helpers for setting no-cache headers and generating
+ * versioned asset URLs so browsers fetch updated CSS/JS when files change.
  */
 
-// Set cache-busting headers
-function set_no_cache_headers() {
+// Set cache-busting headers (skip for CLI to keep cron output clean)
+function set_no_cache_headers(): void
+{
+    if (PHP_SAPI === 'cli') {
+        return;
+    }
+
     if (!headers_sent()) {
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Cache-Control: post-check=0, pre-check=0', false);
@@ -26,25 +21,77 @@ function set_no_cache_headers() {
     }
 }
 
-// Get asset URL with version number
-function asset($path) {
-    // Version number - increment this when you update CSS/JS
-    $version = defined('APP_VERSION') ? APP_VERSION : '5.0.0';
+/**
+ * Locate an asset on disk relative to the project or document root.
+ */
+function resolve_asset_path(string $path): ?string
+{
+    $normalized = '/' . ltrim($path, '/');
 
-    // Absolute URLs: just append version
+    static $root = null;
+    if ($root === null) {
+        $root = realpath(__DIR__ . '/..') ?: __DIR__ . '/..';
+    }
+
+    $candidates = [$root . $normalized];
+
+    $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    if ($documentRoot !== '') {
+        $candidates[] = rtrim($documentRoot, '/') . $normalized;
+    }
+
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Determine a cache-busting version string for an asset.
+ */
+function asset_version(string $path): string
+{
+    if (preg_match('#^https?://#i', $path)) {
+        return defined('APP_ASSET_VERSION') ? APP_ASSET_VERSION : (defined('APP_VERSION') ? APP_VERSION : (string) time());
+    }
+
+    $resolved = resolve_asset_path($path);
+    if ($resolved) {
+        return (string) filemtime($resolved);
+    }
+
+    if (defined('APP_ASSET_VERSION')) {
+        return APP_ASSET_VERSION;
+    }
+
+    if (defined('APP_VERSION')) {
+        return APP_VERSION;
+    }
+
+    return (string) time();
+}
+
+/**
+ * Build a versioned asset URL suitable for use in views.
+ */
+function asset(string $path): string
+{
+    $version = asset_version($path);
+
     if (preg_match('#^https?://#i', $path)) {
         $separator = strpos($path, '?') !== false ? '&' : '?';
         return $path . $separator . 'v=' . $version;
     }
 
-    // Build base-aware asset URL using APP_URL + APP_BASE_PATH
-    $baseUrl  = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
-    $basePath = rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/');
-    $normalized = '/' . ltrim((string)$path, '/');
+    $baseUrl  = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');
+    $basePath = rtrim((string) ($_ENV['APP_BASE_PATH'] ?? '/'), '/');
+    $normalized = '/' . ltrim($path, '/');
 
     $href = ($baseUrl !== '' ? $baseUrl : '') . $basePath . $normalized;
     if ($href === '') {
-        // Fallback to original path if env not available
         $href = $normalized;
     }
 
@@ -52,24 +99,17 @@ function asset($path) {
     return $href . $separator . 'v=' . $version;
 }
 
-// Get timestamp-based version (alternative method)
-function asset_timestamp($path) {
-    $filePath = $_SERVER['DOCUMENT_ROOT'] . $path;
-    
-    // If file exists, use its modification time
-    if (file_exists($filePath)) {
-        $version = filemtime($filePath);
-    } else {
-        // Fallback to current time
-        $version = time();
-    }
-    
-    $separator = strpos($path, '?') !== false ? '&' : '?';
-    return $path . $separator . 'v=' . $version;
+/**
+ * Backwards-compatible alias for older templates that called asset_timestamp().
+ */
+function asset_timestamp(string $path): string
+{
+    return asset($path);
 }
 
 // Generate meta tags to prevent caching
-function cache_meta_tags() {
+function cache_meta_tags(): void
+{
     echo '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">';
     echo '<meta http-equiv="Pragma" content="no-cache">';
     echo '<meta http-equiv="Expires" content="0">';
