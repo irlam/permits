@@ -19,6 +19,7 @@
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
 require_once __DIR__ . '/src/check-expiry.php';
+require_once __DIR__ . '/src/approval-notifications.php';
 
 if (function_exists('check_and_expire_permits')) {
     check_and_expire_permits($db);
@@ -44,6 +45,7 @@ if (!$user || !in_array($user['role'], ['manager', 'admin'])) {
 }
 
 // Get pending approvals
+$approvalStatusMap = [];
 try {
     $stmt = $db->pdo->query("
         SELECT 
@@ -65,6 +67,14 @@ try {
 } catch (Exception $e) {
     $pending_permits = [];
     error_log("Error fetching pending permits: " . $e->getMessage());
+}
+
+if (!empty($pending_permits)) {
+    try {
+        $approvalStatusMap = getApprovalLinkStatusMap($db, array_column($pending_permits, 'id'));
+    } catch (Throwable $e) {
+        error_log('Error building approval link status map: ' . $e->getMessage());
+    }
 }
 
 // Helper function
@@ -228,6 +238,76 @@ function formatDateUK($date) {
             border-radius: 6px;
         }
 
+        .approval-recipients {
+            margin-top: 16px;
+        }
+
+        .recipient-status-list {
+            list-style: none;
+            margin: 12px 0 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .recipient-status-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            background: #f3f4f6;
+            border-radius: 10px;
+            padding: 12px 14px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .recipient-status-item.extra {
+            border: 1px dashed #9ca3af;
+            background: #ffffff;
+        }
+
+        .recipient-labels {
+            display: grid;
+            gap: 4px;
+        }
+
+        .recipient-name {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .recipient-meta {
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+        .recipient-chip {
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            align-self: flex-start;
+        }
+
+        .recipient-chip.status-success { background: rgba(16, 185, 129, 0.15); color: #047857; border: 1px solid rgba(16, 185, 129, 0.35); }
+        .recipient-chip.status-info { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; border: 1px solid rgba(59, 130, 246, 0.35); }
+        .recipient-chip.status-warning { background: rgba(251, 191, 36, 0.15); color: #b45309; border: 1px solid rgba(251, 191, 36, 0.4); }
+        .recipient-chip.status-danger { background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.35); }
+        .recipient-chip.status-muted { background: #e5e7eb; color: #374151; border: 1px solid #d1d5db; }
+
+        .recipient-empty {
+            margin-top: 12px;
+            background: #eef2ff;
+            border: 1px dashed #c7d2fe;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #4c1d95;
+        }
+
         .info-label {
             font-size: 12px;
             color: #6b7280;
@@ -315,6 +395,11 @@ function formatDateUK($date) {
                 width: 100%;
                 justify-content: center;
             }
+
+            .recipient-status-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -374,6 +459,42 @@ function formatDateUK($date) {
                                     <div class="info-label">Submitted</div>
                                     <div class="info-value"><?php echo formatDateUK($permit['created_at']); ?></div>
                                 </div>
+                            </div>
+
+                            <?php
+                                $statusBundle = $approvalStatusMap[$permit['id']] ?? ['recipients' => [], 'extra' => []];
+                                $recipientStatuses = $statusBundle['recipients'];
+                                $extraStatuses = $statusBundle['extra'];
+                                $allStatuses = array_merge($recipientStatuses, $extraStatuses);
+                            ?>
+                            <div class="approval-recipients">
+                                <div class="info-label">Approver Emails</div>
+                                <?php if (empty($allStatuses)): ?>
+                                    <div class="recipient-empty">No approval emails queued yet for the configured recipients.</div>
+                                <?php else: ?>
+                                    <ul class="recipient-status-list">
+                                        <?php foreach ($allStatuses as $entry): ?>
+                                            <?php
+                                                $displayName = $entry['name'] !== '' ? $entry['name'] : $entry['email'];
+                                                $emailLine = $entry['name'] !== '' ? $entry['email'] : '';
+                                                $detail = $entry['detail'] ?? '';
+                                                $itemClass = !empty($entry['configured']) ? 'recipient-status-item' : 'recipient-status-item extra';
+                                            ?>
+                                            <li class="<?php echo $itemClass; ?>">
+                                                <div class="recipient-labels">
+                                                    <div class="recipient-name"><?php echo htmlspecialchars($displayName); ?></div>
+                                                    <?php if ($emailLine !== ''): ?>
+                                                        <div class="recipient-meta"><?php echo htmlspecialchars($emailLine); ?></div>
+                                                    <?php endif; ?>
+                                                    <?php if ($detail !== ''): ?>
+                                                        <div class="recipient-meta"><?php echo htmlspecialchars($detail); ?></div>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <span class="recipient-chip <?php echo htmlspecialchars($entry['status_class']); ?>"><?php echo htmlspecialchars($entry['label']); ?></span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
                             </div>
 
                             <div class="approval-actions">

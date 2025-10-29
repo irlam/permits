@@ -25,6 +25,9 @@ if (!$currentUser || $currentUser['role'] !== 'admin') {
 
 $successMessage = '';
 $errorMessage = '';
+$pendingPermits = [];
+$pendingStatusMap = [];
+$pendingStatusError = '';
 
 try {
     $recipients = getApprovalNotificationRecipients($db);
@@ -62,6 +65,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+try {
+    $pendingStmt = $db->pdo->prepare(
+        "SELECT f.id, f.ref_number, f.ref, f.template_id, f.notified_at, f.created_at, ft.name AS template_name
+         FROM forms f
+         LEFT JOIN form_templates ft ON ft.id = f.template_id
+         WHERE f.status = 'pending_approval'
+         ORDER BY COALESCE(f.notified_at, f.created_at) DESC
+         LIMIT ?"
+    );
+    $pendingStmt->bindValue(1, 10, PDO::PARAM_INT);
+    $pendingStmt->execute();
+    $pendingPermits = $pendingStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    if (!empty($pendingPermits)) {
+        $pendingIds = array_column($pendingPermits, 'id');
+        $pendingStatusMap = getApprovalLinkStatusMap($db, $pendingIds, $recipients ?? []);
+    }
+} catch (Throwable $e) {
+    $pendingStatusError = 'Unable to load pending permits: ' . $e->getMessage();
+}
+
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -91,9 +115,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .alert-error { background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
         .empty { padding: 24px; text-align: center; color: #94a3b8; }
         form.inline { display: contents; }
+        .status-card { margin-top: 32px; }
+        .permit-status { background: #111827; border-radius: 14px; padding: 20px; border: 1px solid #1f2937; margin-top: 18px; }
+        .permit-status:first-of-type { margin-top: 0; }
+        .permit-header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .permit-title { font-weight: 600; font-size: 18px; color: #e2e8f0; }
+        .permit-subtitle { color: #94a3b8; font-size: 13px; }
+        .status-list { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+        .status-item { background: #0f172a; border: 1px solid #1f2937; border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+        .status-info-block { display: grid; gap: 4px; }
+        .status-label { font-weight: 600; color: #e2e8f0; }
+        .status-detail { color: #94a3b8; font-size: 13px; }
+        .status-pill { border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+        .status-pill.status-success { background: rgba(34, 197, 94, 0.16); color: #bbf7d0; border: 1px solid rgba(34, 197, 94, 0.35); }
+        .status-pill.status-info { background: rgba(59, 130, 246, 0.16); color: #cbd5f5; border: 1px solid rgba(59, 130, 246, 0.35); }
+        .status-pill.status-warning { background: rgba(251, 191, 36, 0.16); color: #fcd34d; border: 1px solid rgba(251, 191, 36, 0.35); }
+        .status-pill.status-danger { background: rgba(239, 68, 68, 0.16); color: #fecaca; border: 1px solid rgba(239, 68, 68, 0.35); }
+        .status-pill.status-muted { background: rgba(148, 163, 184, 0.18); color: #cbd5f5; border: 1px solid rgba(148, 163, 184, 0.25); }
+        .pending-meta { color: #94a3b8; font-size: 13px; }
+        .pending-meta strong { color: #e2e8f0; }
+        .muted-link { color: #60a5fa; text-decoration: none; font-size: 13px; }
+        .muted-link:hover { text-decoration: underline; }
+        .status-empty { margin-top: 16px; padding: 20px; border-radius: 12px; background: rgba(148, 163, 184, 0.08); color: #94a3b8; border: 1px dashed #334155; text-align: center; }
+        .pending-error { margin-top: 16px; padding: 16px; border-radius: 12px; background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
         @media (max-width: 720px) {
             .actions { flex-direction: column; }
             .btn { width: 100%; }
+            .status-item { flex-direction: column; align-items: flex-start; }
         }
     </style>
 </head>
@@ -173,6 +221,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <button type="submit" class="btn btn-primary">Add recipient</button>
                 </div>
             </form>
+        </div>
+
+        <div class="card status-card">
+            <h2 style="margin-top:0;">Pending permits &amp; email delivery</h2>
+            <p class="pending-meta">Monitor which configured recipients have active approval emails for permits awaiting a decision.</p>
+
+            <?php if ($pendingStatusError): ?>
+                <div class="pending-error"><?= htmlspecialchars($pendingStatusError, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+            <?php elseif (empty($pendingPermits)): ?>
+                <div class="status-empty">No permits are currently waiting for approval.</div>
+            <?php else: ?>
+                <?php foreach ($pendingPermits as $permit): ?>
+                    <?php
+                        $ref = $permit['ref_number'] ?? $permit['ref'] ?? substr($permit['id'], 0, 8);
+                        $submitted = formatApprovalStatusDate($permit['created_at'] ?? null) ?? 'Unknown';
+                        $queued = formatApprovalStatusDate($permit['notified_at'] ?? null);
+                        $statusBundle = $pendingStatusMap[$permit['id']] ?? ['recipients' => [], 'extra' => []];
+                        $recipientStatuses = $statusBundle['recipients'];
+                        $extraStatuses = $statusBundle['extra'];
+                        $allStatuses = array_merge($recipientStatuses, $extraStatuses);
+                    ?>
+                    <div class="permit-status">
+                        <div class="permit-header">
+                            <div>
+                                <div class="permit-title"><?= htmlspecialchars($permit['template_name'] ?? 'Permit', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+                                <div class="permit-subtitle">#<?= htmlspecialchars($ref, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?> · Submitted <?= htmlspecialchars($submitted, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+                            </div>
+                            <?php if ($queued): ?>
+                                <div class="pending-meta"><strong>Emails queued:</strong> <?= htmlspecialchars($queued, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+                            <?php else: ?>
+                                <div class="pending-meta"><strong>Emails queued:</strong> Not yet queued</div>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if (empty($allStatuses)): ?>
+                            <div class="status-empty" style="margin-top:16px;">No approval emails have been queued for the current configuration.</div>
+                        <?php else: ?>
+                            <ul class="status-list">
+                                <?php foreach ($allStatuses as $entry): ?>
+                                    <?php
+                                        $displayName = $entry['name'] !== '' ? $entry['name'] : $entry['email'];
+                                        $emailLine = $entry['name'] !== '' ? $entry['email'] : '';
+                                        $detail = $entry['detail'] ?? '';
+                                    ?>
+                                    <li class="status-item">
+                                        <div class="status-info-block">
+                                            <div class="status-label"><?= htmlspecialchars($displayName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+                                            <?php if ($emailLine !== ''): ?>
+                                                <div class="status-detail"><?= htmlspecialchars($emailLine, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+                                            <?php endif; ?>
+                                            <?php if ($detail !== ''): ?>
+                                                <div class="status-detail"><?= htmlspecialchars($detail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <span class="status-pill <?= htmlspecialchars($entry['status_class'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"><?= htmlspecialchars($entry['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </body>

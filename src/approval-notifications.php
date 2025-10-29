@@ -702,7 +702,7 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
             $quickApproveUrl = $decisionUrl . '&intent=approve';
             $quickRejectUrl = $decisionUrl . '&intent=reject';
 
-            $mailer->sendPendingApprovalNotification($form, $recipient['email'], [
+            $queueId = $mailer->sendPendingApprovalNotification($form, $recipient['email'], [
                 'recipient' => $recipient,
                 'decisionUrl' => $decisionUrl,
                 'quickApproveUrl' => $quickApproveUrl,
@@ -712,8 +712,20 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
                 'managerUrl' => $baseUrl . '/manager-approvals.php',
             ]);
             $queued++;
+
+            if (function_exists('logActivity')) {
+                $name = trim((string)($recipient['name'] ?? ''));
+                $target = $name !== '' ? $name . ' <' . $recipient['email'] . '>' : $recipient['email'];
+                $message = sprintf('Pending approval email queued (%s) for %s', $queueId, $target);
+                logActivity('permit_pending_email_sent', 'approval', 'form', $permitId, $message);
+            }
         } catch (Throwable $e) {
             error_log('Failed to queue approval notification: ' . $e->getMessage());
+            if (function_exists('logActivity')) {
+                $target = $recipient['email'] ?? 'unknown';
+                $message = sprintf('Failed to queue approval email for %s: %s', $target, $e->getMessage());
+                logActivity('permit_pending_email_error', 'approval', 'form', $permitId, $message);
+            }
         }
     }
 
@@ -808,4 +820,217 @@ function deletePermit(Db $db, string $permitId): bool
         }
         throw $e;
     }
+}
+
+/**
+ * Format a stored datetime string for display in status summaries.
+ */
+function formatApprovalStatusDate(?string $value): ?string
+{
+    if ($value === null) {
+        return null;
+    }
+
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+
+    try {
+        return (new DateTimeImmutable($value))->format('d/m/Y H:i');
+    } catch (Throwable $e) {
+        return $value;
+    }
+}
+
+/**
+ * Build a structured status entry for a recipient/link combination.
+ *
+ * @param array<string,mixed> $recipient
+ * @param array<string,mixed>|null $link
+ * @return array<string,mixed>
+ */
+function buildApprovalRecipientStatusEntry(array $recipient, ?array $link, bool $configured, int $nowTs): array
+{
+    $email = trim((string)($recipient['email'] ?? ''));
+    $name = trim((string)($recipient['name'] ?? ''));
+
+    $status = 'missing';
+    $label = 'Awaiting email';
+    $detail = 'No pending approval email has been queued yet.';
+    $sentAt = null;
+    $expiresAt = null;
+    $usedAt = null;
+    $usedAction = null;
+    $statusClass = 'status-warning';
+
+    if ($link !== null) {
+        $sentAt = $link['created_at'] ?? null;
+        $expiresAt = $link['expires_at'] ?? null;
+        $usedAt = $link['used_at'] ?? null;
+        $usedAction = $link['used_action'] ?? null;
+
+        $sentFormatted = formatApprovalStatusDate($sentAt);
+        $expiresFormatted = formatApprovalStatusDate($expiresAt);
+        $usedFormatted = formatApprovalStatusDate($usedAt);
+
+        $expiresTs = $expiresAt ? strtotime((string)$expiresAt) : null;
+        $usedTs = $usedAt ? strtotime((string)$usedAt) : null;
+
+        if ($usedTs !== null) {
+            $action = strtolower((string)$usedAction);
+            if ($action === 'approved') {
+                $status = 'approved';
+                $label = 'Approved';
+                $statusClass = 'status-success';
+                $detail = $usedFormatted
+                    ? sprintf('Decision recorded %s (approval).', $usedFormatted)
+                    : 'Decision recorded (approval).';
+            } elseif ($action === 'rejected') {
+                $status = 'rejected';
+                $label = 'Rejected';
+                $statusClass = 'status-danger';
+                $detail = $usedFormatted
+                    ? sprintf('Decision recorded %s (rejection).', $usedFormatted)
+                    : 'Decision recorded (rejection).';
+            } else {
+                $status = 'invalidated';
+                $label = 'Invalidated';
+                $statusClass = 'status-warning';
+                $reason = $action !== '' ? str_replace('_', ' ', $action) : 'cancelled';
+                $detail = $usedFormatted
+                    ? sprintf('Link invalidated %s (%s).', $usedFormatted, $reason)
+                    : sprintf('Link invalidated (%s).', $reason);
+            }
+        } elseif ($expiresTs !== null && $expiresTs < $nowTs) {
+            $status = 'expired';
+            $label = 'Link expired';
+            $statusClass = 'status-warning';
+            $detailParts = [];
+            if ($sentFormatted) {
+                $detailParts[] = 'Sent ' . $sentFormatted;
+            }
+            if ($expiresFormatted) {
+                $detailParts[] = 'Expired ' . $expiresFormatted;
+            }
+            $detail = implode(' · ', $detailParts) ?: 'This approval link has expired.';
+        } else {
+            $status = 'awaiting';
+            $label = 'Awaiting decision';
+            $statusClass = 'status-info';
+            $detailParts = [];
+            if ($sentFormatted) {
+                $detailParts[] = 'Sent ' . $sentFormatted;
+            }
+            if ($expiresFormatted) {
+                $detailParts[] = 'Expires ' . $expiresFormatted;
+            }
+            $detail = implode(' · ', $detailParts) ?: 'Email queued for approval.';
+        }
+    }
+
+    if (!$configured) {
+        $detail = trim($detail . ' Recipient not currently configured.');
+    }
+
+    return [
+        'email' => $email,
+        'name' => $name,
+        'configured' => $configured,
+        'status' => $status,
+        'status_class' => $statusClass,
+        'label' => $label,
+        'detail' => $detail,
+        'sent_at' => $sentAt,
+        'expires_at' => $expiresAt,
+        'used_at' => $usedAt,
+        'used_action' => $usedAction,
+    ];
+}
+
+/**
+ * Build a map of approval notification statuses for the supplied permits.
+ *
+ * @param array<int,string> $permitIds
+ * @param array<int,array<string,mixed>>|null $configuredRecipients
+ * @return array<string,array{recipients:array<int,array<string,mixed>>,extra:array<int,array<string,mixed>>}>
+ */
+function getApprovalLinkStatusMap(Db $db, array $permitIds, ?array $configuredRecipients = null): array
+{
+    $permitIds = array_values(array_filter(array_map(static fn($id) => trim((string)$id), $permitIds), static fn($id) => $id !== ''));
+    if (empty($permitIds)) {
+        return [];
+    }
+
+    ensure_approval_links_table_exists($db);
+
+    if ($configuredRecipients === null) {
+        try {
+            $configuredRecipients = getApprovalNotificationRecipients($db);
+        } catch (Throwable $e) {
+            $configuredRecipients = [];
+        }
+    }
+
+    $configuredMap = [];
+    foreach ($configuredRecipients as $recipient) {
+        $emailKey = strtolower(trim((string)($recipient['email'] ?? '')));
+        if ($emailKey === '') {
+            continue;
+        }
+        $configuredMap[$emailKey] = $recipient;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($permitIds), '?'));
+    $stmt = $db->pdo->prepare("SELECT * FROM permit_approval_links WHERE permit_id IN ($placeholders) ORDER BY created_at DESC");
+    foreach ($permitIds as $index => $permitId) {
+        $stmt->bindValue($index + 1, $permitId, PDO::PARAM_STR);
+    }
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $latest = [];
+    foreach ($rows as $row) {
+        $pid = (string)($row['permit_id'] ?? '');
+        $emailKey = strtolower(trim((string)($row['recipient_email'] ?? '')));
+        if ($pid === '' || $emailKey === '') {
+            continue;
+        }
+        if (!isset($latest[$pid][$emailKey])) {
+            $latest[$pid][$emailKey] = $row;
+        }
+    }
+
+    $nowTs = time();
+    $results = [];
+
+    foreach ($permitIds as $permitId) {
+        $permitResults = [
+            'recipients' => [],
+            'extra' => [],
+        ];
+
+        foreach ($configuredMap as $emailKey => $recipient) {
+            $link = $latest[$permitId][$emailKey] ?? null;
+            if ($link !== null) {
+                unset($latest[$permitId][$emailKey]);
+            }
+            $permitResults['recipients'][] = buildApprovalRecipientStatusEntry($recipient, $link, true, $nowTs);
+        }
+
+        if (!empty($latest[$permitId])) {
+            foreach ($latest[$permitId] as $link) {
+                $permitResults['extra'][] = buildApprovalRecipientStatusEntry([
+                    'email' => $link['recipient_email'] ?? '',
+                    'name' => $link['recipient_name'] ?? '',
+                ], $link, false, $nowTs);
+            }
+        }
+
+        unset($latest[$permitId]);
+
+        $results[$permitId] = $permitResults;
+    }
+
+    return $results;
 }
