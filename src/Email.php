@@ -156,7 +156,13 @@ class Email {
      * @param string $recipientEmail Approval recipient email address
      * @param array $context Additional context such as URLs and recipient meta
      */
-    public function sendPendingApprovalNotification(array $form, string $recipientEmail, array $context = []): string {
+    /**
+     * Queue (and optionally allow immediate sending of) a pending approval alert.
+     *
+     * @param array $context Additional context such as URLs and recipient meta
+     * @return array{queueId:string,subject:string,body:string}
+     */
+    public function sendPendingApprovalNotification(array $form, string $recipientEmail, array $context = []): array {
         $ref = $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? 'Permit';
         $subject = 'Permit Awaiting Approval: ' . $ref;
 
@@ -173,7 +179,13 @@ class Email {
             'subject' => $subject,
         ]);
 
-        return $this->queue($recipientEmail, $subject, $body);
+        $queueId = $this->queue($recipientEmail, $subject, $body);
+
+        return [
+            'queueId' => $queueId,
+            'subject' => $subject,
+            'body' => $body,
+        ];
     }
     
     /**

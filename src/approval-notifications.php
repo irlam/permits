@@ -8,6 +8,7 @@
 
 use Permits\Db;
 use Permits\Email;
+use Permits\Mailer;
 use Ramsey\Uuid\Uuid;
 
 require_once __DIR__ . '/Auth.php';
@@ -694,6 +695,8 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
 
     $queued = 0;
 
+    $mailTransport = null;
+
     foreach ($recipients as $recipient) {
         try {
             $link = createApprovalLink($db, $form, $recipient);
@@ -702,7 +705,7 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
             $quickApproveUrl = $decisionUrl . '&intent=approve';
             $quickRejectUrl = $decisionUrl . '&intent=reject';
 
-            $queueId = $mailer->sendPendingApprovalNotification($form, $recipient['email'], [
+            $queueResult = $mailer->sendPendingApprovalNotification($form, $recipient['email'], [
                 'recipient' => $recipient,
                 'decisionUrl' => $decisionUrl,
                 'quickApproveUrl' => $quickApproveUrl,
@@ -713,10 +716,37 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
             ]);
             $queued++;
 
+            $queueId = $queueResult['queueId'] ?? null;
+            $immediateStatus = null;
+
+            if ($queueId !== null) {
+                try {
+                    if ($mailTransport === null) {
+                        $mailTransport = Mailer::fromDatabase($db);
+                    }
+
+                    if ($mailTransport->send($recipient['email'], $queueResult['subject'], $queueResult['body'])) {
+                        $mailer->markAsSent($queueId);
+                        $immediateStatus = 'sent';
+                    }
+                } catch (Throwable $sendError) {
+                    $immediateStatus = 'failed: ' . $sendError->getMessage();
+                }
+            }
+
             if (function_exists('logActivity')) {
                 $name = trim((string)($recipient['name'] ?? ''));
                 $target = $name !== '' ? $name . ' <' . $recipient['email'] . '>' : $recipient['email'];
-                $message = sprintf('Pending approval email queued (%s) for %s', $queueId, $target);
+                $parts = ['Queued approval email'];
+                if ($queueId !== null) {
+                    $parts[] = '#' . $queueId;
+                }
+                if ($immediateStatus === 'sent') {
+                    $parts[] = '(delivered immediately)';
+                } elseif (is_string($immediateStatus)) {
+                    $parts[] = '(immediate send failed: ' . $immediateStatus . ')';
+                }
+                $message = implode(' ', $parts) . ' for ' . $target;
                 logActivity('permit_pending_email_sent', 'approval', 'form', $permitId, $message);
             }
         } catch (Throwable $e) {
