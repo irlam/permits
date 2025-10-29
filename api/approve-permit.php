@@ -79,6 +79,12 @@ try {
     } catch (\Throwable $e) {
         error_log('Failed to clear approval notification flag after approval: ' . $e->getMessage());
     }
+
+    try {
+        cancelApprovalLinksForPermit($db, $permit_id, 'approved_in_app');
+    } catch (\Throwable $e) {
+        error_log('Failed to invalidate approval links after approval: ' . $e->getMessage());
+    }
     
     // Log activity
     if (function_exists('logActivity')) {

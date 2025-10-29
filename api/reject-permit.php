@@ -78,6 +78,12 @@ try {
     } catch (\Throwable $e) {
         error_log('Failed to clear approval notification flag after rejection: ' . $e->getMessage());
     }
+
+    try {
+        cancelApprovalLinksForPermit($db, $permit_id, 'rejected_in_app');
+    } catch (\Throwable $e) {
+        error_log('Failed to invalidate approval links after rejection: ' . $e->getMessage());
+    }
     
     // Log activity
     if (function_exists('logActivity')) {

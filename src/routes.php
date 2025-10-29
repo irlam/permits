@@ -341,6 +341,11 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $
     } catch (\Throwable $e) {
       error_log('Failed to clear approval notification flag: ' . $e->getMessage());
     }
+    try {
+      cancelApprovalLinksForPermit($db, $formId, 'status_changed');
+    } catch (\Throwable $e) {
+      error_log('Failed to invalidate approval links after status change: ' . $e->getMessage());
+    }
   }
 
   $res->getBody()->write(json_encode(['ok'=>true]));

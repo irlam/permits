@@ -163,8 +163,13 @@ class Email {
         $body = $this->renderTemplate('permit-awaiting-approval', [
             'form' => $form,
             'recipient' => $context['recipient'] ?? null,
-            'approvalUrl' => $context['approvalUrl'] ?? null,
+            'decisionUrl' => $context['decisionUrl'] ?? ($context['approvalUrl'] ?? null),
+            'quickApproveUrl' => $context['quickApproveUrl'] ?? null,
+            'quickRejectUrl' => $context['quickRejectUrl'] ?? null,
             'viewUrl' => $context['viewUrl'] ?? null,
+            'managerUrl' => $context['managerUrl'] ?? null,
+            'expiresAt' => $context['expiresAt'] ?? null,
+            'approvalUrl' => $context['decisionUrl'] ?? ($context['approvalUrl'] ?? null),
             'subject' => $subject,
         ]);
 

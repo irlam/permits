@@ -11,6 +11,7 @@ use Permits\Email;
 use Ramsey\Uuid\Uuid;
 
 const APPROVAL_RECIPIENTS_SETTING_KEY = 'approval_notification_recipients';
+const APPROVAL_LINK_EXPIRY_DAYS = 7;
 
 /**
  * Ensure the settings table exists (MySQL/SQLite compatible).
@@ -31,6 +32,422 @@ function ensure_settings_table_exists(Db $db): void
     }
 
     $checked = true;
+}
+
+/**
+ * Ensure the permit_approval_links table exists for email-based approvals.
+ */
+function ensure_approval_links_table_exists(Db $db): void
+{
+    static $linksChecked = false;
+    if ($linksChecked) {
+        return;
+    }
+
+    $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) ?: 'mysql';
+
+    if ($driver === 'sqlite') {
+        $db->pdo->exec(<<<'SQL'
+CREATE TABLE IF NOT EXISTS permit_approval_links (
+    id TEXT PRIMARY KEY,
+    permit_id TEXT NOT NULL,
+    recipient_email TEXT NOT NULL,
+    recipient_name TEXT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT NULL,
+    used_action TEXT NULL,
+    used_comment TEXT NULL,
+    used_ip TEXT NULL,
+    user_agent TEXT NULL,
+    metadata TEXT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+SQL);
+        $db->pdo->exec("CREATE INDEX IF NOT EXISTS idx_approval_links_token ON permit_approval_links(token_hash);");
+        $db->pdo->exec("CREATE INDEX IF NOT EXISTS idx_approval_links_permit ON permit_approval_links(permit_id);");
+        $db->pdo->exec("CREATE INDEX IF NOT EXISTS idx_approval_links_expires ON permit_approval_links(expires_at);");
+    } else {
+        $db->pdo->exec(<<<'SQL'
+CREATE TABLE IF NOT EXISTS permit_approval_links (
+    id VARCHAR(36) PRIMARY KEY,
+    permit_id VARCHAR(36) NOT NULL,
+    recipient_email VARCHAR(255) NOT NULL,
+    recipient_name VARCHAR(255) NULL,
+    token_hash CHAR(64) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    used_action VARCHAR(20) NULL,
+    used_comment TEXT NULL,
+    used_ip VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    metadata TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_approval_links_token (token_hash),
+    INDEX idx_approval_links_permit (permit_id),
+    INDEX idx_approval_links_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+SQL);
+    }
+
+    $linksChecked = true;
+}
+
+/**
+ * Simple SHA-256 hash wrapper for approval tokens.
+ */
+function hashApprovalToken(string $token): string
+{
+    return hash('sha256', $token);
+}
+
+/**
+ * Expire or mark as used all outstanding approval links for a permit.
+ */
+function cancelApprovalLinksForPermit(
+    Db $db,
+    string $permitId,
+    string $reason = 'cancelled',
+    ?string $excludeId = null,
+    ?string $recipientEmail = null
+): void {
+    ensure_approval_links_table_exists($db);
+
+    $now = (new DateTimeImmutable('now'))->format('Y-m-d H:i:s');
+
+    $sql = "UPDATE permit_approval_links
+            SET used_at = CASE WHEN used_at IS NULL THEN :now ELSE used_at END,
+                used_action = CASE WHEN used_action IS NULL THEN :reason ELSE used_action END,
+                expires_at = CASE WHEN expires_at > :now THEN :now ELSE expires_at END
+            WHERE permit_id = :permit AND used_at IS NULL";
+
+    $params = [
+        ':now' => $now,
+        ':reason' => $reason,
+        ':permit' => $permitId,
+    ];
+
+    if ($excludeId !== null) {
+        $sql .= ' AND id <> :exclude';
+        $params[':exclude'] = $excludeId;
+    }
+
+    if ($recipientEmail !== null) {
+        $sql .= ' AND recipient_email = :recipient';
+        $params[':recipient'] = $recipientEmail;
+    }
+
+    $stmt = $db->pdo->prepare($sql);
+    $stmt->execute($params);
+}
+
+/**
+ * Create (or refresh) a secure approval token for a recipient.
+ *
+ * @param array<string,mixed> $form
+ * @param array<string,mixed> $recipient
+ * @return array{id:string,token:string,expires_at:DateTimeImmutable}
+ */
+function createApprovalLink(Db $db, array $form, array $recipient, ?DateInterval $ttl = null): array
+{
+    ensure_settings_table_exists($db);
+    ensure_approval_links_table_exists($db);
+
+    $ttl = $ttl ?? new DateInterval('P' . max(1, (int)APPROVAL_LINK_EXPIRY_DAYS) . 'D');
+    $now = new DateTimeImmutable('now');
+    $expiresAt = $now->add($ttl);
+
+    $permitId = (string)($form['id'] ?? '');
+    if ($permitId === '') {
+        throw new InvalidArgumentException('Permit lacks an ID.');
+    }
+
+    $email = trim((string)($recipient['email'] ?? ''));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new InvalidArgumentException('Recipient email invalid when creating approval link.');
+    }
+
+    cancelApprovalLinksForPermit($db, $permitId, 'superseded', null, $email);
+
+    $token = bin2hex(random_bytes(32));
+    $hash = hashApprovalToken($token);
+    $id = Uuid::uuid4()->toString();
+
+    $metadata = [
+        'recipient_id' => $recipient['id'] ?? null,
+        'recipient_name' => $recipient['name'] ?? null,
+        'permit_ref' => $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? null,
+        'template_name' => $form['template_name'] ?? null,
+    ];
+
+    $metadataJson = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $stmt = $db->pdo->prepare(
+        'INSERT INTO permit_approval_links (id, permit_id, recipient_email, recipient_name, token_hash, expires_at, created_at, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+
+    $stmt->execute([
+        $id,
+        $permitId,
+        $email,
+        trim((string)($recipient['name'] ?? '')),
+        $hash,
+        $expiresAt->format('Y-m-d H:i:s'),
+        $now->format('Y-m-d H:i:s'),
+        $metadataJson,
+    ]);
+
+    return [
+        'id' => $id,
+        'token' => $token,
+        'expires_at' => $expiresAt,
+    ];
+}
+
+/**
+ * Retrieve a stored approval link row (without joining permit data).
+ *
+ * @return array<string,mixed>|null
+ */
+function fetchApprovalLinkByToken(Db $db, string $token): ?array
+{
+    ensure_approval_links_table_exists($db);
+
+    $token = trim($token);
+    if ($token === '') {
+        return null;
+    }
+
+    $hash = hashApprovalToken($token);
+    $stmt = $db->pdo->prepare('SELECT * FROM permit_approval_links WHERE token_hash = ? LIMIT 1');
+    $stmt->execute([$hash]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return null;
+    }
+
+    $row['metadata'] = isset($row['metadata']) && $row['metadata'] !== null
+        ? (json_decode((string)$row['metadata'], true) ?: [])
+        : [];
+    $row['token'] = $token;
+
+    return $row;
+}
+
+/**
+ * Fetch the permit associated with a token.
+ *
+ * @return array<string,mixed>|null
+ */
+function fetchPermitForApproval(Db $db, string $permitId): ?array
+{
+    $stmt = $db->pdo->prepare(
+        'SELECT f.*, ft.name AS template_name
+         FROM forms f
+         LEFT JOIN form_templates ft ON ft.id = f.template_id
+         WHERE f.id = ?
+         LIMIT 1'
+    );
+    $stmt->execute([$permitId]);
+    $permit = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $permit ?: null;
+}
+
+/**
+ * Mark an approval token as used and persist auditing metadata.
+ */
+function markApprovalLinkUsed(Db $db, array $link, string $action, array $options = []): bool
+{
+    ensure_approval_links_table_exists($db);
+
+    $now = (new DateTimeImmutable('now'))->format('Y-m-d H:i:s');
+    $comment = isset($options['comment']) ? trim((string)$options['comment']) : '';
+    $comment = $comment !== '' ? $comment : null;
+    $ip = $options['ip'] ?? null;
+    $agent = $options['user_agent'] ?? null;
+
+    $metadata = [];
+    if (isset($link['metadata']) && is_array($link['metadata'])) {
+        $metadata = $link['metadata'];
+    }
+    if (isset($options['metadata']) && is_array($options['metadata'])) {
+        $metadata = array_merge($metadata, $options['metadata']);
+    }
+    $metadataJson = json_encode($metadata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $stmt = $db->pdo->prepare(
+        'UPDATE permit_approval_links
+         SET used_at = :now,
+             used_action = :action,
+             used_comment = :comment,
+             used_ip = :ip,
+             user_agent = :agent,
+             metadata = :meta
+         WHERE id = :id AND used_at IS NULL'
+    );
+
+    $stmt->execute([
+        ':now' => $now,
+        ':action' => $action,
+        ':comment' => $comment,
+        ':ip' => $ip,
+        ':agent' => $agent,
+        ':meta' => $metadataJson,
+        ':id' => $link['id'],
+    ]);
+
+    return $stmt->rowCount() > 0;
+}
+
+/**
+ * Apply an approval decision made through a secure email link.
+ *
+ * @return array{status:string,title:string,permit_id:string,permit_ref:?string,comment:?string}
+ */
+function processApprovalLinkDecision(Db $db, array $link, string $action, array $options = []): array
+{
+    $action = strtolower(trim($action));
+    if (!in_array($action, ['approve', 'reject'], true)) {
+        throw new InvalidArgumentException('Invalid approval action supplied.');
+    }
+
+    ensure_approval_links_table_exists($db);
+
+    $pdo = $db->pdo;
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) ?: 'mysql';
+
+    $tokenId = (string)($link['id'] ?? '');
+    if ($tokenId === '') {
+        throw new InvalidArgumentException('Approval link is missing an identifier.');
+    }
+
+    $comment = isset($options['comment']) ? trim((string)$options['comment']) : '';
+    $ip = isset($options['ip']) ? trim((string)$options['ip']) : null;
+    $agent = isset($options['user_agent']) ? trim((string)$options['user_agent']) : null;
+
+    $pdo->beginTransaction();
+
+    try {
+        $linkSql = $driver === 'mysql'
+            ? 'SELECT * FROM permit_approval_links WHERE id = ? FOR UPDATE'
+            : 'SELECT * FROM permit_approval_links WHERE id = ?';
+        $linkStmt = $pdo->prepare($linkSql);
+        $linkStmt->execute([$tokenId]);
+        $freshLink = $linkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$freshLink) {
+            throw new RuntimeException('Approval link not found.');
+        }
+
+        if (!empty($freshLink['used_at'])) {
+            throw new RuntimeException('This approval link has already been used.');
+        }
+
+        if (!empty($freshLink['expires_at']) && strtotime((string)$freshLink['expires_at']) < time()) {
+            throw new RuntimeException('This approval link has expired.');
+        }
+
+        $permitSql = $driver === 'mysql'
+            ? 'SELECT * FROM forms WHERE id = ? FOR UPDATE'
+            : 'SELECT * FROM forms WHERE id = ?';
+        $permitStmt = $pdo->prepare($permitSql);
+        $permitStmt->execute([$freshLink['permit_id']]);
+        $permit = $permitStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$permit) {
+            throw new RuntimeException('Permit not found.');
+        }
+
+        if (strtolower((string)$permit['status']) !== 'pending_approval') {
+            throw new RuntimeException('This permit is no longer awaiting approval.');
+        }
+
+        $now = (new DateTimeImmutable('now'))->format('Y-m-d H:i:s');
+        $decision = $action === 'approve' ? 'approved' : 'rejected';
+        $newStatus = $action === 'approve' ? 'active' : 'rejected';
+        $title = $action === 'approve' ? 'Permit approved successfully' : 'Permit rejected successfully';
+
+        $decisionNote = sprintf(
+            '[%s] %s via emailed link by %s%s',
+            $now,
+            ucfirst($decision),
+            $freshLink['recipient_email'],
+            $comment !== '' ? ' – ' . $comment : ''
+        );
+
+        $existingNotes = trim((string)($permit['approval_notes'] ?? ''));
+        $combinedNotes = $existingNotes === '' ? $decisionNote : $existingNotes . PHP_EOL . $decisionNote;
+
+        $update = $pdo->prepare('UPDATE forms SET status = ?, approval_status = ?, approved_at = ?, approved_by = NULL, approval_notes = ? WHERE id = ?');
+        $update->execute([$newStatus, $decision, $now, $combinedNotes, $permit['id']]);
+
+        cancelApprovalLinksForPermit($db, $permit['id'], 'decision_taken', $freshLink['id']);
+
+        $linkMetadata = isset($link['metadata']) && is_array($link['metadata']) ? $link['metadata'] : [];
+        $linkMetadata['decision'] = $decision;
+        $linkMetadata['decided_at'] = $now;
+
+        if (!markApprovalLinkUsed($db, ['id' => $freshLink['id'], 'metadata' => $linkMetadata], $decision, [
+            'comment' => $comment,
+            'ip' => $ip,
+            'user_agent' => $agent,
+            'metadata' => $linkMetadata,
+        ])) {
+            throw new RuntimeException('Failed to mark approval link as used.');
+        }
+
+        $evt = $pdo->prepare('INSERT INTO form_events (id, form_id, type, by_user, payload) VALUES (?,?,?,?,?)');
+        $evt->execute([
+            Uuid::uuid4()->toString(),
+            $permit['id'],
+            'approval_email_action',
+            $freshLink['recipient_email'],
+            json_encode([
+                'decision' => $decision,
+                'comment' => $comment,
+                'link_id' => $freshLink['id'],
+                'ip' => $ip,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+
+        $pdo->commit();
+
+        try {
+            clearPendingApprovalNotificationFlag($db, $permit['id']);
+        } catch (Throwable $e) {
+            error_log('Failed to clear approval notification flag after email decision: ' . $e->getMessage());
+        }
+
+        if (function_exists('logActivity')) {
+            $description = ucfirst($decision) . ' via email link by ' . $freshLink['recipient_email'];
+            if ($comment !== '') {
+                $description .= ' – ' . $comment;
+            }
+            logActivity(
+                'permit_' . $decision . '_email',
+                'approval',
+                'form',
+                $permit['id'],
+                $description
+            );
+        }
+
+        return [
+            'status' => $decision,
+            'title' => $title,
+            'permit_id' => $permit['id'],
+            'permit_ref' => $permit['ref_number'] ?? $permit['id'],
+            'comment' => $comment !== '' ? $comment : null,
+        ];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 }
 
 /**
@@ -262,7 +679,11 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
         $baseUrl = $scheme . '://' . $host;
     }
 
-    $approvalUrl = $baseUrl . '/manager-approvals.php';
+    ensure_approval_links_table_exists($db);
+
+    // Invalidate any old links before issuing fresh ones for this permit.
+    cancelApprovalLinksForPermit($db, $permitId, 'superseded');
+
     $viewUrl = null;
     if (!empty($form['unique_link'])) {
         $viewUrl = $baseUrl . '/view-permit-public.php?link=' . urlencode((string) $form['unique_link']);
@@ -272,10 +693,20 @@ function notifyPendingApprovalRecipients(Db $db, string $root, string $permitId,
 
     foreach ($recipients as $recipient) {
         try {
+            $link = createApprovalLink($db, $form, $recipient);
+
+            $decisionUrl = $baseUrl . '/permit-approval.php?token=' . urlencode($link['token']);
+            $quickApproveUrl = $decisionUrl . '&intent=approve';
+            $quickRejectUrl = $decisionUrl . '&intent=reject';
+
             $mailer->sendPendingApprovalNotification($form, $recipient['email'], [
                 'recipient' => $recipient,
-                'approvalUrl' => $approvalUrl,
+                'decisionUrl' => $decisionUrl,
+                'quickApproveUrl' => $quickApproveUrl,
+                'quickRejectUrl' => $quickRejectUrl,
                 'viewUrl' => $viewUrl,
+                'expiresAt' => $link['expires_at']->format('Y-m-d H:i'),
+                'managerUrl' => $baseUrl . '/manager-approvals.php',
             ]);
             $queued++;
         } catch (Throwable $e) {
