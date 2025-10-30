@@ -23,50 +23,64 @@
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Arial, sans-serif;
   background: #0f172a;
-  color: #e5e7eb;
-  margin: 0;
-  padding: 0;
-  font-size: 16px; /* Base size for mobile */
-  line-height: 1.5;
-  -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape */
-}
+  .permit-sheet {
+    position: fixed;
+    inset: 0;
+    display: none;
+    background: rgba(2,6,23,0.6);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .permit-sheet[data-open="1"] {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .permit-sheet[data-open="0"] {
+    display: none;
+    pointer-events: none;
+  }
+  .permit-sheet__panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #0f172a;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border: 1px solid #334155;
+    max-height: 80vh;
+    overflow: auto;
+    padding: 16px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.45);
+  }
+  .permit-sheet[data-open="1"] .permit-sheet__panel {
+    transform: translateY(0);
+  }
+  .permit-sheet__handle { width: 44px; height: 4px; background: #334155; border-radius: 999px; margin: 6px auto 12px; }
 
-html, body { overflow-x: hidden; }
-
-body.theme-dark {
-  background: #0f172a;
-  color: #e5e7eb;
-}
-
-/* Top Bar */
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #1f2937;
-  background: #0a101a;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  min-height: 60px; /* Touch-friendly height */
-}
-
-/* Page Header */
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  gap: 12px;
-  flex-wrap: wrap; /* Wrap on small screens */
-}
-
-.page-head h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  flex: 1;
+  @media (min-width: 641px) {
+    .permit-sheet__panel {
+      position: relative;
+      bottom: auto;
+      left: auto;
+      right: auto;
+      margin: 8vh auto;
+      max-width: 520px;
+      border-radius: 18px;
+      transform: translateY(-24px);
+    }
+    .permit-sheet[data-open="1"] .permit-sheet__panel {
+      transform: translateY(0);
+    }
+    .permit-sheet__handle {
+      display: none;
+    }
+  }
   min-width: 200px;
 }
 

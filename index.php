@@ -270,8 +270,8 @@ function getReopenLink($permitId) {
         </div>
     </div>
 
-    <!-- Mobile Permit Picker (Hidden by default on desktop) -->
-    <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true" hidden>
+    <!-- Permit Picker overlay -->
+    <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true">
         <div class="permit-sheet__panel">
             <div class="permit-sheet__handle"></div>
             <div class="card-header" style="margin-bottom:12px;">
