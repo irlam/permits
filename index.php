@@ -271,7 +271,7 @@ function getReopenLink($permitId) {
     </div>
 
     <!-- Mobile Permit Picker (Hidden by default on desktop) -->
-    <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true">
+    <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true" hidden>
         <div class="permit-sheet__panel">
             <div class="permit-sheet__handle"></div>
             <div class="card-header" style="margin-bottom:12px;">
@@ -296,14 +296,22 @@ function getReopenLink($permitId) {
             var openBtn = document.getElementById('openPermitPicker');
             var closeBtn = document.getElementById('closePermitSheet');
             var sheet = document.getElementById('permitSheet');
+            var hideTimer = null;
 
             if (!sheet) return;
 
             function open(e) {
                 if (e) e.preventDefault();
-                sheet.setAttribute('data-open', '1');
-                sheet.setAttribute('aria-hidden', 'false');
-                document.body.style.overflow = 'hidden';
+                if (hideTimer) {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                }
+                sheet.removeAttribute('hidden');
+                requestAnimationFrame(function() {
+                    sheet.setAttribute('data-open', '1');
+                    sheet.setAttribute('aria-hidden', 'false');
+                    document.body.style.overflow = 'hidden';
+                });
             }
 
             function close(e) {
@@ -311,6 +319,9 @@ function getReopenLink($permitId) {
                 sheet.setAttribute('data-open', '0');
                 sheet.setAttribute('aria-hidden', 'true');
                 document.body.style.overflow = '';
+                hideTimer = setTimeout(function() {
+                    sheet.setAttribute('hidden', '');
+                }, 320); // allow transition to finish
             }
 
             if (openBtn) openBtn.addEventListener('click', open);
