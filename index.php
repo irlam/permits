@@ -271,8 +271,8 @@ function getReopenLink($permitId) {
     </div>
 
     <!-- Permit picker modal -->
-    <div class="permit-popover-backdrop" id="permitPopoverBackdrop" data-open="0" aria-hidden="true"></div>
-    <div class="permit-popover" id="permitPopover" data-open="0" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Choose a permit type" tabindex="-1">
+    <div class="permit-popover-backdrop" id="permitPopoverBackdrop" data-open="0" aria-hidden="true" hidden></div>
+    <div class="permit-popover" id="permitPopover" data-open="0" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Choose a permit type" tabindex="-1" hidden>
         <div class="permit-popover__header">
             <h3>📋 Choose Permit Type</h3>
             <button type="button" class="btn btn-secondary" id="closePermitPopover">Close</button>
@@ -296,6 +296,7 @@ function getReopenLink($permitId) {
             var backdrop = document.getElementById('permitPopoverBackdrop');
             var closeBtn = document.getElementById('closePermitPopover');
             var active = false;
+            var hideTimer = null;
 
             if (!trigger || !popover || !backdrop) return;
 
@@ -305,7 +306,13 @@ function getReopenLink($permitId) {
                     close();
                     return;
                 }
+                if (hideTimer) {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                }
                 active = true;
+                backdrop.removeAttribute('hidden');
+                popover.removeAttribute('hidden');
                 popover.setAttribute('data-open', '1');
                 popover.setAttribute('aria-hidden', 'false');
                 backdrop.setAttribute('data-open', '1');
@@ -328,6 +335,10 @@ function getReopenLink($permitId) {
                 document.body.style.overflow = '';
                 trigger.setAttribute('aria-expanded', 'false');
                 trigger.focus({ preventScroll: true });
+                hideTimer = setTimeout(function() {
+                    popover.setAttribute('hidden', '');
+                    backdrop.setAttribute('hidden', '');
+                }, 260);
             }
 
             trigger.addEventListener('click', open);
