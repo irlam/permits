@@ -26,15 +26,19 @@ body {
   .permit-sheet {
     position: fixed;
     inset: 0;
-    display: none;
     background: rgba(2,6,23,0.6);
     z-index: 1000;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.25s ease;
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    box-sizing: border-box;
   }
   .permit-sheet[data-open="1"] {
-    display: block;
+    display: flex;
     opacity: 1;
     pointer-events: auto;
   }
@@ -43,44 +47,21 @@ body {
     pointer-events: none;
   }
   .permit-sheet__panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #0f172a;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    border: 1px solid #334155;
-    max-height: 80vh;
+    width: min(520px, 100%);
+    max-height: 85vh;
     overflow: auto;
-    padding: 16px;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-    box-shadow: 0 18px 35px rgba(15, 23, 42, 0.45);
+    background: #0f172a;
+    border-radius: 18px;
+    border: 1px solid #334155;
+    padding: 18px 20px;
+    box-shadow: 0 22px 42px rgba(15, 23, 42, 0.55);
+    transform: translateY(-18px);
+    transition: transform 0.25s ease;
   }
   .permit-sheet[data-open="1"] .permit-sheet__panel {
     transform: translateY(0);
   }
-  .permit-sheet__handle { width: 44px; height: 4px; background: #334155; border-radius: 999px; margin: 6px auto 12px; }
-
-  @media (min-width: 641px) {
-    .permit-sheet__panel {
-      position: relative;
-      bottom: auto;
-      left: auto;
-      right: auto;
-      margin: 8vh auto;
-      max-width: 520px;
-      border-radius: 18px;
-      transform: translateY(-24px);
-    }
-    .permit-sheet[data-open="1"] .permit-sheet__panel {
-      transform: translateY(0);
-    }
-    .permit-sheet__handle {
-      display: none;
-    }
-  }
+  .permit-sheet__handle { display: none; }
   min-width: 200px;
 }
 
