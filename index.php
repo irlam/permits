@@ -306,7 +306,7 @@ function getReopenLink($permitId) {
                     clearTimeout(hideTimer);
                     hideTimer = null;
                 }
-                sheet.removeAttribute('hidden');
+                sheet.style.display = 'block';
                 requestAnimationFrame(function() {
                     sheet.setAttribute('data-open', '1');
                     sheet.setAttribute('aria-hidden', 'false');
@@ -320,7 +320,7 @@ function getReopenLink($permitId) {
                 sheet.setAttribute('aria-hidden', 'true');
                 document.body.style.overflow = '';
                 hideTimer = setTimeout(function() {
-                    sheet.setAttribute('hidden', '');
+                    sheet.style.display = 'none';
                 }, 320); // allow transition to finish
             }
 
