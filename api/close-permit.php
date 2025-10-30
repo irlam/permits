@@ -106,18 +106,20 @@ try {
         $permitId
     ]);
     
-    // Log activity
-    try {
-        $logStmt = $db->pdo->prepare("
-            INSERT INTO activity_log (user_id, type, description, created_at)
-            VALUES (?, 'permit_closed', ?, NOW())
-        ");
-        $logStmt->execute([
-            $currentUser['id'],
-            "Closed permit #{$permit['ref_number']}: {$reason}"
-        ]);
-    } catch (Exception $e) {
-        // Activity logging is optional
+    if (function_exists('logActivity')) {
+        $description = sprintf(
+            'Closed permit #%s%s',
+            $permit['ref_number'],
+            $reason !== '' ? ': ' . $reason : ''
+        );
+
+        logActivity(
+            'permit_closed',
+            'permit',
+            'form',
+            $permit['id'],
+            $description
+        );
     }
     
     echo json_encode([
