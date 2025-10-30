@@ -102,8 +102,15 @@ function asset(string $path): string
         return $path . $separator . 'v=' . $version;
     }
 
-    $baseUrl  = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');
-    $basePath = rtrim((string) ($_ENV['APP_BASE_PATH'] ?? '/'), '/');
+    $baseUrl = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');
+    $basePathRaw = (string) ($_ENV['APP_BASE_PATH'] ?? '/');
+    $basePathTrim = trim($basePathRaw);
+    if ($basePathTrim === '' || $basePathTrim === '/') {
+        $basePath = '';
+    } else {
+        $basePath = '/' . trim($basePathTrim, '/');
+    }
+
     $normalized = '/' . ltrim($path, '/');
 
     $href = ($baseUrl !== '' ? $baseUrl : '') . $basePath . $normalized;

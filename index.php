@@ -114,11 +114,6 @@ $templateIcons = [
     'default' => '📄',
 ];
 
-function appUrl(string $path = '/'): string {
-    global $app;
-    return $app->url($path);
-}
-
 function slugifyTemplateName(string $name): string {
     $slug = strtolower($name);
     $slug = str_replace('&', 'and', $slug);
@@ -152,7 +147,8 @@ function formatDateUK($date) {
 }
 
 function getReopenLink($permitId) {
-    return appUrl('create-permit-public.php?reopen=' . urlencode((string)$permitId));
+    global $app;
+    return $app->url('/create-permit-public.php?reopen=' . urlencode((string)$permitId));
 }
 ?>
 <!DOCTYPE html>
@@ -181,11 +177,11 @@ function getReopenLink($permitId) {
                 <div class="hero-actions hero-actions--secondary">
                     <?php if ($isLoggedIn): ?>
                         <span class="hero-user">👋 <?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
-                        <a href="<?php echo htmlspecialchars(appUrl('dashboard.php')); ?>" class="btn btn-secondary">Dashboard</a>
-                        <a href="<?php echo htmlspecialchars(appUrl('logout.php')); ?>" class="btn btn-secondary">Logout</a>
+                        <a href="<?php echo htmlspecialchars($app->url('/dashboard.php')); ?>" class="btn btn-secondary">Dashboard</a>
+                        <a href="<?php echo htmlspecialchars($app->url('/logout.php')); ?>" class="btn btn-secondary">Logout</a>
                     <?php else: ?>
                         <button id="installButton" class="btn btn-secondary">Install App</button>
-                        <a href="<?php echo htmlspecialchars(appUrl('login.php')); ?>" class="btn btn-secondary">Manager Login</a>
+                        <a href="<?php echo htmlspecialchars($app->url('/login.php')); ?>" class="btn btn-secondary">Manager Login</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -216,7 +212,7 @@ function getReopenLink($permitId) {
                     <p class="panel__lead">Enter the email used on your permit application to view recent activity and download documents.</p>
                 </div>
                 <div class="panel__body">
-                    <form action="<?php echo htmlspecialchars(appUrl('index.php')); ?>" method="GET" class="status-form">
+                    <form action="<?php echo htmlspecialchars($app->url('/')); ?>" method="GET" class="status-form">
                         <input type="email" name="check_email" placeholder="you@company.com" value="<?php echo htmlspecialchars($statusEmail); ?>" required>
                         <button type="submit" class="btn btn-accent">Check Status</button>
                     </form>
@@ -256,9 +252,9 @@ function getReopenLink($permitId) {
                                             <p class="status-card__note">Managers have been notified. You'll receive an update as soon as the permit is approved.</p>
                                         <?php endif; ?>
                                         <div class="status-card__actions">
-                                            <a class="btn btn-secondary" href="<?php echo htmlspecialchars(appUrl('view-permit-public.php?link=' . urlencode((string)$permit['unique_link']))); ?>">View</a>
+                                            <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)$permit['unique_link']))); ?>">View</a>
                                             <?php if ($permit['status'] === 'active'): ?>
-                                                <a class="btn btn-ghost" href="<?php echo htmlspecialchars(appUrl('view-permit-public.php?link=' . urlencode((string)$permit['unique_link']) . '&print=1')); ?>">Print</a>
+                                                <a class="btn btn-ghost" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)$permit['unique_link']) . '&print=1')); ?>">Print</a>
                                                 <a class="btn btn-ghost" href="<?php echo htmlspecialchars(getReopenLink($permit['id'])); ?>">Reopen</a>
                                             <?php endif; ?>
                                         </div>
@@ -301,9 +297,9 @@ function getReopenLink($permitId) {
                                         <p class="recent-card__line"><strong>Valid until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></p>
                                     <?php endif; ?>
                                     <div class="recent-card__actions">
-                                        <a class="btn btn-secondary" href="<?php echo htmlspecialchars(appUrl('view-permit-public.php?link=' . urlencode((string)$permit['unique_link']))); ?>">View</a>
-                                        <a class="btn btn-ghost" href="<?php echo htmlspecialchars(appUrl('view-permit-public.php?link=' . urlencode((string)$permit['unique_link']) . '&print=1')); ?>">Print</a>
-                                        <a class="btn btn-ghost" href="<?php echo htmlspecialchars(appUrl('create-permit-public.php?reopen=' . urlencode((string)($permit['id'] ?? '')))); ?>">Reopen</a>
+                                        <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)$permit['unique_link']))); ?>">View</a>
+                                        <a class="btn btn-ghost" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)$permit['unique_link']) . '&print=1')); ?>">Print</a>
+                                        <a class="btn btn-ghost" href="<?php echo htmlspecialchars($app->url('/create-permit-public.php?reopen=' . urlencode((string)($permit['id'] ?? '')))); ?>">Reopen</a>
                                     </div>
                                 </article>
                             <?php endforeach; ?>
@@ -328,7 +324,7 @@ function getReopenLink($permitId) {
                     <?php else: ?>
                         <div class="template-gallery">
                             <?php foreach ($templates as $template): ?>
-                                <a class="template-tile" href="<?php echo htmlspecialchars(appUrl('create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>">
+                                <a class="template-tile" href="<?php echo htmlspecialchars($app->url('/create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>">
                                     <span class="template-tile__icon"><?php echo getTemplateIcon($template['name']); ?></span>
                                     <span class="template-tile__name"><?php echo htmlspecialchars($template['name']); ?></span>
                                     <span class="template-tile__meta">Version <?php echo htmlspecialchars($template['version'] ?? '1'); ?></span>
@@ -386,7 +382,7 @@ function getReopenLink($permitId) {
                     </div>
                 <?php else: ?>
                     <?php foreach ($templates as $template): ?>
-                        <a class="permit-modal__link" href="<?php echo htmlspecialchars(appUrl('create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>">
+                        <a class="permit-modal__link" href="<?php echo htmlspecialchars($app->url('/create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>">
                             <span class="permit-modal__icon"><?php echo getTemplateIcon($template['name']); ?></span>
                             <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
                         </a>

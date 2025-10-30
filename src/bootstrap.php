@@ -117,11 +117,22 @@ final class App
     /** Build an absolute URL from a path (respects APP_URL + APP_BASE_PATH). */
     public function url(string $path = '/'): string
     {
-        $baseUrl  = rtrim((string)($this->config['APP_URL'] ?? ''), '/');
-        $basePath = (string)($this->config['APP_BASE_PATH'] ?? '/');
-        $path     = ltrim($path, '/');
+        $baseUrl = rtrim((string)($this->config['APP_URL'] ?? ''), '/');
+        $basePathRaw = (string)($this->config['APP_BASE_PATH'] ?? '/');
+        $basePath = trim($basePathRaw);
+        if ($basePath === '' || $basePath === '/') {
+            $basePath = '';
+        } else {
+            $basePath = '/' . trim($basePath, '/');
+        }
 
-        return $baseUrl . rtrim($basePath, '/') . '/' . $path;
+        $normalizedPath = ltrim($path, '/');
+
+        if ($normalizedPath === '') {
+            return ($baseUrl !== '' ? $baseUrl : '') . ($basePath !== '' ? $basePath . '/' : '/');
+        }
+
+        return ($baseUrl !== '' ? $baseUrl : '') . $basePath . '/' . $normalizedPath;
     }
 }
 
