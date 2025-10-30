@@ -1,21 +1,12 @@
 <?php
 /**
- * Public Index Page with Status Checker
+ * Public Landing Experience with Status Tracking & Template Picker
  *
  * File Path: /index.php
- * Description: Public homepage with permit status checking by email
- * Created: 23/10/2025
- * Last Modified: 28/10/2025
- *
- * Features:
- * - Shows available permit templates
- * - Email-based permit status checker
- * - Public permit creation (no login)
- * - Modern, responsive design
- * - PWA support ready
+ * Description: Public homepage that highlights permit activity and provides quick access to templates.
+ * Created: 30/10/2025
  */
 
-// Bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
 // Opportunistic expiry sweep
@@ -47,14 +38,39 @@ try {
     error_log('Error fetching templates: ' . $e->getMessage());
 }
 
+// Platform stats
+$systemStats = [
+    'total' => 0,
+    'active' => 0,
+    'awaiting' => 0,
+    'templates' => count($templates),
+];
+
+try {
+    $statsStmt = $db->pdo->query('SELECT status, COUNT(*) AS total FROM forms GROUP BY status');
+    $rows = $statsStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as $row) {
+        $status = $row['status'] ?? '';
+        $count = (int)($row['total'] ?? 0);
+        $systemStats['total'] += $count;
+        if ($status === 'active') {
+            $systemStats['active'] = $count;
+        } elseif (in_array($status, ['pending', 'pending_approval'], true)) {
+            $systemStats['awaiting'] += $count;
+        }
+    }
+} catch (Exception $e) {
+    error_log('Error fetching permit stats: ' . $e->getMessage());
+}
+
 // Fetch recently approved permits (last 3)
 try {
-    $sql = 'SELECT f.ref_number, f.holder_name, f.unique_link, f.valid_to, f.approved_at, f.created_at, ft.name AS template_name
+    $sql = "SELECT f.ref_number, f.holder_name, f.unique_link, f.valid_to, f.approved_at, f.created_at, ft.name AS template_name, f.id
             FROM forms f
             JOIN form_templates ft ON f.template_id = ft.id
-            WHERE f.status = \'active\'
+            WHERE f.status = 'active'
             ORDER BY COALESCE(f.approved_at, f.created_at) DESC
-            LIMIT 3';
+            LIMIT 3";
     $approvedStmt = $db->pdo->query($sql);
     $approvedPermits = $approvedStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -67,7 +83,7 @@ $statusEmail = $_GET['check_email'] ?? '';
 $userPermits = [];
 if (!empty($statusEmail) && filter_var($statusEmail, FILTER_VALIDATE_EMAIL)) {
     try {
-        $stmt = $db->pdo->prepare('SELECT f.id, f.ref_number, f.status, f.valid_to, f.created_at, f.unique_link, ft.name as template_name
+        $stmt = $db->pdo->prepare('SELECT f.id, f.ref_number, f.status, f.valid_to, f.created_at, f.unique_link, ft.name AS template_name
                                    FROM forms f
                                    JOIN form_templates ft ON f.template_id = ft.id
                                    WHERE f.holder_email = ?
@@ -86,14 +102,15 @@ $templateIcons = [
     'permit-to-dig' => '⛏️',
     'work-at-height-permit' => '🪜',
     'confined-space-entry-permit' => '🕳️',
-    'electrical-isolation-energisation-permit' => '⚡',
-    'environmental-protection-permit' => '🌿',
+    'electrical-isolation-energisation-permit' => '⚡️',
+    'environmental-protection-permit' => '🌳',
     'hazardous-substances-handling-permit' => '☣️',
     'lifting-operations-permit' => '🏗️',
-    'noise-vibration-control-permit' => '📢',
+    'noise-vibration-control-permit' => '🔊',
     'roof-access-permit' => '🏠',
     'temporary-works-permit' => '🛠️',
     'traffic-management-interface-permit' => '🚦',
+    'general-permit-to-work' => '📄',
     'default' => '📄',
 ];
 
@@ -122,13 +139,14 @@ function getStatusBadge($status) {
 }
 
 function formatDateUK($date) {
-    if (!$date) return 'N/A';
+    if (!$date) {
+        return 'N/A';
+    }
     $timestamp = strtotime($date);
     return date('d/m/Y H:i', $timestamp);
 }
 
 function getReopenLink($permitId) {
-    // Simply return the reopen link - the form will handle creating a new permit with copied data
     return '/create-permit-public.php?reopen=' . urlencode($permitId);
 }
 ?>
@@ -137,173 +155,258 @@ function getReopenLink($permitId) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permit System - Check Status & Create Permits</title>
+    <title>Permit System - Create & Track Work Permits</title>
     <meta name="theme-color" content="#0ea5e9">
-    <meta name="description" content="Create and manage work permits easily">
+    <meta name="description" content="Create permits instantly, notify reviewers, and track status in real time.">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/icon-192.png">
     <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body class="theme-dark">
-    <div class="wrap">
-        <!-- Header -->
-        <div class="hero-card home-hero" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div>
-                <h2 class="home-title">🛡️ Permit System</h2>
-                <p class="muted" style="margin:0">Create permits easily, check status anytime</p>
+    <div class="page-shell">
+        <header class="hero-banner">
+            <div class="hero-banner__body">
+                <span class="hero-kicker">Safety, streamlined</span>
+                <h1>Permit System</h1>
+                <p class="hero-lead">Lightning-fast permit creation, manager approvals, and live status tracking — available to every crew member on any device.</p>
+                <div class="hero-actions">
+                    <button type="button" class="btn btn-accent" id="openPermitPicker" aria-haspopup="dialog" aria-expanded="false">Browse Permit Templates</button>
+                    <a href="#status-checker" class="btn btn-ghost">Check Status</a>
+                </div>
+                <div class="hero-actions hero-actions--secondary">
+                    <?php if ($isLoggedIn): ?>
+                        <span class="hero-user">👋 <?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
+                        <a href="/dashboard.php" class="btn btn-secondary">Dashboard</a>
+                        <a href="/logout.php" class="btn btn-secondary">Logout</a>
+                    <?php else: ?>
+                        <button id="installButton" class="btn btn-secondary">Install App</button>
+                        <a href="/login.php" class="btn btn-secondary">Manager Login</a>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="tab-actions">
-                <?php if ($isLoggedIn): ?>
-                    <span class="chip">👤 <?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
-                    <a href="/dashboard.php" class="btn">📊 Dashboard</a>
-                    <a href="/logout.php" class="btn">Logout</a>
-                <?php else: ?>
-                    <button id="installButton" class="btn">📱 Install App</button>
-                    <a href="/login.php" class="btn btn-accent">🔐 Manager Login</a>
-                <?php endif; ?>
-                <button type="button" class="btn btn-secondary" id="openPermitPicker" aria-haspopup="dialog" aria-expanded="false">📄 Permit List</button>
-            </div>
-        </div>
+            <ul class="hero-stats">
+                <li class="hero-stat">
+                    <span class="hero-stat__label">Active permits</span>
+                    <span class="hero-stat__value"><?php echo number_format($systemStats['active']); ?></span>
+                    <span class="hero-stat__delta">Across <?php echo number_format($systemStats['total']); ?> total permits</span>
+                </li>
+                <li class="hero-stat">
+                    <span class="hero-stat__label">Awaiting approval</span>
+                    <span class="hero-stat__value"><?php echo number_format($systemStats['awaiting']); ?></span>
+                    <span class="hero-stat__delta">Managers notified instantly</span>
+                </li>
+                <li class="hero-stat">
+                    <span class="hero-stat__label">Templates ready</span>
+                    <span class="hero-stat__value"><?php echo number_format($systemStats['templates']); ?></span>
+                    <span class="hero-stat__delta">Customise for every site</span>
+                </li>
+            </ul>
+        </header>
 
-        <div class="surface-section">
-            <!-- Check Permit Status -->
-            <section class="surface-card" id="status-checker">
-                <div class="card-header"><h3>🔍 Check Your Permit Status</h3></div>
-                <p class="muted">Enter your email to see all your permits and their current status</p>
-                <form action="/" method="GET" class="status-row">
-                    <input type="email" name="check_email" placeholder="Enter your email address" value="<?php echo htmlspecialchars($statusEmail); ?>" required />
-                    <button type="submit" class="btn btn-accent" style="min-width:140px">🔍 Check Status</button>
-                </form>
+        <main class="content-grid">
+            <section class="panel" id="status-checker">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Live lookup</span>
+                    <h2>Check your permit status</h2>
+                    <p class="panel__lead">Enter the email used on your permit application to view recent activity and download documents.</p>
+                </div>
+                <div class="panel__body">
+                    <form action="/" method="GET" class="status-form">
+                        <input type="email" name="check_email" placeholder="you@company.com" value="<?php echo htmlspecialchars($statusEmail); ?>" required>
+                        <button type="submit" class="btn btn-accent">Check Status</button>
+                    </form>
 
-                <?php if (!empty($statusEmail)): ?>
-                    <?php if (empty($userPermits)): ?>
-                        <div class="empty-state" style="padding:20px">
-                            <div style="font-size:36px;margin-bottom:8px">📭</div>
-                            <div style="font-weight:600;margin-bottom:6px">No permits found</div>
-                            <p class="muted">We couldn't find any permits for <strong><?php echo htmlspecialchars($statusEmail); ?></strong></p>
-                            <p style="margin-top: 12px;"><a href="#templates">Create your first permit below</a></p>
+                    <?php if (!empty($statusEmail)): ?>
+                        <?php if (empty($userPermits)): ?>
+                            <div class="empty-panel">
+                                <span class="empty-panel__icon">📥</span>
+                                <h3>No permits yet</h3>
+                                <p>We couldn't find any permits for <strong><?php echo htmlspecialchars($statusEmail); ?></strong>. Start a new permit using the templates below.</p>
+                                <a href="#templates" class="btn btn-secondary">Create a permit</a>
+                            </div>
+                        <?php else: ?>
+                            <div class="permit-stack">
+                                <?php foreach ($userPermits as $permit): ?>
+                                    <article class="status-card">
+                                        <header class="status-card__header">
+                                            <div>
+                                                <span class="status-card__title"><?php echo htmlspecialchars($permit['template_name']); ?></span>
+                                                <span class="status-card__meta">Ref #<?php echo htmlspecialchars($permit['ref_number']); ?></span>
+                                            </div>
+                                            <?php echo getStatusBadge($permit['status']); ?>
+                                        </header>
+                                        <dl class="status-card__details">
+                                            <div>
+                                                <dt>Submitted</dt>
+                                                <dd><?php echo formatDateUK($permit['created_at']); ?></dd>
+                                            </div>
+                                            <?php if (!empty($permit['valid_to'])): ?>
+                                                <div>
+                                                    <dt>Valid until</dt>
+                                                    <dd><?php echo formatDateUK($permit['valid_to']); ?></dd>
+                                                </div>
+                                            <?php endif; ?>
+                                        </dl>
+                                        <?php if ($permit['status'] === 'pending_approval'): ?>
+                                            <p class="status-card__note">Managers have been notified. You'll receive an update as soon as the permit is approved.</p>
+                                        <?php endif; ?>
+                                        <div class="status-card__actions">
+                                            <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">View</a>
+                                            <?php if ($permit['status'] === 'active'): ?>
+                                                <a class="btn btn-ghost" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">Print</a>
+                                                <a class="btn btn-ghost" href="<?php echo getReopenLink($permit['id']); ?>">Reopen</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+            </section>
+
+            <section class="panel" id="approved-permits">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Fresh off the press</span>
+                    <h2>Recently approved</h2>
+                </div>
+                <div class="panel__body">
+                    <?php if (empty($approvedPermits)): ?>
+                        <div class="empty-panel">
+                            <span class="empty-panel__icon">✨</span>
+                            <h3>No approvals yet</h3>
+                            <p>Approved permits will appear here the moment a manager signs off. Check back soon!</p>
                         </div>
                     <?php else: ?>
-                        <div class="permit-results" style="margin-top:16px">
-                            <h4 style="margin:0 0 10px">Your Permits (<?php echo count($userPermits); ?>)</h4>
-                            <?php foreach ($userPermits as $permit): ?>
-                                <div class="mini-card">
-                                    <div class="card-header">
-                                        <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                        <?php echo getStatusBadge($permit['status']); ?>
-                                    </div>
-                                    <div class="muted"><strong>Submitted:</strong> <?php echo formatDateUK($permit['created_at']); ?></div>
-                                    <?php if ($permit['status'] === 'active' && $permit['valid_to']): ?>
-                                        <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
+                        <div class="card-carousel">
+                            <?php foreach ($approvedPermits as $permit): ?>
+                                <article class="recent-card">
+                                    <header class="recent-card__header">
+                                        <div>
+                                            <span class="recent-card__title"><?php echo htmlspecialchars($permit['template_name']); ?></span>
+                                            <span class="recent-card__meta">Ref #<?php echo htmlspecialchars($permit['ref_number']); ?></span>
+                                        </div>
+                                        <?php echo getStatusBadge('active'); ?>
+                                    </header>
+                                    <?php if (!empty($permit['holder_name'])): ?>
+                                        <p class="recent-card__line"><strong>Permit holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></p>
                                     <?php endif; ?>
-                                    <?php if ($permit['status'] === 'pending_approval'): ?>
-                                        <div class="muted">⏳ Your permit is being reviewed by a manager</div>
+                                    <p class="recent-card__line"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></p>
+                                    <?php if (!empty($permit['valid_to'])): ?>
+                                        <p class="recent-card__line"><strong>Valid until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></p>
                                     <?php endif; ?>
-                                    <div class="tab-actions" style="margin-top:8px">
-                                        <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" class="btn">👁️ View Details</a>
-                                        <?php if ($permit['status'] === 'active'): ?>
-                                            <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1" class="btn btn-secondary">🖨️ Print</a>
-                                            <a href="<?php echo getReopenLink($permit['id']); ?>" class="btn btn-secondary">🔄 Reopen</a>
-                                        <?php endif; ?>
+                                    <div class="recent-card__actions">
+                                        <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">View</a>
+                                        <a class="btn btn-ghost" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">Print</a>
+                                        <a class="btn btn-ghost" href="/create-permit-public.php?reopen=<?php echo urlencode($permit['id'] ?? ''); ?>">Reopen</a>
                                     </div>
-                                </div>
+                                </article>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
-                <?php endif; ?>
+                </div>
             </section>
 
-            <!-- Recently Approved Permits -->
-            <section class="surface-card" id="approved-permits" style="margin-top:16px">
-                <div class="card-header"><h3>✅ Recently Approved</h3></div>
-                <?php if (empty($approvedPermits)): ?>
-                    <div class="muted">No approved permits yet.</div>
-                <?php else: ?>
-                    <div class="scroll-row">
-                        <?php foreach ($approvedPermits as $permit): ?>
-                            <div class="mini-card approved-card">
-                                <div class="card-header">
-                                    <div><strong><?php echo htmlspecialchars($permit['template_name']); ?></strong> #<?php echo htmlspecialchars($permit['ref_number']); ?></div>
-                                    <?php echo getStatusBadge('active'); ?>
-                                </div>
-                                <?php if (!empty($permit['holder_name'])): ?>
-                                    <div class="muted"><strong>Permit Holder:</strong> <?php echo htmlspecialchars($permit['holder_name']); ?></div>
-                                <?php endif; ?>
-                                <div class="muted"><strong>Approved:</strong> <?php echo formatDateUK($permit['approved_at'] ?? $permit['created_at']); ?></div>
-                                <?php if (!empty($permit['valid_to'])): ?>
-                                    <div class="muted"><strong>Valid Until:</strong> <?php echo formatDateUK($permit['valid_to']); ?></div>
-                                <?php endif; ?>
-                                <div class="tab-actions" style="margin-top:8px">
-                                    <a class="btn" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>">👁️ View</a>
-                                    <a class="btn btn-secondary" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>&print=1">🖨️ Print</a>
-                                    <a class="btn btn-secondary" href="/create-permit-public.php?reopen=<?php echo urlencode($permit['id'] ?? ''); ?>">🔄 Reopen</a>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+            <section class="panel" id="templates">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Get started</span>
+                    <h2>Create a new permit</h2>
+                    <p class="panel__lead">Pick a template and capture the right safety details in seconds.</p>
+                </div>
+                <div class="panel__body">
+                    <?php if (empty($templates)): ?>
+                        <div class="empty-panel">
+                            <span class="empty-panel__icon">📄</span>
+                            <h3>No permit templates available</h3>
+                            <p>Contact your administrator to upload or create permit templates.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="template-gallery">
+                            <?php foreach ($templates as $template): ?>
+                                <a class="template-tile" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                                    <span class="template-tile__icon"><?php echo getTemplateIcon($template['name']); ?></span>
+                                    <span class="template-tile__name"><?php echo htmlspecialchars($template['name']); ?></span>
+                                    <span class="template-tile__meta">Version <?php echo htmlspecialchars($template['version'] ?? '1'); ?></span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </section>
 
-            <!-- Create New Permit Templates -->
-            <section class="surface-card" id="templates" style="margin-top:16px">
-                <div class="card-header"><h3>📋 Create New Permit</h3></div>
-                <p class="muted">Select a permit type to get started. No login required.</p>
-                <?php if (empty($templates)): ?>
-                    <div class="empty-state">
-                        <div style="font-size:36px;margin-bottom:8px">📄</div>
-                        <div style="font-weight:600;margin-bottom:6px">No permit templates available</div>
-                        <p class="muted">Contact your administrator to add permit templates.</p>
+            <section class="panel panel--info">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Why teams love it</span>
+                    <h2>Built for everyday permit workflows</h2>
+                </div>
+                <div class="panel__body panel__body--grid">
+                    <div class="info-card">
+                        <h3>⚡ Rapid submissions</h3>
+                        <p>Kick off jobs in under a minute with reusable templates designed for your site.</p>
                     </div>
-                <?php else: ?>
-                    <div class="surface-grid">
-                        <?php foreach ($templates as $template): ?>
-                            <a class="template-card template-card--home template-card--xl" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
-                                <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
-                                <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
-                            </a>
-                        <?php endforeach; ?>
+                    <div class="info-card">
+                        <h3>🔔 Smart notifications</h3>
+                        <p>Supervisors and managers receive instant alerts, keeping approvals moving forward.</p>
                     </div>
-                <?php endif; ?>
+                    <div class="info-card">
+                        <h3>📱 Works everywhere</h3>
+                        <p>Optimised for desktop, tablet, and mobile so teams can stay focused on the work.</p>
+                    </div>
+                </div>
             </section>
+        </main>
 
-            <p class="muted" style="text-align:center;margin:24px 0">© <?php echo date('Y'); ?> Permit System</p>
-        </div>
+        <footer class="page-footer">
+            <p class="page-footer__note">© <?php echo date('Y'); ?> Permit System — Empowering safe, compliant work every day.</p>
+        </footer>
     </div>
 
-    <!-- Permit picker modal -->
-    <div class="permit-popover-backdrop" id="permitPopoverBackdrop" data-open="0" aria-hidden="true" hidden></div>
-    <div class="permit-popover" id="permitPopover" data-open="0" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Choose a permit type" tabindex="-1" hidden>
-        <div class="permit-popover__header">
-            <h3>📋 Choose Permit Type</h3>
-            <button type="button" class="btn btn-secondary" id="closePermitPopover">Close</button>
-        </div>
-        <div class="permit-popover__list">
-            <?php foreach ($templates as $template): ?>
-                <a class="permit-popover__link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
-                    <span class="permit-popover__icon"><?php echo getTemplateIcon($template['name']); ?></span>
-                    <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
-                </a>
-            <?php endforeach; ?>
+    <div class="permit-modal" id="permitModal" data-open="0" aria-hidden="true" hidden>
+        <div class="permit-modal__backdrop" data-dismiss></div>
+        <div class="permit-modal__dialog" role="dialog" aria-label="Choose a permit type" tabindex="-1">
+            <header class="permit-modal__header">
+                <div>
+                    <span class="permit-modal__eyebrow">Quick start</span>
+                    <h3>Choose a permit type</h3>
+                </div>
+                <button type="button" class="permit-modal__close btn btn-ghost" data-dismiss aria-label="Close permit picker">Close ×</button>
+            </header>
+            <div class="permit-modal__body">
+                <?php if (empty($templates)): ?>
+                    <div class="empty-panel">
+                        <span class="empty-panel__icon">📄</span>
+                        <h3>No permit templates available</h3>
+                        <p>Contact your administrator to upload or create permit templates.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($templates as $template): ?>
+                        <a class="permit-modal__link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                            <span class="permit-modal__icon"><?php echo getTemplateIcon($template['name']); ?></span>
+                            <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
     <script src="/assets/app.js"></script>
     <script>
-        // Permit picker modal toggle
         (function() {
             var trigger = document.getElementById('openPermitPicker');
-            var popover = document.getElementById('permitPopover');
-            var backdrop = document.getElementById('permitPopoverBackdrop');
-            var closeBtn = document.getElementById('closePermitPopover');
+            var modal = document.getElementById('permitModal');
+            if (!trigger || !modal) return;
+
+            var dialog = modal.querySelector('.permit-modal__dialog');
+            var dismissEls = modal.querySelectorAll('[data-dismiss]');
             var active = false;
             var hideTimer = null;
 
-            if (!trigger || !popover || !backdrop) return;
-
-            function open(e) {
+            function openModal(e) {
                 if (e) e.preventDefault();
                 if (active) {
-                    close();
+                    closeModal();
                     return;
                 }
                 if (hideTimer) {
@@ -311,77 +414,72 @@ function getReopenLink($permitId) {
                     hideTimer = null;
                 }
                 active = true;
-                backdrop.removeAttribute('hidden');
-                popover.removeAttribute('hidden');
-                backdrop.style.display = 'block';
-                popover.style.display = 'flex';
-                popover.setAttribute('data-open', '1');
-                popover.setAttribute('aria-hidden', 'false');
-                backdrop.setAttribute('data-open', '1');
-                backdrop.setAttribute('aria-hidden', 'false');
+                modal.removeAttribute('hidden');
+                modal.setAttribute('data-open', '1');
+                modal.setAttribute('aria-hidden', 'false');
                 document.body.style.overflow = 'hidden';
                 trigger.setAttribute('aria-expanded', 'true');
                 setTimeout(function() {
-                    popover.focus({ preventScroll: true });
+                    if (dialog && dialog.focus) {
+                        dialog.focus({ preventScroll: true });
+                    }
                 }, 0);
             }
 
-            function close(e) {
+            function closeModal(e) {
                 if (e) e.preventDefault();
                 if (!active) return;
                 active = false;
-                popover.setAttribute('data-open', '0');
-                popover.setAttribute('aria-hidden', 'true');
-                backdrop.setAttribute('data-open', '0');
-                backdrop.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('data-open', '0');
+                modal.setAttribute('aria-hidden', 'true');
                 document.body.style.overflow = '';
                 trigger.setAttribute('aria-expanded', 'false');
-                trigger.focus({ preventScroll: true });
+                if (document.activeElement && document.activeElement !== trigger) {
+                    trigger.focus({ preventScroll: true });
+                }
                 hideTimer = setTimeout(function() {
-                    popover.setAttribute('hidden', '');
-                    backdrop.setAttribute('hidden', '');
-                    popover.style.display = 'none';
-                    backdrop.style.display = 'none';
-                }, 260);
+                    modal.setAttribute('hidden', '');
+                }, 280);
             }
 
-            trigger.addEventListener('click', open);
-            if (closeBtn) closeBtn.addEventListener('click', close);
-            backdrop.addEventListener('click', close);
-            document.addEventListener('keydown', function(e) {
-                if (active && e.key === 'Escape') {
-                    close(e);
+            trigger.addEventListener('click', openModal);
+            dismissEls.forEach(function(el) {
+                el.addEventListener('click', closeModal);
+            });
+            modal.addEventListener('click', function(ev) {
+                if (ev.target === modal) {
+                    closeModal(ev);
+                }
+            });
+            document.addEventListener('keydown', function(ev) {
+                if (active && ev.key === 'Escape') {
+                    closeModal(ev);
                 }
             });
         })();
 
-        // Center scroll rows when not overflowing
         (function() {
-            function updateScrollRows() {
-                document.querySelectorAll('.scroll-row').forEach(function(row) {
-                    var isOverflowing = row.scrollWidth > row.clientWidth + 1;
-                    row.setAttribute('data-overflow', isOverflowing ? '1' : '0');
+            function updateCarousels() {
+                document.querySelectorAll('.card-carousel').forEach(function(track) {
+                    var overflowing = track.scrollWidth > track.clientWidth + 1;
+                    track.setAttribute('data-overflow', overflowing ? '1' : '0');
                 });
             }
 
             if (window.ResizeObserver) {
-                var ro = new ResizeObserver(updateScrollRows);
+                var observer = new ResizeObserver(updateCarousels);
                 window.addEventListener('load', function() {
-                    document.querySelectorAll('.scroll-row').forEach(function(row) {
-                        ro.observe(row);
+                    document.querySelectorAll('.card-carousel').forEach(function(track) {
+                        observer.observe(track);
                     });
-                    updateScrollRows();
+                    updateCarousels();
                 });
             } else {
-                window.addEventListener('load', updateScrollRows);
+                window.addEventListener('load', updateCarousels);
             }
 
-            window.addEventListener('resize', updateScrollRows);
-            window.addEventListener('orientationchange', function() {
-                setTimeout(updateScrollRows, 150);
-            });
+            window.addEventListener('resize', updateCarousels);
         })();
     </script>
-
 </body>
 </html>
