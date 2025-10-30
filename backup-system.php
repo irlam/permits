@@ -37,293 +37,284 @@ $action = $_GET['action'] ?? 'show';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Permit System - Backup & Restore</title>
+    <link rel="stylesheet" href="<?= asset('/assets/app.css') ?>">
     <style>
+        :root {
+            color-scheme: dark;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
-        
-        body {
+
+        body.theme-dark {
+            background: #0f172a;
+            color: #e5e7eb;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            margin: 0;
             padding: 20px;
         }
-        
+
         .container {
-            max-width: 900px;
+            max-width: 960px;
             margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 18px;
+            border: 1px solid #1f2937;
+            background: #111827;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.45);
             overflow: hidden;
         }
-        
+
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px;
+            background: #1e293b;
+            padding: 36px;
             text-align: center;
         }
-        
+
         .header h1 {
-            font-size: 32px;
+            font-size: 30px;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin: 0 0 10px;
+            color: #e5e7eb;
         }
-        
+
         .header p {
             font-size: 16px;
-            opacity: 0.9;
+            color: #94a3b8;
         }
-        
+
         .content {
-            padding: 40px;
+            padding: 36px;
         }
-        
-        .warning {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 16px;
-            margin-bottom: 24px;
-            border-radius: 8px;
-        }
-        
-        .warning h3 {
-            color: #92400e;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-        
-        .warning p {
-            color: #78350f;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        
-        .info {
-            background: #dbeafe;
-            border-left: 4px solid #3b82f6;
-            padding: 16px;
-            margin-bottom: 24px;
-            border-radius: 8px;
-        }
-        
-        .info h3 {
-            color: #1e40af;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-        
-        .info p {
-            color: #1e3a8a;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        
+
+        .warning,
+        .info,
         .success {
-            background: #d1fae5;
-            border-left: 4px solid #10b981;
-            padding: 16px;
+            border-radius: 12px;
+            padding: 18px;
             margin-bottom: 24px;
-            border-radius: 8px;
+            border-left: 4px solid transparent;
+            background: #0a101a;
         }
-        
-        .success h3 {
-            color: #065f46;
+
+        .warning {
+            background: rgba(245, 158, 11, 0.12);
+            border-left-color: #f59e0b;
+        }
+
+        .warning h3 {
+            color: #fbbf24;
             margin-bottom: 8px;
             font-size: 16px;
         }
-        
-        .success p {
-            color: #064e3b;
+
+        .warning p {
+            color: #fde68a;
             font-size: 14px;
             line-height: 1.6;
         }
-        
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 8px;
+
+        .info {
+            background: rgba(59, 130, 246, 0.12);
+            border-left-color: #3b82f6;
+        }
+
+        .info h3 {
+            color: #bfdbfe;
+            margin-bottom: 8px;
             font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+
+        .info p {
+            color: #cbd5f5;
+            font-size: 14px;
+            line-height: 1.6;
         }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+
+        .success {
+            background: rgba(16, 185, 129, 0.12);
+            border-left-color: #10b981;
         }
-        
-        .btn-success {
-            background: #10b981;
-            color: white;
+
+        .success h3 {
+            color: #bbf7d0;
+            margin-bottom: 8px;
+            font-size: 16px;
         }
-        
-        .btn-success:hover {
-            background: #059669;
+
+        .success p {
+            color: #a7f3d0;
+            font-size: 14px;
+            line-height: 1.6;
         }
-        
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-        
+
         .btn-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 12px;
             margin-top: 24px;
-            flex-wrap: wrap;
         }
-        
+
+        .btn-group .btn {
+            flex: 1 1 220px;
+            justify-content: center;
+        }
+
         .checklist {
-            background: #f9fafb;
-            border-radius: 8px;
+            background: #0a101a;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
             padding: 20px;
             margin: 24px 0;
         }
-        
+
         .checklist h3 {
-            color: #111827;
+            color: #e5e7eb;
             margin-bottom: 16px;
             font-size: 18px;
         }
-        
+
         .checklist-item {
             display: flex;
             align-items: center;
             gap: 12px;
             padding: 12px;
-            background: white;
-            border-radius: 6px;
-            margin-bottom: 8px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            margin-bottom: 10px;
         }
-        
+
         .checklist-item input[type="checkbox"] {
             width: 20px;
             height: 20px;
             cursor: pointer;
         }
-        
+
         .checklist-item label {
             flex: 1;
             cursor: pointer;
             font-size: 15px;
-            color: #374151;
+            color: #cbd5f5;
+            transition: opacity 0.2s ease, text-decoration-color 0.2s ease;
         }
-        
+
+        .checklist-item label.checked {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
             margin: 24px 0;
         }
-        
+
         .stat {
-            background: #f9fafb;
+            background: #0a101a;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
             padding: 20px;
-            border-radius: 8px;
             text-align: center;
         }
-        
+
         .stat-value {
             font-size: 32px;
             font-weight: 700;
-            color: #667eea;
+            color: #38bdf8;
             margin-bottom: 8px;
         }
-        
+
         .stat-label {
             font-size: 14px;
-            color: #6b7280;
+            color: #94a3b8;
         }
-        
+
         .progress {
-            background: #e5e7eb;
+            background: #1f2937;
             height: 8px;
             border-radius: 4px;
             overflow: hidden;
             margin: 24px 0;
         }
-        
+
         .progress-bar {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #38bdf8 0%, #6366f1 100%);
             height: 100%;
-            transition: width 0.3s;
+            transition: width 0.3s ease;
         }
-        
+
         .file-list {
-            background: #f9fafb;
-            border-radius: 8px;
+            background: #0a101a;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
             padding: 20px;
             max-height: 300px;
             overflow-y: auto;
         }
-        
+
         .file-list h3 {
-            color: #111827;
+            color: #e5e7eb;
             margin-bottom: 16px;
             font-size: 18px;
         }
-        
+
         .file-item {
             padding: 8px 12px;
-            background: white;
-            border-radius: 4px;
-            margin-bottom: 4px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            margin-bottom: 6px;
             font-size: 14px;
-            color: #374151;
-            font-family: 'Courier New', monospace;
+            color: #cbd5f5;
+            font-family: 'JetBrains Mono', monospace;
         }
-        
+
+        .code-block {
+            display: block;
+            background: #0a101a;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #bfdbfe;
+        }
+
         .footer {
-            background: #f9fafb;
+            background: #0a101a;
+            border-top: 1px solid #1f2937;
             padding: 20px 40px;
             text-align: center;
-            color: #6b7280;
+            color: #94a3b8;
             font-size: 14px;
         }
-        
+
+        .footer strong {
+            color: #f87171;
+        }
+
         @media (max-width: 640px) {
             .header {
                 padding: 24px;
             }
-            
+
             .header h1 {
                 font-size: 24px;
             }
-            
+
             .content {
                 padding: 24px;
             }
-            
+
             .btn-group {
                 flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
             }
         }
     </style>
 </head>
-<body>
+<body class="theme-dark">
     <div class="container">
         <div class="header">
             <h1>💾 Backup & Restore System</h1>
@@ -623,7 +614,7 @@ $action = $_GET['action'] ?? 'show';
                 <div class="warning">
                     <h3>📝 Manual Database Backup</h3>
                     <p>Run this command via SSH:</p>
-                    <code style="display:block;background:#fff;padding:12px;border-radius:4px;margin-top:8px;">
+                    <code class="code-block">
                         mysqldump -u k87747_permits -p k87747_permits > backup_<?php echo date('Ymd'); ?>.sql
                     </code>
                 </div>
@@ -637,21 +628,17 @@ $action = $_GET['action'] ?? 'show';
         </div>
         
         <div class="footer">
-            <p>🔒 Secure Backup System • Created: <?php echo date('d/m/Y H:i'); ?> • <strong style="color:#ef4444;">DELETE THIS FILE AFTER USE</strong></p>
+            <p>🔒 Secure Backup System • Created: <?php echo date('d/m/Y H:i'); ?> • <strong>DELETE THIS FILE AFTER USE</strong></p>
         </div>
     </div>
     
     <script>
         // Auto-check checklist items when clicked
-        document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
+        document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', function () {
                 const label = this.parentElement.querySelector('label');
-                if (this.checked) {
-                    label.style.textDecoration = 'line-through';
-                    label.style.opacity = '0.6';
-                } else {
-                    label.style.textDecoration = 'none';
-                    label.style.opacity = '1';
+                if (label) {
+                    label.classList.toggle('checked', this.checked);
                 }
             });
         });

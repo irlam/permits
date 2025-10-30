@@ -274,211 +274,379 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $existingPermit ? 'Edit Draft' : 'Create Permit'; ?> - <?php echo htmlspecialchars($template['name']); ?></title>
+    <link rel="stylesheet" href="<?= asset('/assets/app.css') ?>">
     <style>
+        :root {
+            color-scheme: dark;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
-        body {
+
+        body.theme-dark {
+            background: #0f172a;
+            color: #e5e7eb;
             font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            margin: 0;
         }
-        .container {
-            max-width: 800px;
+
+        .public-wrap {
+            max-width: 960px;
             margin: 0 auto;
+            padding: 32px 16px 80px;
         }
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
+
+        .public-card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 18px;
             padding: 32px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.45);
         }
-        .header {
+
+        @media (max-width: 768px) {
+            .public-card {
+                padding: 20px;
+            }
+        }
+
+        .card-heading {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
-        .header h1 {
-            font-size: 28px;
-            color: #111827;
-            margin-bottom: 8px;
+
+        .card-heading h1 {
+            font-size: 26px;
+            margin: 0 0 8px;
         }
-        .header p {
-            color: #6b7280;
+
+        .card-heading p {
+            margin: 0;
+            color: #94a3b8;
         }
+
         .form-group {
             margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
+
         label {
-            display: block;
+            font-size: 14px;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: #374151;
+            color: #cbd5f5;
         }
+
         .required {
-            color: #ef4444;
+            color: #f87171;
         }
+
         input[type="text"],
         input[type="email"],
         input[type="tel"],
         input[type="date"],
         input[type="time"],
+        input[type="datetime-local"],
+        input[type="number"],
         textarea,
         select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #1f2937;
+            background: #0a101a;
+            color: #e5e7eb;
             font-size: 15px;
-            transition: border-color 0.2s;
         }
+
         input:focus,
         textarea:focus,
         select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
+
         textarea {
             min-height: 100px;
             resize: vertical;
         }
+
         .notification-box {
-            background: #f0f9ff;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            border-radius: 12px;
             padding: 16px;
             margin: 24px 0;
         }
+
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 12px;
         }
+
         .checkbox-group input[type="checkbox"] {
             width: 20px;
             height: 20px;
             cursor: pointer;
         }
+
         .checkbox-group label {
             margin: 0;
+            color: #e5e7eb;
             cursor: pointer;
         }
-        .btn {
-            display: inline-block;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
+
+        .checkbox-group span {
+            color: #94a3b8;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            width: 100%;
+
+        .choice-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+
+        .choice-group.vertical {
+            flex-direction: column;
+            gap: 10px;
         }
-        .btn-secondary {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
+
+        .choice-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
-        /* Choice button group (Yes / No / N/A) */
-        .choice-group { display: flex; flex-wrap: wrap; gap: 8px; }
-        .choice-group.vertical { flex-direction: column; gap: 10px; }
-        /* Hide native radios by default; labels are the visual buttons */
-        .choice-input { position: absolute; opacity: 0; width: 0; height: 0; }
+
         .choice-pill {
             display: inline-block;
-            padding: 14px 18px;
+            padding: 12px 18px;
             border-radius: 999px;
-            border: 2px solid #e5e7eb;
-            background: #ffffff;
-            color: #374151;
+            border: 1px solid #1f2937;
+            background: #0a101a;
+            color: #e5e7eb;
             font-weight: 600;
             cursor: pointer;
             user-select: none;
-            transition: all .15s ease;
+            transition: all 0.15s ease;
             text-align: center;
             min-width: 90px;
         }
-        .choice-pill:empty::before { content: attr(data-label); }
-        .choice-pill:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(102,126,234,.15); }
-        .choice-input:focus + .choice-pill { outline: 2px solid #a5b4fc; outline-offset: 2px; }
-        .choice-group.vertical .choice-pill { width: 100%; border-radius: 24px; }
-        .choice-input:checked + .choice-pill { color: #ffffff; border-color: transparent; box-shadow: 0 6px 18px rgba(0,0,0,.15); }
-        .choice-input:checked + .choice-pill.choice-yes { background: #9bb837; }
-        .choice-input:checked + .choice-pill.choice-no { background: #e24b4b; }
-        .choice-input:checked + .choice-pill.choice-na { background: #277ba6; }
-        .choice-pill.choice-yes:hover { border-color: #9bb837; }
-        .choice-pill.choice-no:hover { border-color: #e24b4b; }
-        .choice-pill.choice-na:hover { border-color: #277ba6; }
-        /* Mobile fallback: show native radios as well for maximum compatibility */
-        @media (max-width: 640px) {
-            .choice-group { gap: 10px; }
-            .choice-input { position: static; opacity: 1; width: 18px; height: 18px; margin-right: 8px; }
-            .choice-pill { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px; }
+
+        .choice-pill:empty::before {
+            content: attr(data-label);
         }
-        /* Per-question utilities */
-        .field-toolbar { display:flex; gap:12px; align-items:center; margin: 8px 0 6px; flex-wrap: wrap; }
-        .tool-link { display:inline-flex; align-items:center; gap:6px; color:#4f46e5; background:#eef2ff; border:1px solid #c7d2fe; padding:8px 12px; border-radius:10px; font-weight:600; text-decoration:none; cursor:pointer; }
-        .tool-link:hover { background:#e0e7ff; }
-        .note-box { display:none; margin-top:8px; }
-        .note-box textarea { width:100%; min-height:80px; border:2px solid #e5e7eb; border-radius:8px; padding:10px; }
-        .media-box { display:none; margin-top:8px; }
-    .media-box input[type=file] { display:block; width:100%; padding:10px; border:2px dashed #c7d2fe; border-radius:10px; background:#f8fafc; }
-    .media-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
-    .media-note { font-size:12px;color:#64748b;margin-top:6px; }
+
+        .choice-pill:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .choice-input:focus + .choice-pill {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        .choice-group.vertical .choice-pill {
+            width: 100%;
+            border-radius: 24px;
+        }
+
+        .choice-input:checked + .choice-pill {
+            color: #ffffff;
+            border-color: transparent;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+        }
+
+        .choice-input:checked + .choice-pill.choice-yes {
+            background: #22c55e;
+        }
+
+        .choice-input:checked + .choice-pill.choice-no {
+            background: #ef4444;
+        }
+
+        .choice-input:checked + .choice-pill.choice-na {
+            background: #0ea5e9;
+        }
+
+        @media (max-width: 640px) {
+            .choice-group {
+                gap: 10px;
+            }
+
+            .choice-input {
+                position: static;
+                opacity: 1;
+                width: 18px;
+                height: 18px;
+                margin-right: 8px;
+            }
+
+            .choice-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 44px;
+                padding: 10px 14px;
+            }
+        }
+
+        .field-toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin: 8px 0 6px;
+            flex-wrap: wrap;
+        }
+
+        .tool-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #bfdbfe;
+            background: rgba(59, 130, 246, 0.18);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tool-link:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        .note-box,
+        .media-box {
+            display: none;
+            margin-top: 8px;
+        }
+
+        .note-box textarea {
+            width: 100%;
+            min-height: 80px;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 10px;
+            background: #0a101a;
+            color: #e5e7eb;
+        }
+
+        .media-box input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed rgba(59, 130, 246, 0.45);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            color: #cbd5f5;
+        }
+
+        .media-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .media-note {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
         .success-message {
-            background: #d1fae5;
-            border: 2px solid #10b981;
-            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            border-radius: 12px;
             padding: 24px;
             text-align: center;
         }
+
         .success-message h2 {
-            color: #065f46;
+            color: #bbf7d0;
             margin-bottom: 12px;
         }
+
         .success-message p {
-            color: #047857;
+            color: #a7f3d0;
             margin-bottom: 8px;
         }
+
+        .success-meta {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #cbd5f5;
+        }
+
+        .success-meta a {
+            color: #bfdbfe;
+        }
+
+        .success-reminder {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #cbd5f5;
+        }
+
+        .success-actions {
+            margin-top: 24px;
+        }
+
         .error-message {
-            background: #fee2e2;
-            border: 2px solid #ef4444;
-            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            border-radius: 12px;
             padding: 16px;
             margin-bottom: 20px;
-            color: #991b1b;
+            color: #fecaca;
         }
+
         .section-title {
             font-size: 20px;
             font-weight: 700;
-            color: #111827;
-            margin: 32px 0 16px 0;
+            color: #e5e7eb;
+            margin: 32px 0 16px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #e5e7eb;
+            border-bottom: 1px solid #1f2937;
         }
-        @media (max-width: 768px) {
-            .card {
-                padding: 20px;
-            }
+
+        .form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .form-actions .btn {
+            flex: 1 1 200px;
+            justify-content: center;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .cancel-link {
+            margin-top: 16px;
+            text-align: center;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="card">
+<body class="theme-dark">
+    <div class="public-wrap">
+        <div class="public-card">
             <?php if ($success): ?>
                 <!-- Success Message -->
                 <div class="success-message">
@@ -490,28 +658,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p><strong>Reference:</strong> #<?php echo htmlspecialchars($ref_number ?? 'N/A'); ?></p>
                         <p>Your permit is now awaiting manager approval.</p>
                     <?php endif; ?>
-                    <p style="margin-top: 16px;">
+                    <p class="success-reminder">
                         You can check the status anytime on the homepage<br>
                         by entering your email address.
                     </p>
                     <?php if (!empty($unique_link)): ?>
-                        <div style="margin-top: 12px; font-size: 14px; color:#374151;">
+                        <div class="success-meta">
                             <div><strong>Edit Link:</strong> <a href="<?php echo htmlspecialchars($app->url('create-permit-public.php?draft=' . urlencode($unique_link))); ?>">Resume editing</a></div>
                         </div>
                     <?php endif; ?>
                     <?php if (!empty($notification_enabled)): ?>
-                        <p style="margin-top: 16px; font-size: 14px;">
+                        <p class="success-reminder">
                             🔔 We'll send you a notification when your permit is approved!
                         </p>
                     <?php endif; ?>
-                    <div style="margin-top: 24px;">
-                        <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-primary">← Back to Homepage</a>
+                    <div class="success-actions">
+                        <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-primary btn-block">← Back to Homepage</a>
                     </div>
                 </div>
                 
             <?php else: ?>
                 <!-- Permit Creation Form -->
-                <div class="header">
+                <div class="card-heading">
                     <h1>📋 <?php echo htmlspecialchars($template['name']); ?></h1>
                     <p>Please fill in all required information</p>
                 </div>
@@ -551,9 +719,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input type="checkbox" name="enable_notifications" id="enable_notifications">
                             <label for="enable_notifications">
                                 🔔 <strong>Get notified when your permit is approved</strong><br>
-                                <span style="font-size: 14px; color: #6b7280; font-weight: normal;">
-                                    We'll send you a browser notification (optional)
-                                </span>
+                                <span>We'll send you a browser notification (optional)</span>
                             </label>
                         </div>
                     </div>
@@ -667,8 +833,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <button type="button" class="btn media-btn" data-target="camera" data-name="<?php echo htmlspecialchars($fieldName); ?>_media">📷 Take Photo/Video</button>
                                                 <button type="button" class="btn btn-secondary media-btn" data-target="gallery" data-name="<?php echo htmlspecialchars($fieldName); ?>_media">🖼️ Choose from Gallery</button>
                                             </div>
-                                            <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple style="display:none">
-                                            <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" multiple style="display:none">
+                                            <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple>
+                                            <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" multiple>
                                             <div class="media-note">Tip: On mobile, use your camera or photo library.</div>
                                         </div>
                                     <?php endif; ?>
@@ -734,18 +900,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endforeach; ?>
                     
                     <!-- Submit -->
-                    <div style="margin-top: 32px;">
-                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                            <button type="submit" name="action" value="save_draft" class="btn btn-secondary" style="flex:1; min-width:200px;">
-                                📝 Save Draft
-                            </button>
-                            <button type="submit" name="action" value="submit" class="btn btn-primary" style="flex:2; min-width:240px;">
-                                ✅ Submit Permit for Approval
-                            </button>
-                        </div>
+                    <div class="form-actions">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
+                            📝 Save Draft
+                        </button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary">
+                            ✅ Submit Permit for Approval
+                        </button>
                     </div>
-                    
-                    <div style="margin-top: 16px; text-align: center;">
+
+                    <div class="cancel-link">
                         <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-secondary">← Cancel</a>
                     </div>
                 </form>
