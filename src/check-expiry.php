@@ -29,8 +29,8 @@ function check_and_expire_permits(object $db): int
 
     $nowExpression = $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
     $validToCheck = $driver === 'sqlite'
-        ? "valid_to IS NOT NULL AND TRIM(valid_to) <> ''"
-        : "valid_to IS NOT NULL";
+        ? "valid_to IS NOT NULL AND TRIM(valid_to) <> '' AND TRIM(valid_to) NOT LIKE '0000%'"
+        : "valid_to IS NOT NULL AND valid_to NOT LIKE '0000%'";
 
     $sql = <<<SQL
         SELECT id, status, valid_to, ref, ref_number
@@ -70,7 +70,7 @@ function check_and_expire_permits(object $db): int
         }
 
         $validToRaw = $permit['valid_to'] ?? null;
-        if (!is_string($validToRaw) || $validToRaw === '' || $validToRaw === '0000-00-00 00:00:00') {
+        if (!is_string($validToRaw) || $validToRaw === '' || $validToRaw === '0000-00-00 00:00:00' || $validToRaw === '0000-00-00') {
             // MySQL strict mode treats zero dates as errors, so skip them entirely
             continue;
         }
