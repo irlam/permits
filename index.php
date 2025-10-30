@@ -161,7 +161,7 @@ function getReopenLink($permitId) {
                     <button id="installButton" class="btn">📱 Install App</button>
                     <a href="/login.php" class="btn btn-accent">🔐 Manager Login</a>
                 <?php endif; ?>
-                <button type="button" class="btn mobile-only" id="openPermitPicker">☰ Permits</button>
+                <button type="button" class="btn btn-secondary" id="openPermitPicker">📄 Permit List</button>
             </div>
         </div>
 
@@ -328,6 +328,12 @@ function getReopenLink($permitId) {
             if (closeBtn) closeBtn.addEventListener('click', close);
             sheet.addEventListener('click', function(e) {
                 if (e.target === sheet) close();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sheet.getAttribute('data-open') === '1') {
+                    close();
+                }
             });
         })();
 

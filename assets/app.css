@@ -1208,12 +1208,6 @@ body.theme-dark {
   display: none;
   pointer-events: none;
 }
-@media (min-width: 641px) {
-  .permit-sheet {
-    display: none !important;
-    visibility: hidden !important;
-  }
-}
 .permit-sheet__panel { 
   position: absolute; 
   left: 0; 
@@ -1237,3 +1231,36 @@ body.theme-dark {
 .permit-link { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #111827; border: 1px solid #334155; border-radius: 10px; color: #e5e7eb; text-decoration: none; }
 .permit-link .icon { font-size: 22px; }
 .permit-link:active { transform: scale(0.98); }
+
+@media (min-width: 641px) {
+  .permit-sheet__panel {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    max-width: 520px;
+    width: min(520px, 92vw);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
+    padding: 24px 24px 28px;
+    transform: translate(-50%, -40%) scale(0.96);
+  }
+
+  .permit-sheet[data-open="1"] .permit-sheet__panel {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .permit-sheet__handle {
+    margin-top: 0;
+    background: #1f2937;
+  }
+
+  .permit-list {
+    gap: 12px;
+  }
+
+  .permit-link {
+    padding: 14px 16px;
+    border-radius: 12px;
+  }
+}
