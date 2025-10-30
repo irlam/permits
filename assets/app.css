@@ -1,18 +1,5 @@
 /**
  * Mobile-Optimized App CSS
- * 
- * File Path: /assets/app.css
- * Description: Responsive styles optimized for mobile permit forms
- * Created: 23/10/2025
- * Last Modified: 23/10/2025
- * 
- * Features:
- * - Mobile-first responsive design
- * - Touch-friendly buttons and inputs
- * - Larger tap targets (minimum 44x44px)
- * - Optimized for small screens
- * - Easy-to-read text sizes
- * - Improved spacing on mobile
  */
 
 /* Base Styles */
@@ -23,46 +10,9 @@
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Arial, sans-serif;
   background: #0f172a;
-  .permit-sheet {
-    position: fixed;
-    inset: 0;
-    background: rgba(2,6,23,0.6);
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 16px;
-    box-sizing: border-box;
-  }
-  .permit-sheet[data-open="1"] {
-    display: flex;
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .permit-sheet[data-open="0"] {
-    display: none;
-    pointer-events: none;
-  }
-  .permit-sheet__panel {
-    width: min(520px, 100%);
-    max-height: 85vh;
-    overflow: auto;
-    background: #0f172a;
-    border-radius: 18px;
-    border: 1px solid #334155;
-    padding: 18px 20px;
-    box-shadow: 0 22px 42px rgba(15, 23, 42, 0.55);
-    transform: translateY(-18px);
-    transition: transform 0.25s ease;
-  }
-  .permit-sheet[data-open="1"] .permit-sheet__panel {
-    transform: translateY(0);
-  }
-  .permit-sheet__handle { display: none; }
-  min-width: 200px;
+  color: #e5e7eb;
+  margin: 0;
+  min-height: 100vh;
 }
 
 /* Buttons */
@@ -1070,74 +1020,115 @@ body {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Homepage polish                                                            */
+/*  Permit picker modal                                                       */
 /* -------------------------------------------------------------------------- */
-.home-hero {
-  background: linear-gradient(180deg, rgba(59,130,246,0.12), rgba(14,165,233,0.08));
-  border: 1px solid rgba(59,130,246,0.35);
-  box-shadow: 0 14px 32px rgba(2,6,23,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+.permit-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1000;
 }
 
-.home-title {
-  font-size: clamp(22px, 4vw, 30px);
-  font-weight: 700;
-  margin: 0 0 6px;
-  background: linear-gradient(135deg, #60a5fa, #22d3ee 45%, #c084fc 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.permit-popover-backdrop[data-open="1"] {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.status-row {
-  display: flex;
-  gap: 10px;
-  align-items: stretch;
-  margin-top: 10px;
-}
-
-@media (max-width: 520px) {
-  .status-row { flex-direction: column; }
-}
-
-.status-row input[type="email"] {
-  flex: 1;
-  min-height: 46px;
-  background: #0a101a;
-  border: 1px solid #1f2937;
-  border-radius: 10px;
-  color: #e5e7eb;
-  padding: 12px 14px;
-}
-
-.mini-card {
-  background: linear-gradient(180deg, rgba(17,24,39,0.9), rgba(17,24,39,0.7));
+.permit-popover {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -42%) scale(0.96);
+  width: min(520px, calc(100% - 32px));
+  max-height: min(80vh, 560px);
+  background: #0f172a;
   border: 1px solid #334155;
-  border-left: 3px solid #3b82f6;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.mini-card + .mini-card { margin-top: 10px; }
-
-.template-card--home {
-  border: 1px solid #334155;
-  background: linear-gradient(180deg, #111827, #0b1220);
-}
-
-.template-card--home .icon { font-size: 52px; }
-
-.permit-list-scroll { max-height: 420px; overflow: auto; padding-right: 6px; }
-
-/* Horizontal scroller for Recently Approved */
-.scroll-row {
+  border-radius: 16px;
+  box-shadow: 0 32px 56px rgba(2, 6, 23, 0.45);
+  padding: 24px 24px 28px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 1010;
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.permit-popover[data-open="1"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.permit-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 8px 4px 8px 2px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
 }
+
+.permit-popover__header h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.permit-popover__list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.permit-popover__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #111827;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: #e5e7eb;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.permit-popover__link:hover,
+.permit-popover__link:focus-visible {
+  border-color: #3b82f6;
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.18);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.permit-popover__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.permit-popover__list .name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+@media (max-width: 360px) {
+  .permit-popover {
+    width: calc(100% - 24px);
+    padding: 20px;
+  }
+
+  .permit-popover__link {
+    padding: 12px;
+  }
+}
+
 .scroll-row > * { scroll-snap-align: start; }
 .approved-card { min-width: 280px; max-width: 360px; }
 
@@ -1178,84 +1169,3 @@ body {
 .template-card--xl .name { font-size: 17px; }
 
 /* Ticker removed: keeping .scroll-row default behavior only */
-
-/* -------------------------------------------------------------------------- */
-/*  Mobile Permit Picker Sheet                                                */
-/* -------------------------------------------------------------------------- */
-/*  Mobile Permit Picker Sheet                                                */
-/* -------------------------------------------------------------------------- */
-.permit-sheet { 
-  position: fixed; 
-  inset: 0; 
-  display: none; 
-  background: rgba(2,6,23,0.6); 
-  z-index: 1000; 
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.permit-sheet[data-open="1"] { 
-  display: block; 
-  opacity: 1;
-  pointer-events: auto;
-}
-.permit-sheet[data-open="0"] {
-  display: none;
-  pointer-events: none;
-}
-.permit-sheet__panel { 
-  position: absolute; 
-  left: 0; 
-  right: 0; 
-  bottom: 0; 
-  background: #0f172a; 
-  border-top-left-radius: 14px; 
-  border-top-right-radius: 14px; 
-  border: 1px solid #334155; 
-  max-height: 80vh; 
-  overflow: auto; 
-  padding: 16px;
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
-}
-.permit-sheet[data-open="1"] .permit-sheet__panel {
-  transform: translateY(0);
-}
-.permit-sheet__handle { width: 44px; height: 4px; background: #334155; border-radius: 999px; margin: 6px auto 12px; }
-.permit-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.permit-link { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #111827; border: 1px solid #334155; border-radius: 10px; color: #e5e7eb; text-decoration: none; }
-.permit-link .icon { font-size: 22px; }
-.permit-link:active { transform: scale(0.98); }
-
-@media (min-width: 641px) {
-  .permit-sheet__panel {
-    left: 50%;
-    right: auto;
-    bottom: auto;
-    top: 50%;
-    max-width: 520px;
-    width: min(520px, 92vw);
-    border-radius: 16px;
-    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
-    padding: 24px 24px 28px;
-    transform: translate(-50%, -40%) scale(0.96);
-  }
-
-  .permit-sheet[data-open="1"] .permit-sheet__panel {
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  .permit-sheet__handle {
-    margin-top: 0;
-    background: #1f2937;
-  }
-
-  .permit-list {
-    gap: 12px;
-  }
-
-  .permit-link {
-    padding: 14px 16px;
-    border-radius: 12px;
-  }
-}

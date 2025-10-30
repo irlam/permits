@@ -161,7 +161,7 @@ function getReopenLink($permitId) {
                     <button id="installButton" class="btn">📱 Install App</button>
                     <a href="/login.php" class="btn btn-accent">🔐 Manager Login</a>
                 <?php endif; ?>
-                <button type="button" class="btn btn-secondary" id="openPermitPicker">📄 Permit List</button>
+                <button type="button" class="btn btn-secondary" id="openPermitPicker" aria-haspopup="dialog" aria-expanded="false">📄 Permit List</button>
             </div>
         </div>
 
@@ -270,69 +270,72 @@ function getReopenLink($permitId) {
         </div>
     </div>
 
-    <!-- Permit Picker overlay -->
-    <div class="permit-sheet" id="permitSheet" data-open="0" aria-hidden="true">
-        <div class="permit-sheet__panel">
-            <div class="permit-sheet__handle"></div>
-            <div class="card-header" style="margin-bottom:12px;">
-                <h3>📋 Choose Permit Type</h3>
-                <button class="btn btn-secondary" id="closePermitSheet">Close</button>
-            </div>
-            <div class="permit-list">
-                <?php foreach ($templates as $template): ?>
-                    <a class="permit-link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
-                        <span class="icon"><?php echo getTemplateIcon($template['name']); ?></span>
-                        <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
-                    </a>
-                <?php endforeach; ?>
-            </div>
+    <!-- Permit picker modal -->
+    <div class="permit-popover-backdrop" id="permitPopoverBackdrop" data-open="0" aria-hidden="true"></div>
+    <div class="permit-popover" id="permitPopover" data-open="0" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Choose a permit type" tabindex="-1">
+        <div class="permit-popover__header">
+            <h3>📋 Choose Permit Type</h3>
+            <button type="button" class="btn btn-secondary" id="closePermitPopover">Close</button>
+        </div>
+        <div class="permit-popover__list">
+            <?php foreach ($templates as $template): ?>
+                <a class="permit-popover__link" href="/create-permit-public.php?template=<?php echo urlencode($template['id']); ?>">
+                    <span class="permit-popover__icon"><?php echo getTemplateIcon($template['name']); ?></span>
+                    <span class="name"><?php echo htmlspecialchars($template['name']); ?></span>
+                </a>
+            <?php endforeach; ?>
         </div>
     </div>
 
     <script src="/assets/app.js"></script>
     <script>
-        // Mobile permit sheet toggle
+        // Permit picker modal toggle
         (function() {
-            var openBtn = document.getElementById('openPermitPicker');
-            var closeBtn = document.getElementById('closePermitSheet');
-            var sheet = document.getElementById('permitSheet');
-            var hideTimer = null;
+            var trigger = document.getElementById('openPermitPicker');
+            var popover = document.getElementById('permitPopover');
+            var backdrop = document.getElementById('permitPopoverBackdrop');
+            var closeBtn = document.getElementById('closePermitPopover');
+            var active = false;
 
-            if (!sheet) return;
+            if (!trigger || !popover || !backdrop) return;
 
             function open(e) {
                 if (e) e.preventDefault();
-                if (hideTimer) {
-                    clearTimeout(hideTimer);
-                    hideTimer = null;
+                if (active) {
+                    close();
+                    return;
                 }
-                sheet.style.display = 'block';
-                requestAnimationFrame(function() {
-                    sheet.setAttribute('data-open', '1');
-                    sheet.setAttribute('aria-hidden', 'false');
-                    document.body.style.overflow = 'hidden';
-                });
+                active = true;
+                popover.setAttribute('data-open', '1');
+                popover.setAttribute('aria-hidden', 'false');
+                backdrop.setAttribute('data-open', '1');
+                backdrop.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                trigger.setAttribute('aria-expanded', 'true');
+                setTimeout(function() {
+                    popover.focus({ preventScroll: true });
+                }, 0);
             }
 
             function close(e) {
                 if (e) e.preventDefault();
-                sheet.setAttribute('data-open', '0');
-                sheet.setAttribute('aria-hidden', 'true');
+                if (!active) return;
+                active = false;
+                popover.setAttribute('data-open', '0');
+                popover.setAttribute('aria-hidden', 'true');
+                backdrop.setAttribute('data-open', '0');
+                backdrop.setAttribute('aria-hidden', 'true');
                 document.body.style.overflow = '';
-                hideTimer = setTimeout(function() {
-                    sheet.style.display = 'none';
-                }, 320); // allow transition to finish
+                trigger.setAttribute('aria-expanded', 'false');
+                trigger.focus({ preventScroll: true });
             }
 
-            if (openBtn) openBtn.addEventListener('click', open);
+            trigger.addEventListener('click', open);
             if (closeBtn) closeBtn.addEventListener('click', close);
-            sheet.addEventListener('click', function(e) {
-                if (e.target === sheet) close();
-            });
-
+            backdrop.addEventListener('click', close);
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && sheet.getAttribute('data-open') === '1') {
-                    close();
+                if (active && e.key === 'Escape') {
+                    close(e);
                 }
             });
         })();
