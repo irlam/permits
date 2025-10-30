@@ -163,9 +163,9 @@ function getReopenLink($permitId) {
     <title>Permit System - Create & Track Work Permits</title>
     <meta name="theme-color" content="#0ea5e9">
     <meta name="description" content="Create permits instantly, notify reviewers, and track status in real time.">
-    <link rel="manifest" href="<?php echo htmlspecialchars(appUrl('manifest.webmanifest')); ?>">
-    <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(appUrl('icon-192.png')); ?>">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(appUrl('assets/app.css')); ?>">
+    <link rel="manifest" href="<?php echo htmlspecialchars(asset('manifest.webmanifest')); ?>">
+    <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(asset('icon-192.png')); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(asset('assets/app.css')); ?>">
 </head>
 <body class="theme-dark">
     <div class="page-shell">
@@ -396,7 +396,7 @@ function getReopenLink($permitId) {
         </div>
     </div>
 
-    <script src="<?php echo htmlspecialchars(appUrl('assets/app.js')); ?>"></script>
+    <script src="<?php echo htmlspecialchars(asset('assets/app.js')); ?>"></script>
     <script>
         (function() {
             var trigger = document.getElementById('openPermitPicker');
