@@ -230,7 +230,19 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         .alert-success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); color: #bbf7d0; }
         .alert-error { background: rgba(248, 113, 113, 0.16); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
         .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
-        .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35); }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35); }
+    .card-main { display: flex; flex-direction: column; gap: 24px; min-height: 560px; }
+    .editor-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; padding: 24px; background: rgba(15, 23, 42, 0.6); border: 1px solid #2d3a54; border-radius: 14px; }
+    .editor-title { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+    .editor-title .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #64748b; font-weight: 600; }
+    .editor-title h2 { margin: 0; font-size: 24px; color: #f8fafc; }
+    .editor-title p { margin: 0; color: #94a3b8; line-height: 1.6; font-size: 14px; }
+    .badge-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(59, 130, 246, 0.18); color: #bfdbfe; font-size: 12px; font-weight: 600; }
+    .meta-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; min-width: 260px; }
+    .meta-tile { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+    .meta-value { font-size: 14px; color: #e2e8f0; word-break: break-word; }
+    .meta-value code { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 6px; padding: 2px 6px; color: #bfdbfe; }
         .card-list { position: sticky; top: 32px; }
         .template-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
         .template-button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px; border-radius: 14px; border: 1px solid transparent; background: rgba(15, 23, 42, 0.6); color: inherit; text-decoration: none; transition: all 0.15s ease-in-out; }
@@ -251,11 +263,16 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         form select { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 10px; color: #e2e8f0; padding: 10px 12px; font-size: 13px; }
         form select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
         .field-group { margin-bottom: 20px; }
-        .field-inline { display: flex; gap: 16px; }
-        .field-inline .field-group { flex: 1; }
+    .field-inline { display: flex; gap: 16px; flex-wrap: wrap; }
+    .field-inline .field-group { flex: 1 1 220px; }
         .helper { color: #94a3b8; font-size: 13px; margin-top: 6px; }
         .empty { color: #94a3b8; font-size: 14px; text-align: center; padding: 16px 0; }
-        .editor-stack { display: flex; flex-direction: column; gap: 24px; }
+    .editor-stack { display: flex; flex-direction: column; gap: 24px; }
+    .json-editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .json-editor-grid .field-group { margin-bottom: 0; }
+    .editor-empty { text-align: center; padding: 80px 40px; background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; color: #94a3b8; }
+    .editor-empty strong { font-size: 20px; color: #e2e8f0; }
+    .editor-empty span { max-width: 460px; font-size: 14px; line-height: 1.6; }
         .editor-panel { background: rgba(15, 23, 42, 0.6); border: 1px solid #2d3a54; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
         .panel-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
         .panel-header h3 { margin: 0; font-size: 18px; color: #e2e8f0; }
@@ -336,10 +353,42 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                 <?php endif; ?>
             </div>
 
-            <div class="card">
+            <div class="card card-main">
                 <?php if ($editingTemplate): ?>
-                    <?php $schemaTitleValue = is_array($schemaArray) ? ($schemaArray['title'] ?? '') : ''; ?>
-                    <h2 style="margin-bottom:16px; font-size:20px;">Editing: <code><?php echo htmlspecialchars($editingTemplate['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></code></h2>
+                    <?php
+                        $schemaTitleValue = is_array($schemaArray) ? ($schemaArray['title'] ?? '') : '';
+                        $updatedDisplay = formatDateForDisplay($editingTemplate['updated_at'] ?? null);
+                        $publishedDisplay = formatDateForDisplay($editingTemplate['published_at'] ?? null);
+                        $formVersionDisplay = $formVersion !== '' ? 'v' . $formVersion : '—';
+                    ?>
+                    <div class="editor-header">
+                        <div class="editor-title">
+                            <span class="eyebrow">Template selected</span>
+                            <h2><?php echo htmlspecialchars($formName !== '' ? $formName : ($editingTemplate['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h2>
+                            <p>Keep the schema and optional public form layout aligned with your permit process.</p>
+                            <?php if ($schemaTitleValue !== ''): ?>
+                                <span class="badge-pill">Schema title: <?php echo htmlspecialchars($schemaTitleValue, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="meta-strip">
+                            <div class="meta-tile">
+                                <span class="meta-label">Template ID</span>
+                                <span class="meta-value"><code><?php echo htmlspecialchars($editingTemplate['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></code></span>
+                            </div>
+                            <div class="meta-tile">
+                                <span class="meta-label">Version</span>
+                                <span class="meta-value"><?php echo htmlspecialchars($formVersionDisplay, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                            </div>
+                            <div class="meta-tile">
+                                <span class="meta-label">Last Updated</span>
+                                <span class="meta-value"><?php echo htmlspecialchars($updatedDisplay, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                            </div>
+                            <div class="meta-tile">
+                                <span class="meta-label">Published</span>
+                                <span class="meta-value"><?php echo htmlspecialchars($publishedDisplay, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                            </div>
+                        </div>
+                    </div>
 
                     <?php if ($schemaArray === null && $schemaDecodeError !== null): ?>
                         <p class="inline-note" style="margin-bottom:16px;">We could not convert this template into the visual editor yet, so the raw JSON editor is shown below.</p>
@@ -358,19 +407,21 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                                 </div>
                             </div>
 
-                            <div class="field-group">
-                                <label for="json_schema">Template JSON Schema</label>
-                                <textarea id="json_schema" name="json_schema" spellcheck="false" required><?php echo htmlspecialchars($schemaText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
-                                <p class="helper">Full schema used for permit creation. Must be valid JSON.</p>
-                            </div>
+                            <div class="json-editor-grid">
+                                <div class="field-group">
+                                    <label for="json_schema">Template JSON Schema</label>
+                                    <textarea id="json_schema" name="json_schema" spellcheck="false" required><?php echo htmlspecialchars($schemaText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
+                                    <p class="helper">Full schema used for permit creation. Must be valid JSON.</p>
+                                </div>
 
-                            <?php if ($supportsFormStructure): ?>
-                            <div class="field-group">
-                                <label for="form_structure">Public Form Structure (optional)</label>
-                                <textarea id="form_structure" name="form_structure" spellcheck="false"><?php echo htmlspecialchars($structureText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
-                                <p class="helper">Leave blank to keep the fallback structure generated from the schema.</p>
+                                <?php if ($supportsFormStructure): ?>
+                                <div class="field-group">
+                                    <label for="form_structure">Public Form Structure (optional)</label>
+                                    <textarea id="form_structure" name="form_structure" spellcheck="false"><?php echo htmlspecialchars($structureText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
+                                    <p class="helper">Leave blank to keep the fallback structure generated from the schema.</p>
+                                </div>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
 
                             <div class="form-footer">
                                 <button type="submit" class="btn">Save Changes</button>
@@ -494,8 +545,10 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                         </form>
                     <?php endif; ?>
                 <?php else: ?>
-                    <h2 style="margin-bottom:16px; font-size:20px;">Select a template to edit</h2>
-                    <p style="color:#94a3b8; line-height:1.6;">Choose a permit template on the left to update its name, version, or JSON payload. Saving will immediately make the new copy available to issuers.</p>
+                    <div class="editor-empty">
+                        <strong>Select a template to edit</strong>
+                        <span>Pick a permit template on the left to update its metadata, JSON schema, and optional public form layout. Saving applies a new version immediately for issuers.</span>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
