@@ -313,6 +313,8 @@ function getReopenLink($permitId) {
                 active = true;
                 backdrop.removeAttribute('hidden');
                 popover.removeAttribute('hidden');
+                backdrop.style.display = 'block';
+                popover.style.display = 'flex';
                 popover.setAttribute('data-open', '1');
                 popover.setAttribute('aria-hidden', 'false');
                 backdrop.setAttribute('data-open', '1');
@@ -338,6 +340,8 @@ function getReopenLink($permitId) {
                 hideTimer = setTimeout(function() {
                     popover.setAttribute('hidden', '');
                     backdrop.setAttribute('hidden', '');
+                    popover.style.display = 'none';
+                    backdrop.style.display = 'none';
                 }, 260);
             }
 
