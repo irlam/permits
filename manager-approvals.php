@@ -82,7 +82,7 @@ function formatDateUK($date) {
     <link rel="stylesheet" href="<?= asset('/assets/app.css') ?>">
     <style>
         body.theme-dark {
-            background: #0f172a;
+            background: #020617;
             color: #e5e7eb;
             min-height: 100vh;
             margin: 0;
@@ -91,12 +91,12 @@ function formatDateUK($date) {
         .approvals-card {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
         }
 
         .approval-grid {
             display: grid;
-            gap: 16px;
+            gap: 18px;
         }
 
         @media (min-width: 900px) {
@@ -106,34 +106,35 @@ function formatDateUK($date) {
         }
 
         .approval-card {
-            background: #111827;
-            border: 1px solid #1f2937;
-            border-radius: 12px;
-            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);
-            transition: transform 0.2s ease, border-color 0.2s ease;
+            gap: 18px;
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 18px 36px rgba(2, 6, 23, 0.35);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .approval-card:hover {
-            transform: translateY(-3px);
-            border-color: #3b82f6;
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.45);
+            box-shadow: 0 24px 46px rgba(2, 6, 23, 0.45);
         }
 
         .approval-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            gap: 12px;
+            gap: 16px;
             flex-wrap: wrap;
         }
 
         .approval-title {
             font-size: 18px;
             font-weight: 600;
-            color: #e5e7eb;
+            color: #f8fafc;
         }
 
         .approval-ref {
@@ -144,15 +145,18 @@ function formatDateUK($date) {
 
         .approval-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
         }
 
         .info-item {
-            background: #0a101a;
-            border: 1px solid #1f2937;
-            border-radius: 10px;
-            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(51, 65, 85, 0.65);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .info-label {
@@ -160,22 +164,21 @@ function formatDateUK($date) {
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            margin-bottom: 4px;
-            display: block;
         }
 
         .info-value {
             font-size: 15px;
-            color: #e5e7eb;
+            color: #e2e8f0;
             font-weight: 500;
+            word-break: break-word;
         }
 
-        .approval-info .info-value a {
+        .info-value a {
             color: inherit;
             text-decoration: none;
         }
 
-        .approval-info .info-value a:hover {
+        .info-value a:hover {
             color: #38bdf8;
             text-decoration: underline;
         }
@@ -184,8 +187,8 @@ function formatDateUK($date) {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            border-top: 1px solid #1f2937;
-            padding-top: 16px;
+            border-top: 1px solid rgba(51, 65, 85, 0.6);
+            padding-top: 18px;
         }
 
         .approval-actions .btn {
@@ -200,6 +203,19 @@ function formatDateUK($date) {
             }
         }
 
+        .chip-large {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #bfdbfe;
+        }
+
         .empty-state-icon {
             font-size: 56px;
             display: block;
@@ -208,20 +224,8 @@ function formatDateUK($date) {
 
         .empty-state-title {
             font-size: 20px;
-            color: #e5e7eb;
+            color: #e2e8f0;
             margin-bottom: 8px;
-        }
-
-        .chip-large {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: rgba(59, 130, 246, 0.18);
-            border: 1px solid rgba(59, 130, 246, 0.35);
-            color: #bfdbfe;
-            font-size: 13px;
         }
     </style>
 </head>
