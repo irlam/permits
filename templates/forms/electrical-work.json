@@ -1,4 +1,6 @@
 {
+  "id": "electrical-work-v1",
+  "title": "Electrical Work Permit",
   "name": "Electrical Work Permit",
   "description": "Permit for electrical work, ensuring isolation and safety procedures are followed.",
   "fields": [

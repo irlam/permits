@@ -1,4 +1,6 @@
 {
+  "id": "building-inspection-v1",
+  "title": "Building Inspection Permit",
   "name": "Building Inspection Permit",
   "description": "Permit for building inspections to ensure compliance with codes, regulations, and safety standards.",
   "fields": [

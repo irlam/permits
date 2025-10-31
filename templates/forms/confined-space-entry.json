@@ -1,4 +1,6 @@
 {
+  "id": "confined-space-entry-v1",
+  "title": "Confined Space Entry Permit",
   "name": "Confined Space Entry Permit",
   "description": "Permit for entry into confined spaces, ensuring all safety protocols are met.",
   "fields": [

@@ -1,4 +1,6 @@
 {
+  "id": "asbestos-removal-v1",
+  "title": "Asbestos Removal Permit",
   "name": "Asbestos Removal Permit",
   "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
   "fields": [

@@ -1,4 +1,6 @@
 {
+  "id": "crane-lifting-v1",
+  "title": "Crane/Lifting Operations Permit",
   "name": "Crane/Lifting Operations Permit",
   "description": "Permit for crane and lifting operations, ensuring all safety checks and authorizations are in place.",
   "fields": [
