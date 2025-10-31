@@ -133,12 +133,30 @@ try {
                 <a href="/admin-custom-permit.php" class="btn">Create Custom Permit</a>
             </div>
 
+
             <!-- Template Importer -->
             <div class="admin-card">
                 <div class="icon">📦</div>
                 <h3>Permit Template Importer</h3>
                 <p>Run the built-in seeder to sync all JSON presets in seconds. Ideal for shared hosting without CLI access.</p>
                 <a href="/admin-template-import.php" class="btn">Import Templates</a>
+            </div>
+
+            <!-- External Template Importer -->
+            <div class="admin-card">
+                <div class="icon">🌐</div>
+                <h3>External Template Importer</h3>
+                <p>Automatically fetch and convert public construction templates from trusted sources like SafetyCulture, OSHA, and HSE. Paste a public template URL and generate a ready-to-edit permit template in seconds.<br><br>
+                <strong>Supported sources:</strong>
+                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
+                  <li><a href="https://safetyculture.com/library" target="_blank" rel="noopener">SafetyCulture Library</a></li>
+                  <li><a href="https://www.osha.gov/sample-safety-health-programs" target="_blank" rel="noopener">OSHA Sample Programs</a></li>
+                  <li><a href="https://www.hse.gov.uk/construction/" target="_blank" rel="noopener">HSE Construction (UK)</a></li>
+                  <li><a href="https://marketplace.safetyculture.com/templates" target="_blank" rel="noopener">iAuditor Marketplace</a></li>
+                  <li><a href="https://www.safeworkaustralia.gov.au/doc/templates-and-forms" target="_blank" rel="noopener">Safe Work Australia</a></li>
+                </ul>
+                </p>
+                <a href="/admin/admin-external-template-import.php" class="btn">Import External Template</a>
             </div>
 
             <div class="admin-card">

@@ -94,8 +94,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="wrap">
         <a class="back" href="/admin.php">⬅ Back to Admin</a>
-        <h1>External Template Importer</h1>
-        <p class="lead">Fetch and convert public construction templates from external sources (SafetyCulture, OSHA, HSE, etc). Paste a public template URL below.</p>
+                <h1>🌐 External Template Importer</h1>
+                <p class="lead"><strong>Import construction permit templates from trusted sources in seconds!</strong><br>
+                Paste a public template URL from SafetyCulture, OSHA, HSE, or other supported sites. This tool will fetch the page and create a ready-to-edit permit template in your system.<br><br>
+                <span style="color:#38bdf8">Tip:</span> For best results, use direct links to template or checklist pages. You can further edit the imported template in the admin editor.<br><br>
+                <strong>Supported sources:</strong>
+                <ul style="margin:8px 0 0 18px;padding:0;font-size:15px;">
+                    <li><a href="https://safetyculture.com/library" target="_blank" rel="noopener">SafetyCulture Library</a></li>
+                    <li><a href="https://www.osha.gov/sample-safety-health-programs" target="_blank" rel="noopener">OSHA Sample Programs</a></li>
+                    <li><a href="https://www.hse.gov.uk/construction/" target="_blank" rel="noopener">HSE Construction (UK)</a></li>
+                    <li><a href="https://marketplace.safetyculture.com/templates" target="_blank" rel="noopener">iAuditor Marketplace</a></li>
+                    <li><a href="https://www.safeworkaustralia.gov.au/doc/templates-and-forms" target="_blank" rel="noopener">Safe Work Australia</a></li>
+                </ul>
+                <br>
+                <span style="color:#fbbf24">Coming soon:</span> Direct field mapping, batch import, and more sources!<br>
+                </p>
 
         <?php if (!empty($messages)): ?>
             <div class="alert alert-success">
@@ -119,9 +132,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="card">
             <h2>Import External Template</h2>
-            <form method="post">
-                <label>Source:
-                    <select name="source" required>
+            <form method="post" style="margin-bottom:18px;">
+                <label><strong>Source:</strong><br>
+                    <select name="source" required style="margin-top:4px;">
                         <option value="">Select Source</option>
                         <option value="safetyculture">SafetyCulture</option>
                         <option value="osha">OSHA</option>
@@ -130,15 +143,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </select>
                 </label>
                 <br><br>
-                <label>Template URL:
-                    <input type="url" name="template_url" style="width:400px" required placeholder="https://...">
+                <label><strong>Template URL:</strong><br>
+                    <input type="url" name="template_url" style="width:400px;margin-top:4px;" required placeholder="https://...">
                 </label>
                 <br><br>
                 <button type="submit" class="btn">Import Template</button>
             </form>
-            <p class="muted">
-                This tool is a demonstration and will create a stub template from the page title. For full field mapping, a custom parser is needed for each source.
-            </p>
+            <div style="font-size:14px;color:#94a3b8;line-height:1.6;">
+                <strong>Instructions:</strong>
+                <ol style="margin:8px 0 8px 20px;padding:0;">
+                  <li>Choose a source and paste a public template/checklist URL.</li>
+                  <li>Click <b>Import Template</b>. The system will fetch the page and create a new template file.</li>
+                  <li>Edit the imported template in <b>Edit Permit Templates</b> to match your needs.</li>
+                  <li>Re-run the <b>Permit Template Importer</b> to sync it into your system.</li>
+                </ol>
+                <span style="color:#38bdf8">Note:</span> This tool currently creates a basic template from the page title. Full field mapping and batch import are coming soon.<br>
+                <span style="color:#fbbf24">Feedback and suggestions welcome!</span>
+            </div>
         </div>
     </div>
 </body>
