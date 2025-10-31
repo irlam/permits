@@ -1,0 +1,14 @@
+{
+  "name": "Scaffolding Permit",
+  "description": "Permit for erection, modification, or dismantling of scaffolding, ensuring safety and compliance.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Type of Scaffolding", "type": "text", "required": true },
+    { "label": "Purpose", "type": "textarea", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Inspection Completed", "type": "checkbox", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

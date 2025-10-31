@@ -1,0 +1,15 @@
+{
+  "name": "Electrical Work Permit",
+  "description": "Permit for electrical work, ensuring isolation and safety procedures are followed.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Work Description", "type": "textarea", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Isolation Required", "type": "checkbox", "required": true },
+    { "label": "Lockout/Tagout Applied", "type": "checkbox", "required": true },
+    { "label": "PPE Required", "type": "textarea", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

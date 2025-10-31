@@ -1,0 +1,13 @@
+{
+  "name": "Asbestos Removal Permit",
+  "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Area/Material to be Removed", "type": "text", "required": true },
+    { "label": "Removal Method", "type": "textarea", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

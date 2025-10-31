@@ -1,0 +1,123 @@
+{
+  "id": "hot-works-v1",
+  "title": "Hot Works Permit",
+  "meta": {
+    "fields": [
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "block",
+        "label": "Site / Block",
+        "type": "select",
+        "options": [
+          "Block 1",
+          "Block 2",
+          "Block 3",
+          "Block 4"
+        ]
+      },
+      {
+        "key": "location",
+        "label": "Location (exact area)",
+        "type": "text"
+      },
+      {
+        "key": "hwType",
+        "label": "Hot Works Type",
+        "type": "select",
+        "options": [
+          "Welding",
+          "Cutting",
+          "Grinding",
+          "Soldering/Brazing",
+          "Roofing Torch",
+          "Other"
+        ]
+      },
+      {
+        "key": "contractor",
+        "label": "Contractor",
+        "type": "text"
+      },
+      {
+        "key": "holder",
+        "label": "Permit Holder",
+        "type": "text"
+      },
+      {
+        "key": "fireWatcher",
+        "label": "Fire Watcher",
+        "type": "text"
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      },
+      {
+        "key": "fai",
+        "label": "Fire Alarm Isolation?",
+        "type": "select",
+        "options": [
+          "no",
+          "yes"
+        ]
+      },
+      {
+        "key": "faiDetails",
+        "label": "Isolation Details",
+        "type": "text"
+      },
+      {
+        "key": "description",
+        "label": "Work Description",
+        "type": "textarea"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-WORK CONTROLS",
+      "items": [
+        "Area cleared of combustibles within min. 10m (incl. above/below/adjacent levels)",
+        "Floors/walls/voids protected: non-combustible screens/blankets/spark containment",
+        "Flammable liquids/pressurised containers removed from area"
+      ]
+    },
+    {
+      "title": "DURING WORK CONTROLS",
+      "items": [
+        "Continuous fire watch maintained for duration of hot works",
+        "Sparks and heat migration monitored"
+      ]
+    },
+    {
+      "title": "POST-WORK & FIRE WATCH",
+      "items": [
+        "Immediate area inspected on completion; no smouldering",
+        "Re-check at 60 minutes completed and recorded"
+      ]
+    },
+    {
+      "title": "REINSTATEMENT / CLOSE-OUT",
+      "items": [
+        "Fire alarm reinstated and tested",
+        "Permit closed by issuer and acknowledged by permit holder"
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_issue",
+    "holder_return",
+    "issuer_return"
+  ]
+}

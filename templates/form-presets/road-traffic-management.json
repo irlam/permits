@@ -1,0 +1,13 @@
+{
+  "name": "Road/Traffic Management Permit",
+  "description": "Permit for road or traffic management activities, ensuring public and worker safety.",
+  "fields": [
+    { "label": "Location/Area", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Purpose of Management", "type": "textarea", "required": true },
+    { "label": "Traffic Control Plan Reference", "type": "text", "required": false },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

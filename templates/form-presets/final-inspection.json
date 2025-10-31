@@ -1,0 +1,13 @@
+{
+  "name": "Final Inspection Permit",
+  "description": "Permit for final inspections to ensure a property is ready for occupancy and meets all requirements.",
+  "fields": [
+    { "label": "Property/Area", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Inspector Name", "type": "text", "required": true },
+    { "label": "Inspection Checklist", "type": "textarea", "required": true },
+    { "label": "Deficiencies Noted", "type": "textarea", "required": false },
+    { "label": "Sign-off Authority", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

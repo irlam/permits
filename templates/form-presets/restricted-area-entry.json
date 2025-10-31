@@ -1,0 +1,12 @@
+{
+  "name": "Restricted Area Entry Permit",
+  "description": "Permit for entry into restricted or controlled areas, ensuring authorization and safety compliance.",
+  "fields": [
+    { "label": "Area", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Purpose of Entry", "type": "textarea", "required": true },
+    { "label": "Personnel Authorized", "type": "text", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Temporary Works Permit",
+  "description": "Permit for temporary works such as shoring, formwork, or falsework, ensuring design and safety compliance.",
+  "fields": [
+    { "label": "Location/Area", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Type of Temporary Works", "type": "text", "required": true },
+    { "label": "Design Reference", "type": "text", "required": false },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}
