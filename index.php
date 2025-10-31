@@ -16,7 +16,9 @@ if (function_exists('check_and_expire_permits')) {
 }
 
 // Session for login state
-session_start();
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 $isLoggedIn = isset($_SESSION['user_id']);
 $currentUser = null;
 if ($isLoggedIn) {

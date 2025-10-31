@@ -15,12 +15,6 @@ use Permits\Db;
  */
 function startSession() {
     if (session_status() === PHP_SESSION_NONE) {
-        // Secure session settings
-        ini_set('session.cookie_httponly', 1);
-        ini_set('session.use_only_cookies', 1);
-        ini_set('session.cookie_secure', 1); // HTTPS only
-        ini_set('session.cookie_samesite', 'Lax');
-        
         session_start();
     }
 }
