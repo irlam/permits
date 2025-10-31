@@ -357,6 +357,22 @@ ALTER TABLE `forms`
 --
 ALTER TABLE `form_events`
   ADD CONSTRAINT `fk_events_form` FOREIGN KEY (`form_id`) REFERENCES `forms` (`id`);
+
+-- --------------------------------------------------------
+
+--
+-- Seed data: default administrator account
+--
+
+INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `created_at`)
+VALUES
+  ('11111111-1111-1111-1111-111111111111', 'admin@example.com', '$2y$12$4b8QG0yXl8k5ZfB5l1yJ2e9twDaV6nQGJbXlIqGn/0mZy6D4nMG1q', 'System Administrator', 'admin', 'active', NOW())
+ON DUPLICATE KEY UPDATE
+  `email` = VALUES(`email`),
+  `password_hash` = VALUES(`password_hash`),
+  `name` = VALUES(`name`),
+  `role` = VALUES(`role`),
+  `status` = VALUES(`status`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

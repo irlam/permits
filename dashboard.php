@@ -9,9 +9,7 @@
  * 
  * Features:
  * - Metrics cards (total, pending, active, expired)
- * - Quick permit creation
- * - Recent permits display
- * - Template list
+ * - Recent permits display with filtering
  */
 
 // Load bootstrap
@@ -97,24 +95,6 @@ $statusLabelMap = [
 $permitsLimit = $statusFilter === '' ? 10 : 50;
 $permitsListTitle = $statusLabelMap[$statusFilter] ?? 'Permits';
 $filterActive = $statusFilter !== '';
-
-// Get templates
-try {
-    $templates = $db->pdo->query("
-        SELECT * FROM form_templates 
-        WHERE active = 1 
-        ORDER BY name ASC
-    ")->fetchAll();
-} catch (PDOException $e) {
-    try {
-        $templates = $db->pdo->query("
-            SELECT * FROM form_templates 
-            ORDER BY name ASC
-        ")->fetchAll();
-    } catch (Exception $e2) {
-        $templates = [];
-    }
-}
 
 // Fetch permits for the current filter selection
 $permitsList = [];
@@ -240,40 +220,6 @@ function getStatusBadge($status) {
             </a>
         </section>
         
-        <section class="surface-card">
-            <div class="card-header">
-                <h3>📋 Create New Permit</h3>
-            </div>
-            <p>Select a permit type to get started. No login required!</p>
-
-            <?php if (empty($templates)): ?>
-                <div class="empty-state">
-                    <div class="empty-state-icon">📭</div>
-                    <p>No permit templates available yet</p>
-                </div>
-            <?php else: ?>
-                <div class="admin-grid">
-                    <?php
-                    $icons = [
-                        'Hot Works Permit' => '🔥',
-                        'Permit to Dig' => '⛏️',
-                        'Work at Height Permit' => '🪜',
-                        'Confined Space Permit' => '🚪',
-                        'Electrical Work Permit' => '⚡'
-                    ];
-
-                    foreach ($templates as $template):
-                        $icon = $icons[$template['name']] ?? '📋';
-                    ?>
-                        <a href="<?php echo htmlspecialchars($app->url('create-permit-public.php?template=' . urlencode((string)$template['id']))); ?>" class="template-card">
-                            <div class="icon"><?php echo $icon; ?></div>
-                            <div class="name"><?php echo htmlspecialchars($template['name']); ?></div>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </section>
-
         <?php if ($isLoggedIn): ?>
             <section class="surface-card">
                 <div class="card-header">
@@ -340,82 +286,6 @@ function getStatusBadge($status) {
                 </div>
                 <p>Login to filter, browse, and manage permits from the dashboard.</p>
                 <a href="<?php echo htmlspecialchars($app->url('login.php')); ?>" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
-                    🔐 Go to Login
-                </a>
-            </section>
-        <?php endif; ?>
-
-        <div style="text-align: center; color: #94a3b8; margin-top: 32px; opacity: 0.8;">
-            <p>© 2025 Permit System • Secure & Efficient Permit Management</p>
-        </div>
-    </main>
-</body>        <!-- Permits Listing -->
-        <?php if ($isLoggedIn): ?>
-            <div class="card">
-                <div class="card-title">
-                    <span style="display:flex; align-items:center; gap:8px;">
-                        📜
-                        <span class="filter-pill"><?php echo htmlspecialchars($permitsListTitle); ?></span>
-                        <span class="filter-count">(<?php echo count($permitsList); ?>)</span>
-                    </span>
-                    <?php if ($filterActive): ?>
-                        <a href="/dashboard.php" class="btn btn-secondary" style="margin-left:auto; padding: 8px 14px; font-size: 12px;">
-                            ✖ Clear Filter
-                        </a>
-                    <?php endif; ?>
-                </div>
-
-                <?php if (empty($permitsList)): ?>
-                    <div class="empty-state">
-                        <div class="empty-state-icon">�️</div>
-                        <p><?php echo $filterActive ? 'No permits match this status yet.' : 'No recent permits to display just yet.'; ?></p>
-                    </div>
-                <?php else: ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Reference</th>
-                                <th>Type</th>
-                                <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
-                                    <th>Holder</th>
-                                <?php endif; ?>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($permitsList as $permit): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($permit['ref_number'] ?? 'N/A'); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($permit['template_name']); ?></td>
-                                    <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
-                                        <td><?php echo htmlspecialchars($permit['holder_name'] ?? $permit['holder_email'] ?? 'Unknown'); ?></td>
-                                    <?php endif; ?>
-                                    <td><?php echo getStatusBadge($permit['status']); ?></td>
-                                    <td><?php echo isset($permit['created_at']) ? date('d/m/Y H:i', strtotime($permit['created_at'])) : 'N/A'; ?></td>
-                                    <td>
-                                        <?php if (!empty($permit['unique_link'])): ?>
-                                            <a href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>"
-                                               class="btn btn-secondary"
-                                               style="padding: 6px 12px; font-size: 12px;">
-                                                👁️ View
-                                            </a>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
-        <?php else: ?>
-            <section class="surface-card">
-                <div class="card-header">
-                    <h3>🔒 Sign in to view permits</h3>
-                </div>
-                <p>Login to filter, browse, and manage permits from the dashboard.</p>
-                <a href="/login.php" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
                     🔐 Go to Login
                 </a>
             </section>
