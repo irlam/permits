@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permit System - Create & Track Work Permits</title>
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="description" content="Create permits instantly, notify reviewers, and track status in real time.">
+    <link rel="manifest" href="https://permits.defecttracker.uk/manifest.webmanifest?v=1761480261">
+    <link rel="apple-touch-icon" href="https://permits.defecttracker.uk/icon-192.png?v=1761504171">
+    <link rel="stylesheet" href="https://permits.defecttracker.uk/assets/app.css?v=1761858850">
+</head>
+<body class="theme-dark">
+    <div class="page-shell">
+        <header class="hero-banner">
+            <div class="hero-banner__body">
+                <span class="hero-kicker">Safety, streamlined</span>
+                <h1>Permit System</h1>
+                <p class="hero-lead">Lightning-fast permit creation, manager approvals, and live status tracking — available to every crew member on any device.</p>
+                <div class="hero-actions">
+                    <button type="button" class="btn btn-accent" id="openPermitPicker" aria-haspopup="dialog" aria-expanded="false">Browse Permit Templates</button>
+                    <a href="#status-checker" class="btn btn-ghost">Check Status</a>
+                </div>
+                <div class="hero-actions hero-actions--secondary">
+                                            <button id="installButton" class="btn btn-secondary">Install App</button>
+                        <a href="https://permits.defecttracker.uk/login.php" class="btn btn-secondary">Manager Login</a>
+                                    </div>
+            </div>
+            <ul class="hero-stats">
+                <li class="hero-stat">
+                    <span class="hero-stat__label">Active permits</span>
+                    <span class="hero-stat__value">7</span>
+                    <span class="hero-stat__delta">Across 19 total permits</span>
+                </li>
+                <li class="hero-stat">
+                    <span class="hero-stat__label">Awaiting approval</span>
+                    <span class="hero-stat__value">7</span>
+                    <span class="hero-stat__delta">Managers notified instantly</span>
+                </li>
+                <li class="hero-stat">
+                    <span class="hero-stat__label">Templates ready</span>
+                    <span class="hero-stat__value">13</span>
+                    <span class="hero-stat__delta">Customise for every site</span>
+                </li>
+            </ul>
+        </header>
+
+        <main class="content-grid">
+            <section class="panel" id="status-checker">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Live lookup</span>
+                    <h2>Check your permit status</h2>
+                    <p class="panel__lead">Enter the email used on your permit application to view recent activity and download documents.</p>
+                </div>
+                <div class="panel__body">
+                    <form action="https://permits.defecttracker.uk/" method="GET" class="status-form">
+                        <input type="email" name="check_email" placeholder="you@company.com" value="" required>
+                        <button type="submit" class="btn btn-accent">Check Status</button>
+                    </form>
+
+                                    </div>
+            </section>
+
+            <section class="panel" id="approved-permits">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Fresh off the press</span>
+                    <h2>Recently approved</h2>
+                </div>
+                <div class="panel__body">
+                                            <div class="card-carousel">
+                                                            <article class="recent-card">
+                                    <header class="recent-card__header">
+                                        <div>
+                                            <span class="recent-card__title">Permit to Dig</span>
+                                            <span class="recent-card__meta">Ref #PTW-2025-6142</span>
+                                        </div>
+                                        <span class="badge badge-success">✅ Active</span>                                    </header>
+                                                                            <p class="recent-card__line"><strong>Permit holder:</strong> chris irlam</p>
+                                                                        <p class="recent-card__line"><strong>Approved:</strong> 29/10/2025 11:20</p>
+                                                                        <div class="recent-card__actions">
+                                        <a class="btn btn-secondary" href="https://permits.defecttracker.uk/view-permit-public.php?link=d3f92e401b746b2418505627e782ed60">View</a>
+                                        <a class="btn btn-ghost" href="https://permits.defecttracker.uk/view-permit-public.php?link=d3f92e401b746b2418505627e782ed60&amp;print=1">Print</a>
+                                        <a class="btn btn-ghost" href="https://permits.defecttracker.uk/create-permit-public.php?reopen=9dc0145e-a6bf-46b2-9342-07c1dc4b2000">Reopen</a>
+                                    </div>
+                                </article>
+                                                            <article class="recent-card">
+                                    <header class="recent-card__header">
+                                        <div>
+                                            <span class="recent-card__title">General Permit to Work</span>
+                                            <span class="recent-card__meta">Ref #PTW-2025-2279</span>
+                                        </div>
+                                        <span class="badge badge-success">✅ Active</span>                                    </header>
+                                                                            <p class="recent-card__line"><strong>Permit holder:</strong> chris irlam</p>
+                                                                        <p class="recent-card__line"><strong>Approved:</strong> 28/10/2025 23:17</p>
+                                                                        <div class="recent-card__actions">
+                                        <a class="btn btn-secondary" href="https://permits.defecttracker.uk/view-permit-public.php?link=341b2f81c84993852968fbdc2ea1feac">View</a>
+                                        <a class="btn btn-ghost" href="https://permits.defecttracker.uk/view-permit-public.php?link=341b2f81c84993852968fbdc2ea1feac&amp;print=1">Print</a>
+                                        <a class="btn btn-ghost" href="https://permits.defecttracker.uk/create-permit-public.php?reopen=c2051078-65ca-4e92-8ab4-89431ba19cd0">Reopen</a>
+                                    </div>
+                                </article>
+                                                            <article class="recent-card">
+                                    <header class="recent-card__header">
+                                        <div>
+                                            <span class="recent-card__title">Permit to Dig</span>
+                                            <span class="recent-card__meta">Ref #PTW-2025-2680</span>
+                                        </div>
+                                        <span class="badge badge-success">✅ Active</span>                                    </header>
+                                                                            <p class="recent-card__line"><strong>Permit holder:</strong> chris irlam</p>
+                                                                        <p class="recent-card__line"><strong>Approved:</strong> 25/10/2025 11:53</p>
+                                                                        <div class="recent-card__actions">
+                                        <a class="btn btn-secondary" href="https://permits.defecttracker.uk/view-permit-public.php?link=cf3a4b5381b45f6e6f1b599391c2f155">View</a>
+                                        <a class="btn btn-ghost" href="https://permits.defecttracker.uk/view-permit-public.php?link=cf3a4b5381b45f6e6f1b599391c2f155&amp;print=1">Print</a>
+                                        <a class="btn btn-ghost" href="https://permits.defecttracker.uk/create-permit-public.php?reopen=ce1ae5ee-2a96-4eb5-a12e-3b505dd7640a">Reopen</a>
+                                    </div>
+                                </article>
+                                                    </div>
+                                    </div>
+            </section>
+
+            <section class="panel" id="templates">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Get started</span>
+                    <h2>Create a new permit</h2>
+                    <p class="panel__lead">Pick a template and capture the right safety details in seconds.</p>
+                </div>
+                <div class="panel__body">
+                                            <div class="template-gallery">
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=confined-space-v1">
+                                    <span class="template-tile__icon">🕳️</span>
+                                    <span class="template-tile__name">Confined Space Entry Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=electrical-isolation-v1">
+                                    <span class="template-tile__icon">📄</span>
+                                    <span class="template-tile__name">Electrical Isolation &amp; Energisation Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=environmental-control-v1">
+                                    <span class="template-tile__icon">🌳</span>
+                                    <span class="template-tile__name">Environmental Protection Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=general-ptw-v1">
+                                    <span class="template-tile__icon">📄</span>
+                                    <span class="template-tile__name">General Permit to Work</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=hazardous-substances-v1">
+                                    <span class="template-tile__icon">☣️</span>
+                                    <span class="template-tile__name">Hazardous Substances Handling Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=hot-works-v1">
+                                    <span class="template-tile__icon">🔥</span>
+                                    <span class="template-tile__name">Hot Works Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=lifting-operations-v1">
+                                    <span class="template-tile__icon">🏗️</span>
+                                    <span class="template-tile__name">Lifting Operations Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=noise-vibration-v1">
+                                    <span class="template-tile__icon">📄</span>
+                                    <span class="template-tile__name">Noise &amp; Vibration Control Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=permit-to-dig-v1">
+                                    <span class="template-tile__icon">⛏️</span>
+                                    <span class="template-tile__name">Permit to Dig</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=roof-access-v1">
+                                    <span class="template-tile__icon">🏠</span>
+                                    <span class="template-tile__name">Roof Access Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=temporary-works-v1">
+                                    <span class="template-tile__icon">🛠️</span>
+                                    <span class="template-tile__name">Temporary Works Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=traffic-management-v1">
+                                    <span class="template-tile__icon">🚦</span>
+                                    <span class="template-tile__name">Traffic Management Interface Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                            <a class="template-tile" href="https://permits.defecttracker.uk/create-permit-public.php?template=work-at-height-v1">
+                                    <span class="template-tile__icon">🪜</span>
+                                    <span class="template-tile__name">Work at Height Permit</span>
+                                    <span class="template-tile__meta">Version 1</span>
+                                    <span class="template-tile__cta">Start permit →</span>
+                                </a>
+                                                    </div>
+                                    </div>
+            </section>
+
+            <section class="panel panel--info">
+                <div class="panel__header">
+                    <span class="panel__eyebrow">Why teams love it</span>
+                    <h2>Built for everyday permit workflows</h2>
+                </div>
+                <div class="panel__body panel__body--grid">
+                    <div class="info-card">
+                        <h3>⚡ Rapid submissions</h3>
+                        <p>Kick off jobs in under a minute with reusable templates designed for your site.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>🔔 Smart notifications</h3>
+                        <p>Supervisors and managers receive instant alerts, keeping approvals moving forward.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>📱 Works everywhere</h3>
+                        <p>Optimised for desktop, tablet, and mobile so teams can stay focused on the work.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="page-footer">
+            <p class="page-footer__note">© 2025 Permit System — Empowering safe, compliant work every day.</p>
+        </footer>
+    </div>
+
+    <div class="permit-modal" id="permitModal" data-open="0" aria-hidden="true" hidden>
+        <div class="permit-modal__backdrop" data-dismiss></div>
+        <div class="permit-modal__dialog" role="dialog" aria-label="Choose a permit type" tabindex="-1">
+            <header class="permit-modal__header">
+                <div>
+                    <span class="permit-modal__eyebrow">Quick start</span>
+                    <h3>Choose a permit type</h3>
+                </div>
+                <button type="button" class="permit-modal__close btn btn-ghost" data-dismiss aria-label="Close permit picker">Close ×</button>
+            </header>
+            <div class="permit-modal__body">
+                                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=confined-space-v1">
+                            <span class="permit-modal__icon">🕳️</span>
+                            <span class="name">Confined Space Entry Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=electrical-isolation-v1">
+                            <span class="permit-modal__icon">📄</span>
+                            <span class="name">Electrical Isolation &amp; Energisation Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=environmental-control-v1">
+                            <span class="permit-modal__icon">🌳</span>
+                            <span class="name">Environmental Protection Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=general-ptw-v1">
+                            <span class="permit-modal__icon">📄</span>
+                            <span class="name">General Permit to Work</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=hazardous-substances-v1">
+                            <span class="permit-modal__icon">☣️</span>
+                            <span class="name">Hazardous Substances Handling Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=hot-works-v1">
+                            <span class="permit-modal__icon">🔥</span>
+                            <span class="name">Hot Works Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=lifting-operations-v1">
+                            <span class="permit-modal__icon">🏗️</span>
+                            <span class="name">Lifting Operations Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=noise-vibration-v1">
+                            <span class="permit-modal__icon">📄</span>
+                            <span class="name">Noise &amp; Vibration Control Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=permit-to-dig-v1">
+                            <span class="permit-modal__icon">⛏️</span>
+                            <span class="name">Permit to Dig</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=roof-access-v1">
+                            <span class="permit-modal__icon">🏠</span>
+                            <span class="name">Roof Access Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=temporary-works-v1">
+                            <span class="permit-modal__icon">🛠️</span>
+                            <span class="name">Temporary Works Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=traffic-management-v1">
+                            <span class="permit-modal__icon">🚦</span>
+                            <span class="name">Traffic Management Interface Permit</span>
+                        </a>
+                                            <a class="permit-modal__link" href="https://permits.defecttracker.uk/create-permit-public.php?template=work-at-height-v1">
+                            <span class="permit-modal__icon">🪜</span>
+                            <span class="name">Work at Height Permit</span>
+                        </a>
+                                                </div>
+        </div>
+    </div>
+
+    <script src="https://permits.defecttracker.uk/assets/app.js?v=1761579431"></script>
+    <script>
+        (function() {
+            var trigger = document.getElementById('openPermitPicker');
+            var modal = document.getElementById('permitModal');
+            if (!trigger || !modal) return;
+
+            var dialog = modal.querySelector('.permit-modal__dialog');
+            var dismissEls = modal.querySelectorAll('[data-dismiss]');
+            var active = false;
+            var hideTimer = null;
+
+            function openModal(e) {
+                if (e) e.preventDefault();
+                if (active) {
+                    closeModal();
+                    return;
+                }
+                if (hideTimer) {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                }
+                active = true;
+                modal.removeAttribute('hidden');
+                modal.setAttribute('data-open', '1');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+                trigger.setAttribute('aria-expanded', 'true');
+                setTimeout(function() {
+                    if (dialog && dialog.focus) {
+                        dialog.focus({ preventScroll: true });
+                    }
+                }, 0);
+            }
+
+            function closeModal(e) {
+                if (e) e.preventDefault();
+                if (!active) return;
+                active = false;
+                modal.setAttribute('data-open', '0');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                trigger.setAttribute('aria-expanded', 'false');
+                if (document.activeElement && document.activeElement !== trigger) {
+                    trigger.focus({ preventScroll: true });
+                }
+                hideTimer = setTimeout(function() {
+                    modal.setAttribute('hidden', '');
+                }, 280);
+            }
+
+            trigger.addEventListener('click', openModal);
+            dismissEls.forEach(function(el) {
+                el.addEventListener('click', closeModal);
+            });
+            modal.addEventListener('click', function(ev) {
+                if (ev.target === modal) {
+                    closeModal(ev);
+                }
+            });
+            document.addEventListener('keydown', function(ev) {
+                if (active && ev.key === 'Escape') {
+                    closeModal(ev);
+                }
+            });
+        })();
+
+        (function() {
+            function updateCarousels() {
+                document.querySelectorAll('.card-carousel').forEach(function(track) {
+                    var overflowing = track.scrollWidth > track.clientWidth + 1;
+                    track.setAttribute('data-overflow', overflowing ? '1' : '0');
+                });
+            }
+
+            if (window.ResizeObserver) {
+                var observer = new ResizeObserver(updateCarousels);
+                window.addEventListener('load', function() {
+                    document.querySelectorAll('.card-carousel').forEach(function(track) {
+                        observer.observe(track);
+                    });
+                    updateCarousels();
+                });
+            } else {
+                window.addEventListener('load', updateCarousels);
+            }
+
+            window.addEventListener('resize', updateCarousels);
+        })();
+    </script>
+</body>
+</html>
