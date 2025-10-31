@@ -1,10 +1,14 @@
 # --- Core: enable rewriting ---
 RewriteEngine On
 
+
 # 1) Serve existing files/directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
+
+# 1b) Allow direct access to admin PHP files
+RewriteRule ^admin/([a-zA-Z0-9_-]+)\.php$ /admin/$1.php [L]
 
 # 2) Front controller: send everything else to index.php
 RewriteRule ^ index.php [QSA,L]
