@@ -1,4 +1,6 @@
 {
+  "id": "excavation-v1",
+  "title": "Excavation Permit",
   "name": "Excavation Permit",
   "description": "Permit for excavation work, ensuring all underground hazards and safety measures are addressed.",
   "fields": [
