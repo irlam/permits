@@ -131,6 +131,21 @@ try {
                 <a href="/admin-permit-durations.php" class="btn">Manage Durations</a>
             </div>
 
+                        <!-- OpenAI API Key Settings -->
+                        <div class="admin-card">
+                                <div class="icon">🤖</div>
+                                <h3>OpenAI API Key</h3>
+                                <p>Set or update the OpenAI API key for AI-powered field extraction and advanced features. Only visible to admins.<br><br>
+                                <strong>Required for:</strong>
+                                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
+                                    <li>AI field mapping</li>
+                                    <li>Template auto-extraction</li>
+                                    <li>Future: AI-powered automations</li>
+                                </ul>
+                                </p>
+                                <a href="/admin/admin-openai-settings.php" class="btn">OpenAI Settings</a>
+                        </div>
+
             <!-- User Management -->
             <div class="admin-card">
                 <div class="icon">👥</div>
