@@ -8,6 +8,13 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 session_start();
+// DEBUG: Output session info for troubleshooting
+if (isset($_GET['debug'])) {
+    echo '<pre style="background:#222;color:#fff;padding:12px;">';
+    echo 'Session ID: ' . session_id() . "\n";
+    echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
+    echo '</pre>';
+}
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login.php');
     exit;
