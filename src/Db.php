@@ -105,7 +105,48 @@ final class Db
     {
         // Default to /data/permits.sqlite under project root if not provided
         $defaultPath = \realpath(__DIR__ . '/..') . '/data/permits.sqlite';
-        $path = (string)($_ENV['DB_SQLITE_PATH'] ?? $defaultPath);
+        $configuredPath = trim((string)($_ENV['DB_SQLITE_PATH'] ?? ''));
+        $path = $configuredPath !== '' ? $configuredPath : $defaultPath;
+
+        $openBaseDir = \ini_get('open_basedir');
+        if ($openBaseDir !== false && $openBaseDir !== '') {
+            $allowedRoots = array_filter(array_map('trim', preg_split('#[:;]+#', $openBaseDir)));
+            if (!empty($allowedRoots)) {
+                $normalize = static function (string $input): ?string {
+                    if ($input === '') {
+                        return null;
+                    }
+                    $real = \realpath($input);
+                    if ($real !== false) {
+                        return rtrim(str_replace('\\', '/', $real), '/') . '/';
+                    }
+                    $input = str_replace('\\', '/', $input);
+                    if ($input === '' || $input[0] !== '/') {
+                        return null;
+                    }
+                    return rtrim($input, '/') . '/';
+                };
+
+                $targetDir = $normalize(\dirname($path));
+                $isAllowed = false;
+                if ($targetDir !== null) {
+                    foreach ($allowedRoots as $root) {
+                        $normalizedRoot = $normalize($root);
+                        if ($normalizedRoot === null) {
+                            continue;
+                        }
+                        if (str_starts_with($targetDir, $normalizedRoot)) {
+                            $isAllowed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!$isAllowed) {
+                    $path = $defaultPath;
+                }
+            }
+        }
 
         $dir = \dirname($path);
 
