@@ -1,0 +1,13 @@
+{
+  "name": "General Work Permit",
+  "description": "Permit for general work activities, ensuring all necessary safety checks are completed.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Work Description", "type": "textarea", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "PPE Required", "type": "textarea", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Vehicle/Equipment Access Permit",
+  "description": "Permit for vehicle or equipment access to controlled areas, ensuring safety and authorization.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Vehicle/Equipment Type", "type": "text", "required": true },
+    { "label": "Operator Name", "type": "text", "required": true },
+    { "label": "Purpose of Access", "type": "textarea", "required": true },
+    { "label": "Access Time", "type": "time", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

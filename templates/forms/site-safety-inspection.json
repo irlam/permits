@@ -1,0 +1,13 @@
+{
+  "name": "Site Safety Inspection Permit",
+  "description": "Permit for conducting site safety inspections to proactively identify and address hazards.",
+  "fields": [
+    { "label": "Inspection Area", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Inspector Name", "type": "text", "required": true },
+    { "label": "Hazards Identified", "type": "textarea", "required": true },
+    { "label": "Corrective Actions Required", "type": "textarea", "required": false },
+    { "label": "Supervisor", "type": "text", "required": false },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

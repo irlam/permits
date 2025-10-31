@@ -1,0 +1,14 @@
+{
+  "name": "Roof Work Permit",
+  "description": "Permit for roof work, ensuring all safety protocols and fall protection measures are in place.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Work Description", "type": "textarea", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Fall Protection Measures", "type": "textarea", "required": true },
+    { "label": "Weather Conditions", "type": "text", "required": false },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

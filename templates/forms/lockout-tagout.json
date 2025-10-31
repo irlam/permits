@@ -1,0 +1,15 @@
+{
+  "name": "Lockout/Tagout Permit",
+  "description": "Permit for lockout/tagout procedures to ensure equipment is safely isolated before maintenance or repair.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Equipment Description", "type": "text", "required": true },
+    { "label": "Work Description", "type": "textarea", "required": true },
+    { "label": "Isolation Points", "type": "textarea", "required": true },
+    { "label": "Lockout/Tagout Devices Applied", "type": "checkbox", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

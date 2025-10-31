@@ -1,0 +1,15 @@
+{
+  "name": "Working at Heights Permit",
+  "description": "Permit for work performed at heights, ensuring fall protection and safety measures are in place.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Work Description", "type": "textarea", "required": true },
+    { "label": "Height (meters)", "type": "number", "required": true },
+    { "label": "Personnel Involved", "type": "text", "required": true },
+    { "label": "Fall Protection Equipment", "type": "textarea", "required": true },
+    { "label": "Weather Conditions", "type": "text", "required": false },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}

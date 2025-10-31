@@ -1,0 +1,17 @@
+{
+  "name": "Confined Space Entry Permit",
+  "description": "Permit for entry into confined spaces, ensuring all safety protocols are met.",
+  "fields": [
+    { "label": "Location", "type": "text", "required": true },
+    { "label": "Date", "type": "date", "required": true },
+    { "label": "Time In", "type": "time", "required": true },
+    { "label": "Time Out", "type": "time", "required": false },
+    { "label": "Entrant(s)", "type": "text", "required": true },
+    { "label": "Attendant(s)", "type": "text", "required": true },
+    { "label": "Supervisor", "type": "text", "required": true },
+    { "label": "Atmospheric Testing Results", "type": "textarea", "required": true },
+    { "label": "PPE Required", "type": "textarea", "required": true },
+    { "label": "Rescue Plan", "type": "textarea", "required": true },
+    { "label": "Signatures", "type": "signature", "required": true }
+  ]
+}
