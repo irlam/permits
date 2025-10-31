@@ -1,4 +1,6 @@
 {
+  "id": "temporary-works-v1",
+  "title": "Temporary Works Permit",
   "name": "Temporary Works Permit",
   "description": "Permit for temporary works such as shoring, formwork, or falsework, ensuring design and safety compliance.",
   "fields": [

@@ -1,4 +1,6 @@
 {
+  "id": "water-discharge-environmental-v1",
+  "title": "Water Discharge/Environmental Permit",
   "name": "Water Discharge/Environmental Permit",
   "description": "Permit for water discharge or other environmental activities, ensuring compliance with environmental regulations.",
   "fields": [

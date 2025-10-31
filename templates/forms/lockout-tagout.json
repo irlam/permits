@@ -1,4 +1,6 @@
 {
+  "id": "lockout-tagout-v1",
+  "title": "Lockout/Tagout Permit",
   "name": "Lockout/Tagout Permit",
   "description": "Permit for lockout/tagout procedures to ensure equipment is safely isolated before maintenance or repair.",
   "fields": [

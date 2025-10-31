@@ -1,4 +1,6 @@
 {
+  "id": "demolition-v1",
+  "title": "Demolition Permit",
   "name": "Demolition Permit",
   "description": "Permit for demolition activities, ensuring all safety, environmental, and regulatory requirements are met.",
   "fields": [

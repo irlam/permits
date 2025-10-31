@@ -1,4 +1,6 @@
 {
+  "id": "general-work-v1",
+  "title": "General Work Permit",
   "name": "General Work Permit",
   "description": "Permit for general work activities, ensuring all necessary safety checks are completed.",
   "fields": [

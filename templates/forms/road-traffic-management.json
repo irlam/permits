@@ -1,4 +1,6 @@
 {
+  "id": "road-traffic-management-v1",
+  "title": "Road/Traffic Management Permit",
   "name": "Road/Traffic Management Permit",
   "description": "Permit for road or traffic management activities, ensuring public and worker safety.",
   "fields": [

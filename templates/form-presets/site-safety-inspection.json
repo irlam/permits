@@ -1,4 +1,6 @@
 {
+  "id": "site-safety-inspection-v1",
+  "title": "Site Safety Inspection Permit",
   "name": "Site Safety Inspection Permit",
   "description": "Permit for conducting site safety inspections to proactively identify and address hazards.",
   "fields": [

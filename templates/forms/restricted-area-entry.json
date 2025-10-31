@@ -1,4 +1,6 @@
 {
+  "id": "restricted-area-entry-v1",
+  "title": "Restricted Area Entry Permit",
   "name": "Restricted Area Entry Permit",
   "description": "Permit for entry into restricted or controlled areas, ensuring authorization and safety compliance.",
   "fields": [

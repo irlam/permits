@@ -1,4 +1,6 @@
 {
+  "id": "hazardous-materials-v1",
+  "title": "Hazardous Materials Handling Permit",
   "name": "Hazardous Materials Handling Permit",
   "description": "Permit for handling, storage, or transport of hazardous materials on site.",
   "fields": [

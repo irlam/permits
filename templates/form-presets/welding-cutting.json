@@ -1,4 +1,6 @@
 {
+  "id": "welding-cutting-v1",
+  "title": "Welding/Cutting Permit",
   "name": "Welding/Cutting Permit",
   "description": "Permit for welding or cutting operations, ensuring fire safety and hazard controls are in place.",
   "fields": [

@@ -1,4 +1,6 @@
 {
+  "id": "scaffolding-v1",
+  "title": "Scaffolding Permit",
   "name": "Scaffolding Permit",
   "description": "Permit for erection, modification, or dismantling of scaffolding, ensuring safety and compliance.",
   "fields": [

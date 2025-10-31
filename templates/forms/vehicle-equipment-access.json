@@ -1,4 +1,6 @@
 {
+  "id": "vehicle-equipment-access-v1",
+  "title": "Vehicle/Equipment Access Permit",
   "name": "Vehicle/Equipment Access Permit",
   "description": "Permit for vehicle or equipment access to controlled areas, ensuring safety and authorization.",
   "fields": [
