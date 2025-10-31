@@ -1,0 +1,2 @@
+This is a static test file for admin directory access.
+If you can read this, static files are accessible in /admin/.
