@@ -24,8 +24,10 @@ if (function_exists('maybe_check_and_expire_permits')) {
     check_and_expire_permits($db);
 }
 
-// Start session
-session_start();
+// Start session if not already active
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
 // Check if user is logged in
 $isLoggedIn = isset($_SESSION['user_id']);
