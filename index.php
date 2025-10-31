@@ -7,6 +7,9 @@
  * Created: 30/10/2025
  */
 
+use Permits\DatabaseMaintenance;
+use Permits\FormTemplateSeeder;
+
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
 // Opportunistic expiry sweep
@@ -40,6 +43,31 @@ try {
     error_log('Error fetching templates: ' . $e->getMessage());
 }
 
+if (empty($templates)) {
+    try {
+        $columns = DatabaseMaintenance::ensureFormTemplateColumns($db);
+        if (!empty($columns['errors'])) {
+            foreach ($columns['errors'] as $error) {
+                error_log('Template column check error: ' . $error);
+            }
+        }
+
+        $seedResult = FormTemplateSeeder::importFromDirectory($db, $root . '/templates/form-presets');
+        if (!empty($seedResult['imported'])) {
+            $templatesStmt = $db->pdo->query('SELECT id, name, version, created_at FROM form_templates ORDER BY name ASC');
+            $templates = $templatesStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        if (!empty($seedResult['errors'])) {
+            foreach ($seedResult['errors'] as $error) {
+                error_log('Template seed error: ' . $error);
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Template auto-import failed: ' . $e->getMessage());
+    }
+}
+
 // Platform stats
 $systemStats = [
     'total' => 0,
@@ -51,13 +79,15 @@ $systemStats = [
 try {
     $statsStmt = $db->pdo->query('SELECT status, COUNT(*) AS total FROM forms GROUP BY status');
     $rows = $statsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $activeStatuses = ['active', 'issued', 'approved'];
+    $awaitingStatuses = ['pending', 'pending_approval', 'awaiting', 'awaiting_approval', 'submitted'];
     foreach ($rows as $row) {
-        $status = $row['status'] ?? '';
+        $status = strtolower((string)($row['status'] ?? ''));
         $count = (int)($row['total'] ?? 0);
         $systemStats['total'] += $count;
-        if ($status === 'active') {
+        if (in_array($status, $activeStatuses, true)) {
             $systemStats['active'] = $count;
-        } elseif (in_array($status, ['pending', 'pending_approval'], true)) {
+        } elseif (in_array($status, $awaitingStatuses, true)) {
             $systemStats['awaiting'] += $count;
         }
     }
@@ -68,9 +98,9 @@ try {
 // Fetch recently approved permits (last 3)
 try {
     $sql = "SELECT f.ref_number, f.holder_name, f.unique_link, f.valid_to, f.approved_at, f.created_at, ft.name AS template_name, f.id
-            FROM forms f
-            JOIN form_templates ft ON f.template_id = ft.id
-            WHERE f.status = 'active'
+        FROM forms f
+        JOIN form_templates ft ON f.template_id = ft.id
+        WHERE f.status IN ('active', 'issued', 'approved')
             ORDER BY COALESCE(f.approved_at, f.created_at) DESC
             LIMIT 3";
     $approvedStmt = $db->pdo->query($sql);
