@@ -61,6 +61,17 @@ if ($APP_URL === '') {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
     $APP_URL = $scheme . '://' . $host;
+} else {
+    $parsedAppUrl = @parse_url($APP_URL);
+    $currentHost = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? null);
+    if (!empty($currentHost) && is_array($parsedAppUrl)) {
+        $appHost = strtolower((string)($parsedAppUrl['host'] ?? ''));
+        $isLoopback = in_array($appHost, ['127.0.0.1', 'localhost'], true) || str_starts_with($appHost, '127.');
+        if ($isLoopback && strtolower($currentHost) !== $appHost) {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $APP_URL = $scheme . '://' . $currentHost;
+        }
+    }
 }
 $_ENV['APP_URL'] = $APP_URL;
 
