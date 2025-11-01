@@ -241,20 +241,34 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         
         .alert {
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 24px;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .alert-success {
-            background: #064e3b;
+            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
             border: 1px solid #10b981;
             color: #d1fae5;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
         }
         
         .alert-error {
-            background: #7f1d1d;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
             border: 1px solid #ef4444;
             color: #fecaca;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
         }
         
         .card-description {
@@ -270,24 +284,124 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
             margin-top: 4px;
         }
         
-        .info-box {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
+        .card {
+            background: linear-gradient(135deg, #0f172a 0%, #111a2e 100%);
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
         }
         
-        .info-box h4 {
-            color: #e5e7eb;
+        .card:hover {
+            border-color: #334155;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+        
+        .card h2 {
+            color: #f1f5f9;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-group,
+        .field {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label,
+        .field label {
+            display: block;
+            color: #e2e8f0;
+            font-weight: 500;
             margin-bottom: 8px;
             font-size: 14px;
         }
         
+        .form-group input,
+        .form-group select,
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%);
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .form-group input::placeholder,
+        .field input::placeholder {
+            color: #64748b;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            background: linear-gradient(135deg, #082f49 0%, #0c4a6e 100%);
+            box-shadow: 
+                inset 0 2px 4px rgba(0, 0, 0, 0.2),
+                0 0 0 3px rgba(6, 182, 212, 0.1),
+                0 0 0 1px rgba(6, 182, 212, 0.3);
+        }
+        
+        .form-group select,
+        .field select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="%2394a3b8" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 40px;
+        }
+        
+        .form-group select option,
+        .field select option {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 8px;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #0f172a 0%, #111a2e 100%);
+            border: 2px solid #334155;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .info-box:hover {
+            border-color: #475569;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+        
+        .info-box h4 {
+            color: #0ea5e9;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
         .info-box p {
-            color: #94a3b8;
+            color: #cbd5e1;
             font-size: 13px;
-            line-height: 1.6;
+            line-height: 1.7;
+        }
+        
+        .info-box strong {
+            color: #e2e8f0;
+            font-weight: 600;
         }
 
         .logo-preview {
@@ -301,14 +415,44 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         .logo-preview img {
             max-width: 160px;
             max-height: 120px;
-            border-radius: 12px;
-            background: #0a101a;
-            padding: 12px;
-            border: 1px solid #1f2937;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%);
+            padding: 16px;
+            border: 2px solid #334155;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .logo-preview img:hover {
+            border-color: #0ea5e9;
+            box-shadow: 0 6px 16px rgba(6, 182, 212, 0.2);
         }
 
         .remove-logo-btn {
             margin-top: 12px;
+        }
+        
+        input[type="file"]::file-selector-button {
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+            color: #ffffff;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            margin-right: 12px;
+        }
+        
+        input[type="file"]::file-selector-button:hover {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        input[type="file"] {
+            padding: 12px 16px;
         }
     </style>
 </head>
