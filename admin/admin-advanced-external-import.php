@@ -1,3 +1,4 @@
+session_start();
 <?php
 /**
  * Advanced External Template Importer (Admin)
@@ -12,16 +13,20 @@
  * 5. Scheduled sync (future)
  */
 
-require __DIR__ . '/../vendor/autoload.php';
-
-session_start();
-// DEBUG: Output session info for troubleshooting
+// DEBUG: Output session and cookie info for troubleshooting, before any redirect
 if (isset($_GET['debug'])) {
+    session_start();
     echo '<pre style="background:#222;color:#fff;padding:12px;">';
     echo 'Session ID: ' . session_id() . "\n";
     echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
+    echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
     echo '</pre>';
+    exit;
 }
+
+require __DIR__ . '/../vendor/autoload.php';
+
+session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login.php');
     exit;
