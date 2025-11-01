@@ -1,146 +1,160 @@
-# Deployment & Handover Guide
+# Permit System Deployment Guide
 
-This guide walks a non-technical audience through packaging, deploying, and handing over the permit system to a different hosting provider or customer. It also covers optional automation ideas and highlights common pitfalls.
-
----
-
-## 1. What You Need
-
-- **Hosting**: Shared, VPS, or managed PHP hosting that supports
-  - PHP 8.0+ with PDO, OpenSSL, Mbstring, JSON, cURL, Zip
-  - MySQL 8.0+ (or compatible MariaDB)
-  - HTTPS (recommended)
-- **Access tools**
-  - A file manager or SFTP client (FileZilla, Cyberduck, etc.)
-  - phpMyAdmin or MySQL Workbench for database import
-  - Optional: Git / Composer if host allows SSH
-
-> **Tip:** For a non-technical buyer, pick a host with a “1‑click” LAMP stack and phpMyAdmin pre-installed (e.g. SiteGround, Hostinger, DigitalOcean App Platform).
+This version of the guide is written for an end user who just received the project backup (from the new admin → Backup Utility). Follow the steps exactly to get the system running on a fresh server.
 
 ---
 
-## 2. Packaging the Project for Handoff
+## 1. Before You Start
 
-1. **Export the database content**
-   - Open phpMyAdmin on the current server.
-   - Select the `k87747_permits` database (or whatever name you used).
-   - Click **Export → Custom → Format: SQL**, tick "Add DROP TABLE", and download the `.sql` file.
-   - Save it as `database/permits_export_YYYYMMDD.sql` inside the repository before zipping.
-   - Keep the provided patch file `database/k87747_permits_patch.sql.txt` alongside it.
+- **Hosting account** with:
+  - PHP 8.1 or newer (with PDO, cURL, Zip, Mbstring ready out of the box)
+  - MySQL 8 / MariaDB 10.4 or newer
+  - HTTPS enabled for the domain
+- **Tools you’ll use**
+  - Host’s file manager or an SFTP client (FileZilla, Cyberduck)
+  - phpMyAdmin (usually bundled with shared hosting)
+  - A text editor to tweak the `.env` settings (VS Code, Sublime, or even Notepad)
 
-2. **Copy application files**
-   - Make sure `vendor/` is included (Composer dependencies already installed).
-   - Remove any environment-specific secrets (e.g. `.env` with production credentials). Instead, ship a `.env.example` with placeholder values.
-
-3. **Create the delivery bundle**
-   - Zip the entire project directory **after** adding the fresh database export: `permits-full-package-YYYYMMDD.zip`.
-   - Deliver the zip + a copy of this guide to the buyer.
+> **Tip:** If the host offers “Softaculous → File Manager / phpMyAdmin” or similar, that’s enough. SSH access is nice to have but not required.
 
 ---
 
-## 3. Deploying on a New Host (Non-Coder Edition)
+## 2. What You Received
 
-1. **Create an empty database** on the new host (e.g. `permits_live`). Note the hostname, username, password.
-2. **Upload files**
-   - Unzip the package locally.
-   - Use the host’s file manager or SFTP to upload all files into the web root (`public_html/` or similar).
-   - Ensure `uploads/` remains writable (set permissions to 755 or 775 depending on host guidance).
-3. **Import the database**
-   - Open phpMyAdmin on the new host.
-   - Select the empty database and choose **Import**.
-   - Upload `permits_export_YYYYMMDD.sql`.
-   - Once complete, run the patch file (if needed) by importing `database/k87747_permits_patch.sql.txt`.
-4. **Configure environment**
-   - Copy `.env.example` to `.env`.
-   - Edit the following keys with the new values:
-     ```
-     APP_URL="https://your-domain.com"
+After running the admin backup utility you should have a single zip file named like:
+
+```
+permits_backup_2025-11-01_143210.zip
+```
+
+Inside that archive you will find:
+
+- All application files (PHP, templates, assets, vendor dependencies)
+- `database/database.sql` — the SQL dump
+- `MANIFEST.txt` — quick overview of what the backup contains
+- `README.md` — restore checklist
+
+Keep this zip safe; you’ll upload it in the next step.
+
+---
+
+## 3. Deploying to a New Server
+
+1. **Create the database**
+   - In your hosting control panel open MySQL Wizard / Database Manager.
+   - Create a database (e.g. `permits_live`).
+   - Create a database user and assign it **all privileges** to the database.
+   - Note the hostname (often `localhost`), the database name, username, and password.
+
+2. **Upload and extract the backup**
+   - Log into your host’s file manager or connect via SFTP.
+   - Go to the document root (often `public_html` or `www`).
+   - Upload the zip file.
+   - Extract it in place. This will recreate the full folder structure.
+   - Ensure the following folders are writable by the web server: `backups/` and any `uploads/` directory you use. Set permissions to `755` or `775` depending on the host recommendation.
+
+3. **Configure environment variables**
+   - In the extracted files locate `.env` (if it does not exist, copy `.env.example` to `.env`).
+   - Open `.env` in your editor and update these keys:
+
+     ```env
+     APP_URL="https://yourdomain.com"
+     APP_ENV=production
      DB_HOST=localhost
      DB_PORT=3306
      DB_DATABASE=permits_live
-     DB_USERNAME=your_db_user
-     DB_PASSWORD=your_db_password
-     MAIL_* (if using SMTP)
-     PUSH_VAPID_* (if using push notifications)
+     DB_USERNAME=the_user_you_created
+     DB_PASSWORD=the_password_you_created
+
+     MAIL_HOST=smtp.yourmailprovider.com
+     MAIL_PORT=587
+     MAIL_USERNAME=...
+     MAIL_PASSWORD=...
+     MAIL_ENCRYPTION=tls
+     MAIL_FROM_ADDRESS=permits@yourdomain.com
+     MAIL_FROM_NAME="Permit System"
+
+     # Push notifications (optional)
+     VAPID_PUBLIC_KEY=
+     VAPID_PRIVATE_KEY=
+     VAPID_SUBJECT=mailto:you@yourdomain.com
      ```
-   - If the host disables `APP_ENV=development`, set it to `production`.
-5. **Cache & permissions**
-   - If SSH is available, run `php bin/check_env_and_db.php` to verify environment.
-   - Ensure `backups/` and `uploads/` folders are writable.
-6. **Smoke test**
-   - Visit `/login.php` on the new domain.
-   - Log in using an admin account (reset password in the `users` table if needed).
-   - Run through permit creation to confirm email and push settings.
+
+   - Save the file. If the host blocks direct editing, download → edit locally → upload back.
+
+4. **Import the database**
+   - Open phpMyAdmin from the hosting control panel.
+   - Select the database you created.
+   - Click **Import**.
+   - Choose the file `database/database.sql` from the extracted backup on your local machine and upload it.
+   - Wait for the success message (green banner). If the host times out, ask them to increase upload limits or import via SSH (`mysql -u user -p database < database.sql`).
+
+5. **Run the environment check (optional but recommended)**
+   - If SSH is available, run:
+     ```bash
+     php bin/check_env_and_db.php
+     ```
+   - It confirms the database connection and required folders.
+
+6. **Final tidy-up**
+   - Delete the uploaded zip file from the server once everything works.
+   - Point your domain/subdomain to the new host (update DNS A record to the server IP). Allow up to an hour for propagation.
 
 ---
 
-## 4. Optional: One-Click Installer (`installer.php`)
+## 4. First Login & Post-Deployment Tasks
 
-For non-coders, you can include a simple installer script. Recommended approach:
-
-1. Duplicate `installer-sample.php` (create this from the template below) in the project root.
-2. The script should:
-   - Prompt for database credentials and site URL.
-   - Test the connection.
-   - Run the SQL import (or guide the user to do it manually if file uploads are restricted).
-   - Write the `.env` file.
-   - Remove itself once finished for security.
-
-**Sample outline (pseudo-code):**
-
-```php
-<?php
-// installer-sample.php (DO NOT leave in production)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Validate submitted DB credentials
-    // 2. Attempt PDO connection
-    // 3. Run SQL import using exec() or mysqli multi_query
-    // 4. Copy .env.example to .env with submitted values
-    // 5. Provide success message and delete this file
-}
-// Render HTML form with inputs for DB host, name, user, password, app URL
-```
-
-> **Security note:** Do **not** leave the installer accessible after use. Rename or delete it immediately.
+1. Visit `https://yourdomain.com/login.php`.
+2. Use the existing admin email/password to sign in.
+   - If you forgot it, open phpMyAdmin, look at the `users` table, and update the password column using the hash from another working account or trigger the password reset email if SMTP is already configured.
+3. Navigate to **Admin → Settings** and verify:
+   - Company details, email settings, and push notification keys.
+   - AI provider settings, if you intend to use the template importer.
+4. Navigate to **Admin → Backup Utility** and run a test backup on the new server so you know it works.
+5. Browse the dashboard and create a test permit. Ensure emails and any web push notifications arrive.
 
 ---
 
-## 5. Automations & CI/CD (Optional)
+## 5. Keeping the Installation Healthy
 
-If the customer wants turnkey deployments:
-
-- **GitHub Actions**: create a workflow that, on tag push, builds the project and deploys via SFTP or rsync using stored secrets.
-- **Envoyer/Forge/RunCloud**: connect the repo, configure `.env` per environment, let the platform handle Composer and migrations.
-- **Custom deploy form**: build a small `deploy.php` that accepts credentials, but store secrets outside web root. For non-technical teams this can introduce security risk; prefer platform tools above.
+- **Regular backups**: Use the built-in admin Backup Utility weekly. Download and store copies outside the server.
+- **Updates**: When you pull new code from GitHub, run the backup first, then deploy. After uploading, re-run the environment check.
+- **Security**:
+  - Never leave installer or backup scripts exposed outside the admin area.
+  - Keep PHP version updated with your host.
+  - Use strong passwords for both hosting and the admin panel.
+- **Mail and push keys**: If you change hostnames, update the `.env` values and regenerate VAPID keys using `generate_vapid.php`.
 
 ---
 
-## 6. Common Issues & Fixes
+## 6. Troubleshooting
 
-| Issue | Cause | Fix |
+| Problem | Likely Cause | Fix |
 | --- | --- | --- |
-| Blank page on load | Display errors disabled, PHP fatal | Enable `APP_DEBUG=true` temporarily in `.env`, check `storage/logs/` or host error logs. |
-| Cannot connect to DB | Wrong credentials / host | Confirm DB hostname (often `localhost` or `127.0.0.1`), user grants, and port 3306. |
-| Emails not sending | SMTP credentials missing | Fill `MAIL_HOST`, `MAIL_USERNAME`, etc. Use a transactional service (SendGrid, Mailgun). |
-| Push notifications failing | VAPID keys not generated | Run `/generate_vapid.php` on the new host and update `.env`. |
-| Permission denied for uploads/backups | Inherited restrictive permissions | Set folders to 755/775, or use hosting “Fix Permissions” tool. |
+| White page / error 500 | PHP error with display disabled | Temporarily set `APP_DEBUG=true` in `.env`, reload, then revert to `false` once resolved. Check the host error logs. |
+| “Could not connect to database” | Wrong DB credentials or host | Re-open `.env`, confirm host (often `localhost`), database name, user, password. Save and try again. |
+| Emails don’t send | SMTP values missing/incorrect | Verify `MAIL_*` values. Some hosts require you to use their SMTP relay or enable “less secure app” access. |
+| Push notifications fail | Missing VAPID keys | Run `php generate_vapid.php`, copy the printed keys into `.env`, clear browser cache, and re-subscribe. |
+| Permission denied for backups | Server disallows writing | Use file manager to set `backups/` and `uploads/` to `755` or `775`. |
 
 ---
 
-## 7. License & Source Sale Checklist
+## 7. Need to Re-Deploy Elsewhere?
 
-- Document what the buyer is receiving (source code + database export + instructions).
-- Clarify support terms (hours, response time, ongoing maintenance).
-- Include a changelog (`CHANGES.md`) so the buyer knows what’s new.
-- Provide default admin credentials securely (separate email or password reset instructions).
+If you move again:
+
+1. Log into the admin area and use **Backup Utility → Generate Backup**.
+2. Download the generated zip from `backups/`.
+3. Follow this guide from the top on the new server.
+
+That’s it—no manual database dump required thanks to the built-in exporter.
 
 ---
 
-## 8. Next Steps / Suggestions
+## 8. Support & Handover Notes
 
-- Draft a short **handover PDF** summarising system purpose, key URLs, and support contacts.
-- Host a quick screen-recorded video walking through login and key features (5–10 minutes).
-- If you adopt the installer, keep it in version control but remember to delete after each deployment.
-- Consider Dockerising (optional): build a `docker-compose.yml` with `nginx`, `php-fpm`, `mysql`. Buyers comfortable with Docker can spin up the whole stack locally.
+- Always store a copy of this guide alongside the backup zip.
+- Share the primary admin login with trusted personnel using a secure channel. Encourage them to change their password on first login.
+- Document any customisations you made (changes in `templates/`, additional cron jobs, etc.) so the next admin understands the setup.
 
-Feel free to adapt or expand this guide for specific customer SLAs or hosting platforms.
+With these steps the permit system should be up and running on any modern PHP host without developer intervention.

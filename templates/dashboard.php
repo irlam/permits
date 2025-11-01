@@ -6,7 +6,9 @@
  */
 
 require_once __DIR__ . '/../src/cache-helper.php';
+require_once __DIR__ . '/../src/SystemSettings.php';
 require_once __DIR__ . '/../src/Auth.php';
+use Permits\SystemSettings;
 $auth = new Auth($db);
 
 /** Status filter from query ?status=pending|active|issued|expired|draft|closed */
@@ -73,6 +75,10 @@ function badgeClass($status){
   ];
   return $m[strtolower($status)] ?? 'badge-draft';
 }
+
+$companyName = SystemSettings::companyName($db) ?? 'Permits System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?>
 <!doctype html>
 <html lang="en">
@@ -115,8 +121,16 @@ function badgeClass($status){
 </head>
 <body>
 <header class="top">
-  <h1>📊 Dashboard</h1>
-  <div style="display:flex;gap:8px">
+  <div class="brand-mark">
+    <?php if ($companyLogoUrl): ?>
+      <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+    <?php endif; ?>
+    <div>
+      <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+      <div class="brand-mark__sub">📊 Dashboard</div>
+    </div>
+  </div>
+  <div class="top-actions">
     <?php if($auth->isLoggedIn() && $auth->hasRole('admin')): ?>
       <a class="btn" href="/admin.php" style="background:#f59e0b">⚙️ Admin Panel</a>
     <?php endif; ?>

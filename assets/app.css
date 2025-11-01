@@ -1148,6 +1148,51 @@ body {
   align-items: center;
 }
 
+.top {
+  background: #111827;
+  border-bottom: 1px solid #1f2937;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark__logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  padding: 8px;
+}
+
+.brand-mark__name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.brand-mark__sub {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
 .site-header__actions .user-info {
   color: #94a3b8;
   font-size: 14px;

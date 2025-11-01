@@ -47,6 +47,39 @@ final class SystemSettings
     return array_replace($defaults, $settings);
     }
 
+        /**
+         * Convenience accessor for a stored company name. Returns null when the
+         * value has not been configured.
+         */
+        public static function companyName(Db $db): ?string
+        {
+            try {
+                $settings = self::load($db, ['company_name'], []);
+            } catch (Throwable $e) {
+                return null;
+            }
+
+            $name = trim((string)($settings['company_name'] ?? ''));
+            return $name !== '' ? $name : null;
+        }
+
+        /**
+         * Return the relative path (inside the project) to the configured company
+         * logo image if one exists. The caller is responsible for converting the
+         * path into a public URL (e.g. using the asset() helper).
+         */
+        public static function companyLogoPath(Db $db): ?string
+        {
+            try {
+                $settings = self::load($db, ['company_logo_path'], []);
+            } catch (Throwable $e) {
+                return null;
+            }
+
+            $path = trim((string)($settings['company_logo_path'] ?? ''));
+            return $path !== '' ? $path : null;
+        }
+
     /**
      * Persist a batch of settings. Values are stored as plain text.
      *

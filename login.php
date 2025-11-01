@@ -1,4 +1,5 @@
 <?php
+use Permits\SystemSettings;
 /**
  * Login Page - Simple Version
  * 
@@ -94,6 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$companyName = SystemSettings::companyName($db) ?? 'Permits System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -113,7 +118,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </head>
 <body class="theme-dark">
   <header class="site-header">
-    <h1 class="site-header__title">🛡️ Permit System</h1>
+    <div class="brand-mark">
+      <?php if ($companyLogoUrl): ?>
+        <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+      <?php endif; ?>
+      <div>
+        <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+        <div class="brand-mark__sub">� Manager Login</div>
+      </div>
+    </div>
     <div class="site-header__actions">
       <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('/'))?>">🏠 Home</a>
     </div>

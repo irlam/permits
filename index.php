@@ -5,6 +5,7 @@
 
 use Permits\DatabaseMaintenance;
 use Permits\FormTemplateSeeder;
+use Permits\SystemSettings;
 
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
@@ -108,6 +109,10 @@ if ($statusEmail !== '' && filter_var($statusEmail, FILTER_VALIDATE_EMAIL)) {
 		error_log('Error fetching user permits: ' . $e->getMessage());
 	}
 }
+
+$companyName = SystemSettings::companyName($db) ?? 'Permit System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 
 $templateIcons = [
 	'hot-works-permit' => '&#128293;',
@@ -251,6 +256,23 @@ function reopen_link($app, $permitId): string
 			flex-wrap: wrap;
 			gap: 12px;
 		}
+	.hero__brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 16px;
+		margin-bottom: 20px;
+	}
+	.hero__brand .brand-mark__logo {
+		width: 64px;
+		height: 64px;
+	}
+	.hero__brand .brand-mark__name {
+		font-size: 28px;
+	}
+	.hero__brand .brand-mark__sub {
+		font-size: 15px;
+		color: rgba(148, 163, 184, 0.88);
+	}
 		.btn {
 			display: inline-flex;
 			align-items: center;
@@ -572,6 +594,15 @@ function reopen_link($app, $permitId): string
 	<div class="site-shell">
 		<header class="hero">
 			<div class="hero__content">
+				<div class="brand-mark hero__brand">
+					<?php if ($companyLogoUrl): ?>
+						<img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+					<?php endif; ?>
+					<div>
+						<div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+						<div class="brand-mark__sub">Permit System</div>
+					</div>
+				</div>
 				<p class="nav-actions">
 					<?php if ($isLoggedIn && !empty($currentUser)): ?>
 						<span class="nav-actions__welcome">Welcome <?php echo htmlspecialchars($currentUser['name'] ?? 'Manager', ENT_QUOTES, 'UTF-8'); ?></span>

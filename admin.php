@@ -18,6 +18,8 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
+use Permits\SystemSettings;
+
 require_once __DIR__ . '/src/check-expiry.php';
 
 if (function_exists('maybe_check_and_expire_permits')) {
@@ -74,6 +76,10 @@ try {
         'total_templates' => 0
     ];
 }
+
+$companyName = SystemSettings::companyName($db) ?? 'Permits System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -85,7 +91,15 @@ try {
 </head>
 <body class="theme-dark">
     <header class="site-header">
-        <h1 class="site-header__title">⚙️ Admin Panel</h1>
+        <div class="brand-mark">
+            <?php if ($companyLogoUrl): ?>
+                <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+            <?php endif; ?>
+            <div>
+                <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+                <div class="brand-mark__sub">⚙️ Admin Panel</div>
+            </div>
+        </div>
         <div class="site-header__actions">
             <span class="user-info">👤 <?php echo htmlspecialchars($currentUser['name']); ?></span>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">📊 Dashboard</a>

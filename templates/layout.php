@@ -11,12 +11,18 @@
 // Load cache helper for preventing browser caching
 require_once __DIR__ . '/../src/cache-helper.php';
 
+require_once __DIR__ . '/../src/SystemSettings.php';
+use Permits\SystemSettings;
+
 // Load Auth class for admin button
 require_once __DIR__ . '/../src/Auth.php';
 $auth = new Auth($db);
 
 $base = $_ENV['APP_URL'] ?? '/';
 $params = $_GET ?? [];
+$companyName = SystemSettings::companyName($db) ?? 'Permits & Registers';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -92,8 +98,16 @@ $params = $_GET ?? [];
 </head>
 <body>
 <header class="top">
-  <h1>Permits & Registers</h1>
-  <div style="display:flex;gap:8px">
+  <div class="brand-mark">
+    <?php if ($companyLogoUrl): ?>
+      <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+    <?php endif; ?>
+    <div>
+      <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+      <div class="brand-mark__sub">Permits &amp; Registers</div>
+    </div>
+  </div>
+  <div class="top-actions">
     <?php if($auth->isLoggedIn() && $auth->hasRole('admin')): ?>
       <a class="btn" href="/admin.php" style="background:#f59e0b">⚙️ Admin Panel</a>
     <?php endif; ?>

@@ -1,4 +1,5 @@
 <?php
+use Permits\SystemSettings;
 /**
  * Main Dashboard with Metrics
  * 
@@ -66,6 +67,10 @@ try {
 } catch (Exception $e) {
     // Ignore errors, metrics stay at 0
 }
+
+$companyName = SystemSettings::companyName($db) ?? 'Permits System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 
 // Resolve status filter coming from metric cards (?status=<key>)
 $statusFilter = strtolower(trim((string)($_GET['status'] ?? '')));
@@ -165,7 +170,15 @@ function getStatusBadge($status) {
 </head>
 <body class="theme-dark">
     <header class="site-header">
-        <h1 class="site-header__title">🛡️ Permit System</h1>
+        <div class="brand-mark">
+            <?php if ($companyLogoUrl): ?>
+                <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+            <?php endif; ?>
+            <div>
+                <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+                <div class="brand-mark__sub">🛡️ Permit System</div>
+            </div>
+        </div>
         <div class="site-header__actions">
             <?php if ($isLoggedIn && $currentUser): ?>
                 <div class="user-info">

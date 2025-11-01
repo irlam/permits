@@ -1,4 +1,5 @@
 <?php
+use Permits\SystemSettings;
 /**
  * Manager Approval Dashboard
  * 
@@ -74,6 +75,10 @@ function formatDateUK($date) {
     if (!$date) return 'N/A';
     return date('d/m/Y H:i', strtotime($date));
 }
+
+$companyName = SystemSettings::companyName($db) ?? 'Permits System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -233,7 +238,15 @@ function formatDateUK($date) {
 </head>
 <body class="theme-dark">
     <header class="site-header">
-        <h1 class="site-header__title">⏳ Pending Approvals</h1>
+        <div class="brand-mark">
+            <?php if ($companyLogoUrl): ?>
+                <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+            <?php endif; ?>
+            <div>
+                <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+                <div class="brand-mark__sub">⏳ Pending Approvals</div>
+            </div>
+        </div>
         <div class="site-header__actions">
             <span class="user-info">👤 <?php echo htmlspecialchars($user['name'] ?? ($user['email'] ?? '')); ?></span>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('presentation-dashboard.php')); ?>">🎬 Presentation</a>

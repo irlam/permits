@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../../src/cache-helper.php';
+require_once __DIR__ . '/../../src/SystemSettings.php';
+use Permits\SystemSettings;
 $base = rtrim((string)($_ENV['APP_URL'] ?? ''), '/') . rtrim((string)($_ENV['APP_BASE_PATH'] ?? '/'), '/');
 $schema = json_decode($template['json_schema'], true);
 $metadata = json_decode($form['metadata'], true);
@@ -59,6 +61,10 @@ $statusColors = [
   'closed' => '#6b7280',
 ];
 $statusColor = $statusColors[$form['status']] ?? '#6b7280';
+
+$companyName = SystemSettings::companyName($db) ?? 'Permits System';
+$companyLogoPath = SystemSettings::companyLogoPath($db);
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -92,20 +98,44 @@ $statusColor = $statusColors[$form['status']] ?? '#6b7280';
     .event-item{border-left:3px solid #3b82f6;padding:8px 12px;margin-bottom:8px;background:#0a101a;border-radius:4px}
     .event-time{font-size:12px;color:#94a3b8}
     .event-type{font-weight:600;color:#e5e7eb;text-transform:capitalize}
+    .brand-print{display:none;align-items:center;gap:12px;margin-bottom:16px}
+    .brand-print__logo{max-height:56px;width:auto;object-fit:contain}
     @media print{
       html,body{background:#fff!important;color:#111!important}
       .top,.actions{display:none!important}
+      .brand-print{display:flex}
+      .brand-print__logo{max-height:72px}
       .card,.section-card,.info-item{background:#fff!important;border-color:#bbb!important}
     }
   </style>
 </head>
 <body>
 <header class="top">
-  <h1>View Permit</h1>
-  <a class="btn" href="<?=$base?>/">← Back to Home</a>
+  <div class="brand-mark">
+    <?php if ($companyLogoUrl): ?>
+      <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+    <?php endif; ?>
+    <div>
+      <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
+      <div class="brand-mark__sub">View Permit</div>
+    </div>
+  </div>
+  <div class="top-actions">
+    <a class="btn" href="<?=$base?>/">← Back to Home</a>
+  </div>
 </header>
 
 <div class="view-wrap">
+  <div class="brand-print">
+    <?php if ($companyLogoUrl): ?>
+      <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-print__logo">
+    <?php endif; ?>
+    <div>
+      <div style="font-size:20px;font-weight:600;"><?= htmlspecialchars($companyName) ?></div>
+      <div style="font-size:14px;color:#475569;">Permit Reference <?= htmlspecialchars($form['ref'] ?? '') ?></div>
+    </div>
+  </div>
+
   <div class="actions">
     <button class="btn" onclick="window.print()">🖨️ Print / PDF</button>
   <a class="btn" href="<?=$base?>/form/<?=htmlspecialchars($form['id'])?>/edit">✏️ Edit</a>
