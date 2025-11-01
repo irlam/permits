@@ -1,20 +1,20 @@
 <?php
 /**
- * Admin Settings - Company Branding & Configuration
+ * System Settings - Admin Panel
  * 
  * File Path: /admin/settings.php
- * Description: Manage company branding (logo, name) and system configuration
- * Created: 01/11/2025
+ * Description: General system settings including company branding and configuration
+ * Created: 24/10/2025
  * Last Modified: 01/11/2025
  * 
  * Features:
- * - Company name management
- * - Logo upload and storage
- * - Logo preview and removal
- * - System configuration
+ * - Company information and branding
+ * - Logo upload and management
+ * - System preferences and configuration
+ * - Timezone and date format settings
+ * - Permit reference prefix settings
  */
 
-// Load application bootstrap
 require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
 
@@ -31,28 +31,81 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Get current user and verify admin role
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+// Get current user
+$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Check if user is admin
 if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
+    die('<h1>Access Denied</h1><p>Admin access required. <a href="/dashboard.php">Back to Dashboard</a></p>');
 }
 
-$error = '';
-$success = '';
+$message = '';
+$messageType = '';
 
-// Handle settings update
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     try {
+        if ($action === 'save_settings') {
+            $companyName = trim($_POST['company_name'] ?? '');
+            $siteTitle = trim($_POST['site_title'] ?? '');
+            $timezone = $_POST['timezone'] ?? 'Europe/London';
+            $dateFormat = $_POST['date_format'] ?? 'd/m/Y';
+            $permitPrefix = trim($_POST['permit_prefix'] ?? 'PTW');
+            
+            // Read current .env
+            $envFile = __DIR__ . '/../.env';
+            if (!file_exists($envFile)) {
+                $envContent = '';
+            } else {
+                $envContent = file_get_contents($envFile);
+            }
+            
+            // Update or add settings
+            $settings = [
+                'COMPANY_NAME' => $companyName,
+                'SITE_TITLE' => $siteTitle,
+                'TIMEZONE' => $timezone,
+                'DATE_FORMAT' => $dateFormat,
+                'PERMIT_PREFIX' => $permitPrefix,
+            ];
+            
+            foreach ($settings as $key => $value) {
+                // Escape the value and add quotes if it contains spaces or special characters
+                if (preg_match('/[\s\'"#]/', $value)) {
+                    $escapedValue = '"' . str_replace('"', '\\"', $value) . '"';
+                } else {
+                    $escapedValue = $value;
+                }
+                
+                if (preg_match("/^{$key}=/m", $envContent)) {
+                    // Update existing
+                    $envContent = preg_replace("/^{$key}=.*$/m", "{$key}={$escapedValue}", $envContent);
+                } else {
+                    // Add new
+                    $envContent .= "\n{$key}={$escapedValue}";
+                }
+            }
+            
+            // Write back to .env
+            file_put_contents($envFile, $envContent);
+            
+            $message = 'System settings saved successfully!';
+            $messageType = 'success';
+            
+            // Reload environment
+            $_ENV = array_merge($_ENV, $settings);
+        }
+        
         if ($action === 'save_branding') {
-            $companyName = trim((string)($_POST['company_name'] ?? ''));
-            $brandingUpdates = ['company_name' => $companyName];
+            $brandingUpdates = [];
+            $companyNameFromForm = trim((string)($_POST['company_name_branding'] ?? ''));
+            if ($companyNameFromForm !== '') {
+                $brandingUpdates['company_name'] = $companyNameFromForm;
+            }
 
             $upload = $_FILES['company_logo'] ?? null;
             if ($upload && ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -95,7 +148,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $newRelativePath = 'uploads/branding/' . $filename;
 
-                $existingPath = trim((string)($settings['company_logo_path'] ?? ''));
+                // Load existing settings to cleanup old logo
+                $dbSettings = [];
+                $stmt = $db->pdo->query("SELECT `key`, value FROM settings");
+                while ($row = $stmt->fetch()) {
+                    $dbSettings[$row['key']] = $row['value'];
+                }
+
+                $existingPath = trim((string)($dbSettings['company_logo_path'] ?? ''));
                 if ($existingPath !== '') {
                     $existingFile = $root . '/' . ltrim($existingPath, '/');
                     if (is_file($existingFile)) {
@@ -104,16 +164,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $brandingUpdates['company_logo_path'] = $newRelativePath;
-                $settings['company_logo_path'] = $newRelativePath;
             }
 
-            SystemSettings::save($db, $brandingUpdates);
-            $settings = array_merge($settings, $brandingUpdates);
-            $success = 'Branding updated successfully';
+            if (!empty($brandingUpdates)) {
+                SystemSettings::save($db, $brandingUpdates);
+                $message = 'Branding updated successfully';
+                $messageType = 'success';
+            }
         }
 
         if ($action === 'remove_logo') {
-            $existingPath = trim((string)($settings['company_logo_path'] ?? ''));
+            // Load existing settings to cleanup logo
+            $dbSettings = [];
+            $stmt = $db->pdo->query("SELECT `key`, value FROM settings");
+            while ($row = $stmt->fetch()) {
+                $dbSettings[$row['key']] = $row['value'];
+            }
+
+            $existingPath = trim((string)($dbSettings['company_logo_path'] ?? ''));
             if ($existingPath !== '') {
                 $existingFile = $root . '/' . ltrim($existingPath, '/');
                 if (is_file($existingFile)) {
@@ -122,123 +190,290 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             SystemSettings::save($db, ['company_logo_path' => '']);
-            unset($settings['company_logo_path']);
-            $success = 'Company logo removed.';
+            $message = 'Company logo removed.';
+            $messageType = 'success';
         }
-    } catch (\Exception $e) {
-        $error = 'Error updating settings: ' . $e->getMessage();
+    } catch (Exception $e) {
+        $message = 'Error: ' . $e->getMessage();
+        $messageType = 'error';
     }
 }
 
 // Load current settings
-$settings = [];
+$companyName = $_ENV['COMPANY_NAME'] ?? '';
+$siteTitle = $_ENV['SITE_TITLE'] ?? 'Permits System';
+$timezone = $_ENV['TIMEZONE'] ?? 'Europe/London';
+$dateFormat = $_ENV['DATE_FORMAT'] ?? 'd/m/Y';
+$permitPrefix = $_ENV['PERMIT_PREFIX'] ?? 'PTW';
+
+// Remove quotes if they exist
+$companyName = trim($companyName, '"');
+$siteTitle = trim($siteTitle, '"');
+
+// Load branding settings from database
+$dbSettings = [];
 try {
     $stmt = $db->pdo->query("SELECT `key`, value FROM settings");
     while ($row = $stmt->fetch()) {
-        $settings[$row['key']] = $row['value'];
+        $dbSettings[$row['key']] = $row['value'];
     }
 } catch (\Exception $e) {
-    $error = 'Settings table not found. Run: php bin/migrate-features.php';
+    // Settings table might not exist yet
 }
 
-$base = $_ENV['APP_URL'] ?? '/';
-$companyName = trim((string)($settings['company_name'] ?? '')) ?: 'Permits System';
-$companyLogoPath = trim((string)($settings['company_logo_path'] ?? ''));
+$dbCompanyName = trim((string)($dbSettings['company_name'] ?? '')) ?: $companyName;
+$companyLogoPath = trim((string)($dbSettings['company_logo_path'] ?? ''));
 $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, '/')) : null;
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#0ea5e9">
-  <title>Admin Settings - Permits</title>
-  <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings - Admin</title>
+    <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
+    <style>
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .alert-success {
+            background: #064e3b;
+            border: 1px solid #10b981;
+            color: #d1fae5;
+        }
+        
+        .alert-error {
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+            color: #fecaca;
+        }
+        
+        .card-description {
+            color: #94a3b8;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        
+        .label-description {
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 400;
+            margin-top: 4px;
+        }
+        
+        .info-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        
+        .info-box h4 {
+            color: #e5e7eb;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .info-box p {
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .logo-preview {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .logo-preview img {
+            max-width: 160px;
+            max-height: 120px;
+            border-radius: 12px;
+            background: #0a101a;
+            padding: 12px;
+            border: 1px solid #1f2937;
+        }
+
+        .remove-logo-btn {
+            margin-top: 12px;
+        }
+    </style>
 </head>
 <body>
-<header class="top">
-  <div class="brand-mark">
-    <?php if ($companyLogoUrl): ?>
-      <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
-    <?php endif; ?>
-    <div>
-      <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
-      <div class="brand-mark__sub">Admin Settings</div>
-    </div>
-  </div>
-  <div class="top-actions">
-  <a class="btn" href="<?php echo htmlspecialchars($app->url('admin.php')); ?>">Admin Panel</a>
-  <a class="btn" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">Dashboard</a>
-  <a class="btn" href="<?php echo htmlspecialchars($app->url('/')); ?>">Home</a>
-  </div>
-</header>
-
-<section class="grid">
-  <?php if ($error): ?>
-    <div class="card" style="grid-column: 1/-1; background: #fef2f2; border-color: #fecaca; color: #991b1b;">
-      <strong>⚠ Error:</strong> <?= htmlspecialchars($error) ?>
-    </div>
-  <?php endif; ?>
-
-  <?php if ($success): ?>
-    <div class="card" style="grid-column: 1/-1; background: #f0fdf4; border-color: #bbf7d0; color: #166534;">
-      <strong>✓ Success:</strong> <?= htmlspecialchars($success) ?>
-    </div>
-  <?php endif; ?>
-
-  <!-- Company Branding -->
-  <div class="card">
-    <h2>Company Branding</h2>
-    <form method="post" enctype="multipart/form-data">
-      <input type="hidden" name="action" value="save_branding">
-
-      <div class="field">
-        <label>Company Name</label>
-        <input type="text" name="company_name" value="<?= htmlspecialchars($settings['company_name'] ?? '') ?>" placeholder="Your company name">
-        <p style="color:#94a3b8;font-size:13px;margin-top:4px;">Displayed in site headers and branding areas throughout the system.</p>
-      </div>
-
-      <?php if ($companyLogoUrl): ?>
-        <div class="field">
-          <label>Current Logo</label>
-          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-            <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" style="max-width:160px;max-height:120px;border-radius:12px;background:#0a101a;padding:12px;border:1px solid #1f2937;">
-            <span style="color:#94a3b8;font-size:13px;">Displayed on dashboards, headers, and printed outputs.</span>
-          </div>
+    <header class="top">
+        <div class="brand-mark">
+            <?php if ($companyLogoUrl): ?>
+                <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($dbCompanyName) ?> logo" class="brand-mark__logo">
+            <?php endif; ?>
+            <div>
+                <div class="brand-mark__name"><?= htmlspecialchars($dbCompanyName) ?></div>
+                <div class="brand-mark__sub">Admin Settings</div>
+            </div>
         </div>
-      <?php endif; ?>
+        <div class="top-actions">
+            <a class="btn" href="<?php echo htmlspecialchars($app->url('admin.php')); ?>">Admin Panel</a>
+            <a class="btn" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">Dashboard</a>
+            <a class="btn" href="<?php echo htmlspecialchars($app->url('logout.php')); ?>">Logout</a>
+        </div>
+    </header>
+    
+    <div class="container">
+        <?php if ($message): ?>
+            <div class="alert alert-<?php echo $messageType; ?>">
+                <?php echo htmlspecialchars($message); ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Company Branding Section -->
+        <div class="card">
+            <h2>🎨 Company Branding</h2>
+            <p class="card-description">Manage your company logo and branding</p>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="save_branding">
 
-      <div class="field">
-        <label>Upload Logo</label>
-        <input type="file" name="company_logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
-        <p style="color:#94a3b8;font-size:13px;margin-top:8px;">Use a square PNG, JPG, WEBP, or SVG. Recommended 400×400px, max 2&nbsp;MB.</p>
-      </div>
+                <div class="field">
+                    <label>
+                        Company Name (Branding)
+                        <div class="label-description">Used in site headers and branding areas</div>
+                    </label>
+                    <input type="text" name="company_name_branding" value="<?= htmlspecialchars($dbCompanyName) ?>" placeholder="Your company name">
+                </div>
 
-      <button type="submit" class="btn btn-accent">Save Branding</button>
-    </form>
+                <?php if ($companyLogoUrl): ?>
+                    <div class="field">
+                        <label>Current Logo</label>
+                        <div class="logo-preview">
+                            <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($dbCompanyName) ?> logo">
+                            <span style="color:#94a3b8;font-size:13px;">Displayed on dashboards, headers, and printed outputs.</span>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
-    <?php if ($companyLogoUrl): ?>
-      <form method="post" style="margin-top:12px;">
-        <input type="hidden" name="action" value="remove_logo">
-        <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Remove the current company logo?')">Remove Logo</button>
-      </form>
-    <?php endif; ?>
-  </div>
+                <div class="field">
+                    <label>
+                        Upload Logo
+                        <div class="label-description">PNG, JPG, WEBP, or SVG (max 2 MB, recommended 400×400px)</div>
+                    </label>
+                    <input type="file" name="company_logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                </div>
 
-  <!-- Documentation -->
-  <div class="card">
-    <h2>About This Page</h2>
-    <p>Manage your company's branding and system configuration from this admin settings page.</p>
-    <ul style="margin-top:12px;color:#94a3b8;font-size:14px;">
-      <li><strong>Company Name:</strong> Used throughout the site in headers and branding.</li>
-      <li><strong>Logo:</strong> Appears in site headers, dashboards, and printed permit documents.</li>
-      <li><strong>File Support:</strong> PNG, JPG, WEBP, or SVG (max 2 MB)</li>
-      <li><strong>Recommended Size:</strong> 400×400px (square aspect ratio recommended)</li>
-    </ul>
-  </div>
-</section>
+                <button type="submit" class="btn btn-accent">💾 Save Branding</button>
+            </form>
 
-<script src="/assets/app.js"></script>
+            <?php if ($companyLogoUrl): ?>
+                <form method="post" class="remove-logo-btn">
+                    <input type="hidden" name="action" value="remove_logo">
+                    <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Remove the current company logo?')">🗑️ Remove Logo</button>
+                </form>
+            <?php endif; ?>
+        </div>
+        
+        <!-- System Settings Form -->
+        <form method="POST">
+            <input type="hidden" name="action" value="save_settings">
+            
+            <!-- Company Information -->
+            <div class="card">
+                <h2>🏢 Company Information</h2>
+                <p class="card-description">Basic information about your organization</p>
+                
+                <div class="form-group">
+                    <label>
+                        Company Name (Environment)
+                        <div class="label-description">Your company or organization name (stored in .env)</div>
+                    </label>
+                    <input type="text" name="company_name" value="<?php echo htmlspecialchars($companyName); ?>" placeholder="Your Company Ltd">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        Site Title
+                        <div class="label-description">Title displayed in browser and emails</div>
+                    </label>
+                    <input type="text" name="site_title" value="<?php echo htmlspecialchars($siteTitle); ?>" placeholder="Permits System">
+                </div>
+            </div>
+            
+            <!-- Regional Settings -->
+            <div class="card">
+                <h2>🌍 Regional Settings</h2>
+                <p class="card-description">Configure timezone and date formats</p>
+                
+                <div class="form-group">
+                    <label>
+                        Timezone
+                        <div class="label-description">Default timezone for the system</div>
+                    </label>
+                    <select name="timezone">
+                        <option value="Europe/London" <?php echo $timezone === 'Europe/London' ? 'selected' : ''; ?>>Europe/London (GMT)</option>
+                        <option value="Europe/Paris" <?php echo $timezone === 'Europe/Paris' ? 'selected' : ''; ?>>Europe/Paris (CET)</option>
+                        <option value="America/New_York" <?php echo $timezone === 'America/New_York' ? 'selected' : ''; ?>>America/New_York (EST)</option>
+                        <option value="America/Los_Angeles" <?php echo $timezone === 'America/Los_Angeles' ? 'selected' : ''; ?>>America/Los_Angeles (PST)</option>
+                        <option value="Asia/Dubai" <?php echo $timezone === 'Asia/Dubai' ? 'selected' : ''; ?>>Asia/Dubai (GST)</option>
+                        <option value="Asia/Tokyo" <?php echo $timezone === 'Asia/Tokyo' ? 'selected' : ''; ?>>Asia/Tokyo (JST)</option>
+                        <option value="Australia/Sydney" <?php echo $timezone === 'Australia/Sydney' ? 'selected' : ''; ?>>Australia/Sydney (AEDT)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        Date Format
+                        <div class="label-description">How dates are displayed throughout the system</div>
+                    </label>
+                    <select name="date_format">
+                        <option value="d/m/Y" <?php echo $dateFormat === 'd/m/Y' ? 'selected' : ''; ?>>DD/MM/YYYY (24/10/2025)</option>
+                        <option value="m/d/Y" <?php echo $dateFormat === 'm/d/Y' ? 'selected' : ''; ?>>MM/DD/YYYY (10/24/2025)</option>
+                        <option value="Y-m-d" <?php echo $dateFormat === 'Y-m-d' ? 'selected' : ''; ?>>YYYY-MM-DD (2025-10-24)</option>
+                        <option value="d M Y" <?php echo $dateFormat === 'd M Y' ? 'selected' : ''; ?>>DD Mon YYYY (24 Oct 2025)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Permit Settings -->
+            <div class="card">
+                <h2>📋 Permit Settings</h2>
+                <p class="card-description">Configure how permits are generated</p>
+                
+                <div class="form-group">
+                    <label>
+                        Permit Reference Prefix
+                        <div class="label-description">Prefix for permit reference numbers (e.g. PTW-2025-0001)</div>
+                    </label>
+                    <input type="text" name="permit_prefix" value="<?php echo htmlspecialchars($permitPrefix); ?>" placeholder="PTW" maxlength="10">
+                </div>
+                
+                <div class="info-box">
+                    <h4>📌 Reference Number Format:</h4>
+                    <p>Permits will be numbered as: <strong><?php echo htmlspecialchars($permitPrefix); ?>-<?php echo date('Y'); ?>-####</strong><br>
+                    Example: <?php echo htmlspecialchars($permitPrefix); ?>-<?php echo date('Y'); ?>-0001</p>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-accent">💾 Save System Settings</button>
+        </form>
+        
+        <div class="info-box" style="margin-top: 24px;">
+            <h4>ℹ️ Important Notes:</h4>
+            <p>• Branding settings (company name, logo) are stored in the database<br>
+            • System settings are stored in the .env file in the root directory<br>
+            • Values with spaces are automatically quoted<br>
+            • Some changes may require a page refresh to take effect<br>
+            • Make sure to test your configuration after making changes</p>
+        </div>
+    </div>
 </body>
 </html>
