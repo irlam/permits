@@ -229,6 +229,20 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
             </div>
 
             <div class="admin-card">
+                <div class="icon">✨</div>
+                <h3>Premium Permit Intelligence Showcase</h3>
+                <p>Professional presentation with 4 subsections, interactive flowcharts, and comprehensive voice-over narration. Perfect for executive briefings, strategic planning, and stakeholder presentations.</p>
+                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
+                    <li>Executive Overview with key metrics</li>
+                    <li>Operational Workflow with user journey flowchart</li>
+                    <li>Performance analytics with 12-month trends</li>
+                    <li>Strategic Insights & recommendations</li>
+                    <li>Automated voice narration with highlighting</li>
+                </ul>
+                <a href="/presentation-dashboard-enhanced.php" class="btn">Launch Premium Showcase</a>
+            </div>
+
+            <div class="admin-card">
                 <div class="icon">✉️</div>
                 <h3>Approval Notifications</h3>
                 <p>Maintain the list of people emailed as soon as a permit is submitted for approval.</p>
