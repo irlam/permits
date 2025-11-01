@@ -40,7 +40,20 @@ if (function_exists('maybe_check_and_expire_permits')) {
 }
 
 // Start session
-session_start();
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
+// DEBUG: Output session and cookie info if requested, even if already logged in
+if (isset($_GET['debug'])) {
+    echo '<pre style="background:#222;color:#fff;padding:12px;">';
+    echo 'Session Name: ' . session_name() . "\n";
+    echo 'Session ID: ' . session_id() . "\n";
+    echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
+    echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
+    echo '</pre>';
+    exit;
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
