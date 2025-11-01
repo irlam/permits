@@ -1,4 +1,3 @@
-// ...existing code...
 <?php
 /**
  * Admin Panel - Simple Version

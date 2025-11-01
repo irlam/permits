@@ -942,7 +942,17 @@ $narrationSections = [
                 if (!synth) { resolve(null); return; }
                 const available = synth.getVoices();
                 if (available.length) {
-                    selectedVoice = available.find(v => v.name.includes('Female') || v.name.includes('Google')) || available[0];
+                    // Prefer UK English voices
+                    selectedVoice = available.find(v => 
+                        v.lang.startsWith('en-GB') && v.name.includes('Female')
+                    ) || available.find(v => 
+                        v.lang.startsWith('en-GB')
+                    ) || available.find(v => 
+                        v.name.includes('British')
+                    ) || available.find(v => 
+                        v.name.includes('Female')
+                    ) || available[0];
+                    if (selectedVoice) selectedVoice.lang = 'en-GB';
                     resolve(selectedVoice);
                     return;
                 }
@@ -950,7 +960,17 @@ $narrationSections = [
                     const fresh = synth.getVoices();
                     if (fresh.length) {
                         synth.removeEventListener('voiceschanged', handle);
-                        selectedVoice = fresh.find(v => v.name.includes('Female') || v.name.includes('Google')) || fresh[0];
+                        // Prefer UK English voices
+                        selectedVoice = fresh.find(v => 
+                            v.lang.startsWith('en-GB') && v.name.includes('Female')
+                        ) || fresh.find(v => 
+                            v.lang.startsWith('en-GB')
+                        ) || fresh.find(v => 
+                            v.name.includes('British')
+                        ) || fresh.find(v => 
+                            v.name.includes('Female')
+                        ) || fresh[0];
+                        if (selectedVoice) selectedVoice.lang = 'en-GB';
                         resolve(selectedVoice);
                     }
                 };
