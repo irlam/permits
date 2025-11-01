@@ -45,8 +45,10 @@ $messages = [];
 $errors = [];
 $previewData = [];
 $showPreview = false;
-$openAiConfig = load_openai_config($root);
-$openAiAvailable = $openAiConfig !== null;
+$aiConfig = load_ai_config($root);
+$aiAvailable = $aiConfig !== null;
+$activeAiProvider = $aiConfig['provider'] ?? 'openai';
+$activeAiProviderLabel = ucwords(str_replace('_', ' ', $activeAiProvider));
 $fieldTypeOptions = [
     'text' => 'Short Text',
     'textarea' => 'Long Text',
@@ -62,7 +64,7 @@ $fieldTypeOptions = [
 ];
 $selectedSource = $_POST['source'] ?? '';
 $postedUrls = $_POST['template_urls'] ?? '';
-if ($openAiAvailable) {
+if ($aiAvailable) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $aiRequested = isset($_POST['enable_ai']) && $_POST['enable_ai'] === '1';
     } else {
@@ -264,7 +266,7 @@ function extract_text_from_docx(string $path): string
     return trim(implode("\n", $paragraphs));
 }
 
-function build_preview_from_content(array $item, string $source, bool $aiRequested, ?array $openAiConfig, array &$errors): ?array
+function build_preview_from_content(array $item, string $source, bool $aiRequested, ?array $aiConfig, array &$errors): ?array
 {
     $content = $item['content'] ?? '';
     if (!is_string($content) || trim($content) === '') {
@@ -381,8 +383,8 @@ function build_preview_from_content(array $item, string $source, bool $aiRequest
         $title = 'Imported Template';
     }
 
-    if ($aiRequested && $openAiConfig) {
-        $aiResult = enhance_fields_with_openai($textForAi, $fields, $source, $openAiConfig, $errors);
+    if ($aiRequested && $aiConfig) {
+        $aiResult = enhance_fields_with_ai($textForAi, $fields, $source, $aiConfig, $errors);
         $fields = $aiResult['fields'];
         $aiAdded = $aiResult['added'] ?? 0;
     }
@@ -412,10 +414,11 @@ function build_preview_from_content(array $item, string $source, bool $aiRequest
         'ai_added' => $aiAdded,
         'ai_requested' => $aiRequested,
         'content_type' => $contentType,
+        'ai_provider' => $aiConfig['provider'] ?? null,
     ];
 }
 
-function load_openai_config(string $root): ?array
+function load_ai_config(string $root): ?array
 {
     static $cached = null;
     static $cachedRoot = null;
@@ -423,31 +426,87 @@ function load_openai_config(string $root): ?array
         return $cached;
     }
 
-    $config = [];
-    $configPath = $root . '/config/openai.php';
-    if (is_file($configPath)) {
-        $config = require $configPath;
+    $defaults = [
+        'provider' => 'openai',
+        'providers' => [
+            'openai' => [
+                'api_key' => '',
+                'endpoint' => 'https://api.openai.com/v1/chat/completions',
+                'model' => 'gpt-4o-mini',
+            ],
+            'azure_openai' => [
+                'api_key' => '',
+                'endpoint' => 'https://YOUR-RESOURCE.openai.azure.com',
+                'deployment' => '',
+                'api_version' => '2024-02-15-preview',
+            ],
+            'anthropic' => [
+                'api_key' => '',
+                'endpoint' => 'https://api.anthropic.com/v1/messages',
+                'model' => 'claude-3-sonnet-20240229',
+                'version' => '2023-06-01',
+                'max_tokens' => 900,
+            ],
+        ],
+    ];
+
+    $settings = $defaults;
+    $settingsPath = $root . '/config/ai-settings.json';
+    if (is_file($settingsPath)) {
+        $raw = file_get_contents($settingsPath);
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $settings = array_replace_recursive($defaults, $decoded);
+            }
+        }
     }
 
-    $fileKey = $root . '/config/openai.key';
-    $apiKey = null;
-    if (is_file($fileKey)) {
-        $apiKey = trim((string)file_get_contents($fileKey));
+    // Legacy fallbacks for existing OpenAI-only deployments
+    $openAiKeyPath = $root . '/config/openai.key';
+    if (empty($settings['providers']['openai']['api_key']) && is_file($openAiKeyPath)) {
+        $settings['providers']['openai']['api_key'] = trim((string)file_get_contents($openAiKeyPath));
     }
-    if (!$apiKey) {
-        $apiKey = $config['api_key'] ?? getenv('OPENAI_API_KEY') ?: null;
+    $legacyConfigPath = $root . '/config/openai.php';
+    if (is_file($legacyConfigPath)) {
+        $legacy = require $legacyConfigPath;
+        if (is_array($legacy)) {
+            $settings['providers']['openai']['endpoint'] = $legacy['endpoint'] ?? $settings['providers']['openai']['endpoint'];
+            $settings['providers']['openai']['model'] = $legacy['model'] ?? $settings['providers']['openai']['model'];
+            if (empty($settings['providers']['openai']['api_key']) && !empty($legacy['api_key'])) {
+                $settings['providers']['openai']['api_key'] = $legacy['api_key'];
+            }
+        }
+    }
+    if (empty($settings['providers']['openai']['api_key'])) {
+        $envKey = getenv('OPENAI_API_KEY');
+        if ($envKey) {
+            $settings['providers']['openai']['api_key'] = $envKey;
+        }
     }
 
-    if (!$apiKey || stripos($apiKey, 'YOUR_OPENAI_API_KEY_HERE') !== false) {
+    $provider = $settings['provider'] ?? 'openai';
+    $providerConfig = $settings['providers'][$provider] ?? null;
+    if (!is_array($providerConfig)) {
+        $cached = null;
+        $cachedRoot = $root;
+        return null;
+    }
+
+    $apiKey = trim((string)($providerConfig['api_key'] ?? ''));
+    if ($apiKey === '' || stripos($apiKey, 'YOUR_OPENAI_API_KEY_HERE') !== false) {
         $cached = null;
         $cachedRoot = $root;
         return null;
     }
 
     $cached = [
+        'provider' => $provider,
         'api_key' => $apiKey,
-        'endpoint' => $config['endpoint'] ?? 'https://api.openai.com/v1/chat/completions',
-        'model' => $config['model'] ?? 'gpt-4o-mini',
+        'endpoint' => trim((string)($providerConfig['endpoint'] ?? '')),
+        'model' => $providerConfig['model'] ?? '',
+        'config' => $providerConfig,
+        'providers' => $settings['providers'],
     ];
     $cachedRoot = $root;
 
@@ -529,7 +588,7 @@ function merge_fields_with_ai(array $existing, array $aiFields): array
     return [$merged, $added];
 }
 
-function enhance_fields_with_openai(string $html, array $fields, string $source, array $config, array &$errors): array
+function enhance_fields_with_ai(string $html, array $fields, string $source, array $config, array &$errors): array
 {
     $text = trim(preg_replace('/\s+/', ' ', strip_tags($html)));
     if (function_exists('mb_substr')) {
@@ -552,45 +611,109 @@ function enhance_fields_with_openai(string $html, array $fields, string $source,
     }
 
     $sourceLabel = $source !== '' ? $source : 'unspecified';
+    $prompt = implode("\n", [
+        'Source: ' . $sourceLabel,
+        '',
+        'Existing extracted fields:',
+        implode("\n", $fieldSummary),
+        '',
+        'Raw template content snippet:',
+        $text,
+    ]);
 
-    $payload = [
-        'model' => $config['model'],
-        'messages' => [
-            [
-                'role' => 'system',
-                'content' => 'You are an assistant that extracts structured checklist or permit fields from raw construction safety templates. Always respond with pure JSON in the shape {"fields": [{"label": string, "type": string, "required": boolean, "options": [string], "help_text": string}]}. Use lowercase snake_case for type names (text, checkbox, select, radio, textarea, section, number, date, time). Only include "options" when multiple choices exist. Do not include explanations or prose.',
-            ],
-            [
-                'role' => 'user',
-                'content' => implode("\n", [
-                    'Source: ' . $sourceLabel,
-                    '',
-                    'Existing extracted fields:',
-                    implode("\n", $fieldSummary),
-                    '',
-                    'Raw template content snippet:',
-                    $text,
-                ]),
-            ],
+    $provider = $config['provider'] ?? 'openai';
+    $apiKey = $config['api_key'] ?? '';
+    $providerConfig = $config['config'] ?? [];
+
+    $messages = [
+        [
+            'role' => 'system',
+            'content' => 'You are an assistant that extracts structured checklist or permit fields from raw construction safety templates. Always respond with pure JSON in the shape {"fields": [{"label": string, "type": string, "required": boolean, "options": [string], "help_text": string}]}. Use lowercase snake_case for type names (text, checkbox, select, radio, textarea, section, number, date, time). Only include "options" when multiple choices exist. Do not include explanations or prose.',
         ],
-        'temperature' => 0.1,
+        [
+            'role' => 'user',
+            'content' => $prompt,
+        ],
     ];
 
-    $ch = curl_init($config['endpoint']);
+    $endpoint = $config['endpoint'] ?? '';
+    $headers = [];
+    $payload = [];
+    $timeout = 45;
+
+    switch ($provider) {
+        case 'azure_openai':
+            $base = rtrim((string)($providerConfig['endpoint'] ?? ''), '/');
+            $deployment = trim((string)($providerConfig['deployment'] ?? ''));
+            $apiVersion = $providerConfig['api_version'] ?? '2024-02-15-preview';
+            if ($base === '' || $deployment === '') {
+                $errors[] = 'Azure OpenAI provider requires both a resource endpoint and deployment name.';
+                return ['fields' => $fields, 'added' => 0];
+            }
+            $endpoint = $base . '/openai/deployments/' . rawurlencode($deployment) . '/chat/completions?api-version=' . rawurlencode($apiVersion);
+            $headers = [
+                'api-key: ' . $apiKey,
+                'Content-Type: application/json',
+            ];
+            $payload = [
+                'messages' => $messages,
+                'temperature' => 0.1,
+            ];
+            break;
+
+        case 'anthropic':
+            $endpoint = $providerConfig['endpoint'] ?? 'https://api.anthropic.com/v1/messages';
+            $headers = [
+                'x-api-key: ' . $apiKey,
+                'content-type: application/json',
+                'anthropic-version: ' . ($providerConfig['version'] ?? '2023-06-01'),
+            ];
+            $payload = [
+                'model' => $providerConfig['model'] ?? 'claude-3-sonnet-20240229',
+                'max_tokens' => (int)($providerConfig['max_tokens'] ?? 900),
+                'temperature' => 0.1,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => $prompt,
+                            ],
+                        ],
+                    ],
+                ],
+            ];
+            $timeout = 60;
+            break;
+
+        default: // OpenAI-compatible
+            $endpoint = $endpoint !== '' ? $endpoint : 'https://api.openai.com/v1/chat/completions';
+            $model = $config['model'] ?: ($providerConfig['model'] ?? 'gpt-4o-mini');
+            $headers = [
+                'Authorization: Bearer ' . $apiKey,
+                'Content-Type: application/json',
+            ];
+            $payload = [
+                'model' => $model,
+                'messages' => $messages,
+                'temperature' => 0.1,
+            ];
+            break;
+    }
+
+    $ch = curl_init($endpoint);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $config['api_key'],
-            'Content-Type: application/json',
-        ],
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        CURLOPT_TIMEOUT => 45,
+        CURLOPT_TIMEOUT => $timeout,
     ]);
 
     $response = curl_exec($ch);
     if ($response === false) {
-        $errors[] = 'OpenAI request failed: ' . curl_error($ch);
+        $errors[] = strtoupper($provider) . ' request failed: ' . curl_error($ch);
         curl_close($ch);
         return ['fields' => $fields, 'added' => 0];
     }
@@ -599,19 +722,31 @@ function enhance_fields_with_openai(string $html, array $fields, string $source,
     curl_close($ch);
 
     if ($status >= 400) {
-        $errors[] = 'OpenAI API error (' . $status . '): ' . substr($response, 0, 200);
+        $errors[] = strtoupper($provider) . ' API error (' . $status . '): ' . substr($response, 0, 200);
         return ['fields' => $fields, 'added' => 0];
     }
 
     $data = json_decode($response, true);
     if (!is_array($data)) {
-        $errors[] = 'OpenAI response was not valid JSON.';
+        $errors[] = strtoupper($provider) . ' response was not valid JSON.';
         return ['fields' => $fields, 'added' => 0];
     }
 
-    $content = $data['choices'][0]['message']['content'] ?? '';
+    if ($provider === 'anthropic') {
+        $content = '';
+        if (!empty($data['content']) && is_array($data['content'])) {
+            foreach ($data['content'] as $segment) {
+                if (($segment['type'] ?? '') === 'text' && isset($segment['text'])) {
+                    $content .= (string)$segment['text'];
+                }
+            }
+        }
+    } else {
+        $content = $data['choices'][0]['message']['content'] ?? '';
+    }
+
     if (!is_string($content) || trim($content) === '') {
-        $errors[] = 'OpenAI returned an empty response.';
+        $errors[] = strtoupper($provider) . ' returned an empty response.';
         return ['fields' => $fields, 'added' => 0];
     }
 
@@ -624,13 +759,13 @@ function enhance_fields_with_openai(string $html, array $fields, string $source,
 
     $aiPayload = json_decode($contentTrimmed, true);
     if (!is_array($aiPayload)) {
-        $errors[] = 'Unable to decode AI response JSON.';
+        $errors[] = 'Unable to decode AI response JSON from ' . strtoupper($provider) . '.';
         return ['fields' => $fields, 'added' => 0];
     }
 
     $aiFields = $aiPayload['fields'] ?? $aiPayload;
     if (!is_array($aiFields)) {
-        $errors[] = 'AI response did not include a "fields" array.';
+        $errors[] = strtoupper($provider) . ' response did not include a "fields" array.';
         return ['fields' => $fields, 'added' => 0];
     }
 
@@ -783,7 +918,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sources = array_merge($sources, $uploadedSources);
 
         foreach ($sources as $sourceItem) {
-            $preview = build_preview_from_content($sourceItem, $source, $aiRequested, $openAiConfig, $errors);
+            $preview = build_preview_from_content($sourceItem, $source, $aiRequested, $aiConfig, $errors);
             if ($preview !== null) {
                 $previewData[] = $preview;
             }
@@ -897,16 +1032,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="file" name="template_files[]" accept="text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" multiple style="margin-top:6px;">
                 </label>
                 <p class="muted" style="margin:6px 0 18px 0;">Upload exported HTML checklists, PDF safety forms, or Word (.docx) documents. We’ll extract the text and run the same AI-assisted field mapping.</p>
-                <?php if ($openAiAvailable): ?>
+                <?php if ($aiAvailable): ?>
                     <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;">
                         <input type="checkbox" name="enable_ai" value="1" <?= $aiRequested ? 'checked' : '' ?>>
                         <span>
-                            <strong>Enhance with OpenAI suggestions</strong><br>
-                            <span class="muted">A short snippet of the template is sent securely to OpenAI to suggest refined field labels, types, and options.</span>
+                            <strong>Enhance with <?= htmlspecialchars($activeAiProviderLabel) ?> suggestions</strong><br>
+                            <span class="muted">A short snippet of the template is sent securely to your <?= htmlspecialchars($activeAiProviderLabel) ?> account to suggest refined field labels, types, and options.</span>
                         </span>
                     </label>
                 <?php else: ?>
-                    <p class="muted" style="margin:0 0 18px 0;">Add an OpenAI API key in <a href="/admin/admin-openai-settings.php">OpenAI Settings</a> to enable AI-assisted field extraction.</p>
+                    <p class="muted" style="margin:0 0 18px 0;">Configure an AI provider in <a href="/admin/admin-openai-settings.php">AI Provider Settings</a> to enable AI-assisted field extraction.</p>
                 <?php endif; ?>
                 <button type="submit" class="btn">Preview Templates</button>
             </form>
@@ -918,7 +1053,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <li>Confirm the mapping to save JSON templates into your system.</li>
                   <li>Re-run the <b>Permit Template Importer</b> to sync them once you’re happy.</li>
                 </ol>
-                                <span style="color:#38bdf8">Note:</span> When OpenAI is enabled, field suggestions are refined using your secure API key. Use the preview below to map the final fields before saving, even for PDFs.<br>
+                                <span style="color:#38bdf8">Note:</span> When AI is enabled (current provider: <?= htmlspecialchars($activeAiProviderLabel) ?>), field suggestions are refined using your secure API key. Use the preview below to map the final fields before saving, even for PDFs.<br>
                 <span style="color:#fbbf24">Feedback and suggestions welcome!</span>
             </div>
         </div>
@@ -938,8 +1073,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php if (!empty($template['content_type'])): ?>
                                     <span class="content-chip"><?= htmlspecialchars(strtoupper($template['content_type'])) ?></span>
                                 <?php endif; ?>
-                                <?php if (!empty($template['ai_requested'])): ?>
-                                    <span class="ai-chip">AI Enhanced<?= $template['ai_added'] > 0 ? ' +' . (int)$template['ai_added'] : '' ?></span>
+                                <?php if (!empty($template['ai_requested'])):
+                                    $chipProvider = $template['ai_provider'] ?? $activeAiProvider;
+                                    $chipProviderLabel = ucwords(str_replace('_', ' ', (string)$chipProvider));
+                                ?>
+                                    <span class="ai-chip">AI Enhanced <?= htmlspecialchars($chipProviderLabel) ?><?= $template['ai_added'] > 0 ? ' +' . (int)$template['ai_added'] : '' ?></span>
                                 <?php endif; ?>
                             </h3>
                             <p class="source">Source: <?= htmlspecialchars($template['source_label']) ?></p>

@@ -5,6 +5,7 @@
 ### Highlights
 - Enabled direct PDF uploads in the Advanced External Template Importer, parsing document text with `smalot/pdfparser` before running the existing extraction pipeline.
 - Added Word (.docx) document ingestion using a lightweight DOCX XML reader so safety forms exported from Office can flow through the same AI-assisted mapping.
+- Added an inline OpenAI API key checker in `admin/admin-openai-settings.php` with a one-click connectivity test.
 - Added a two-step preview and mapping workflow to `admin/admin-advanced-external-import.php`, letting admins review and tweak extracted fields before saving.
 - Introduced interactive controls for field labels, types, required flags, options, and help text, plus the ability to skip unwanted items.
 - Improved AI-assisted imports by surfacing the number of OpenAI-suggested fields and carrying that context into the new mapping UI.
