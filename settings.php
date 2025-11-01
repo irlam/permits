@@ -150,9 +150,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       unset($settings['company_logo_path']);
       $success = 'Company logo removed.';
     }
-    } catch (\Exception $e) {
-        $error = 'Error updating settings: ' . $e->getMessage();
-    }
+  } catch (\Exception $e) {
+    $error = 'Error updating settings: ' . $e->getMessage();
+  }
 }
 
 // Load current settings
