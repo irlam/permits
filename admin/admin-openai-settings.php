@@ -147,12 +147,15 @@ function validate_ai_key(string $provider, string $key): ?string
     return null;
 }
 
-function test_ai_provider(string $provider, array $providerSettings, array &$messages, array &$errors): void
+/**
+ * Build a provider-specific request configuration.
+ */
+function build_provider_request(string $provider, array $providerSettings, string $mode, array &$errors): ?array
 {
     $apiKey = trim((string)($providerSettings['api_key'] ?? ''));
     if ($apiKey === '') {
         $errors[] = 'Add an API key before testing.';
-        return;
+        return null;
     }
 
     $label = provider_label($provider);
@@ -166,7 +169,7 @@ function test_ai_provider(string $provider, array $providerSettings, array &$mes
             $base = rtrim((string)($providerSettings['endpoint'] ?? ''), '/');
             if ($base === '') {
                 $errors[] = 'Azure OpenAI requires a resource endpoint (e.g. https://your-resource.openai.azure.com).';
-                return;
+                return null;
             }
             $apiVersion = $providerSettings['api_version'] ?? '2024-02-15-preview';
             $endpoint = $base . '/openai/deployments?api-version=' . rawurlencode($apiVersion);
@@ -199,7 +202,10 @@ function test_ai_provider(string $provider, array $providerSettings, array &$mes
             if (!preg_match('#/v\d+$#', $base)) {
                 $base .= '/v1';
             }
-            $endpoint = $base . '/models?limit=1';
+            $endpoint = $base . '/models';
+            if ($mode === 'test') {
+                $endpoint .= '?limit=1';
+            }
             $headers = [
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json',
@@ -207,35 +213,135 @@ function test_ai_provider(string $provider, array $providerSettings, array &$mes
             break;
     }
 
-    $ch = curl_init($endpoint);
+    return [
+        'label' => $label,
+        'endpoint' => $endpoint,
+        'headers' => $headers,
+        'method' => $method,
+        'body' => $body,
+    ];
+}
+
+function execute_provider_request(array $request): array
+{
+    $ch = curl_init($request['endpoint']);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 20,
-        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_HTTPHEADER => $request['headers'],
     ]);
-    if ($method === 'POST') {
+    if ($request['method'] === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request['body']));
     }
 
     $response = curl_exec($ch);
-    if ($response === false) {
-        $errors[] = $label . ' request failed: ' . curl_error($ch);
-        curl_close($ch);
-        return;
-    }
-
+    $error = $response === false ? curl_error($ch) : null;
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
+    return [
+        'body' => $response,
+        'status' => $status,
+        'error' => $error,
+    ];
+}
+
+function test_ai_provider(string $provider, array $providerSettings, array &$messages, array &$errors): void
+{
+    $request = build_provider_request($provider, $providerSettings, 'test', $errors);
+    if ($request === null) {
+        return;
+    }
+
+    $result = execute_provider_request($request);
+    if ($result['error']) {
+        $errors[] = $request['label'] . ' request failed during connectivity test: ' . $result['error'];
+        return;
+    }
+
+    $response = $result['body'];
+    $status = $result['status'];
+
     if ($status >= 200 && $status < 300) {
-        $messages[] = $label . ' connectivity check succeeded (HTTP ' . $status . ').';
+        $messages[] = $request['label'] . ' connectivity check succeeded (HTTP ' . $status . ').';
     } elseif ($status === 401) {
-        $errors[] = $label . ' returned HTTP 401 (unauthorized). Double-check the key and permissions.';
+        $errors[] = $request['label'] . ' returned HTTP 401 (unauthorized). Double-check the key and permissions.';
     } else {
         $snippet = trim(substr($response, 0, 200));
-        $errors[] = $label . ' responded with HTTP ' . $status . '. Body snippet: ' . $snippet;
+        $errors[] = $request['label'] . ' responded with HTTP ' . $status . '. Body snippet: ' . $snippet;
     }
+}
+
+function fetch_provider_models(string $provider, array $providerSettings, array &$messages, array &$errors): void
+{
+    $request = build_provider_request($provider, $providerSettings, 'models', $errors);
+    if ($request === null) {
+        return;
+    }
+
+    $result = execute_provider_request($request);
+    if ($result['error']) {
+        $errors[] = $request['label'] . ' request failed while fetching models: ' . $result['error'];
+        return;
+    }
+
+    $response = $result['body'];
+    $status = $result['status'];
+    if ($status < 200 || $status >= 300) {
+        $snippet = trim(substr((string)$response, 0, 200));
+        $errors[] = $request['label'] . ' responded with HTTP ' . $status . ' while listing models. Body snippet: ' . $snippet;
+        return;
+    }
+
+    $decoded = json_decode((string)$response, true);
+    if (!is_array($decoded)) {
+        $errors[] = 'Unable to parse model list response from ' . $request['label'] . '.';
+        return;
+    }
+
+    $models = [];
+    if (isset($decoded['data']) && is_array($decoded['data'])) {
+        foreach ($decoded['data'] as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (!empty($entry['id'])) {
+                $models[] = (string)$entry['id'];
+            } elseif (!empty($entry['deploymentName'])) {
+                $models[] = (string)$entry['deploymentName'];
+            }
+        }
+    }
+    if (isset($decoded['value']) && is_array($decoded['value'])) {
+        foreach ($decoded['value'] as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (!empty($entry['name'])) {
+                $models[] = (string)$entry['name'];
+            } elseif (!empty($entry['id'])) {
+                $models[] = basename((string)$entry['id']);
+            }
+            if (isset($entry['properties']['model']['name'])) {
+                $models[] = (string)$entry['properties']['model']['name'];
+            }
+        }
+    }
+
+    $models = array_values(array_unique($models));
+
+    if (empty($models) && isset($decoded['error'])) {
+        $errors[] = $request['label'] . ' reported an error: ' . ($decoded['error']['message'] ?? json_encode($decoded['error']));
+        return;
+    }
+
+    if (empty($models)) {
+        $messages[] = 'No models were returned by ' . $request['label'] . '. You may need to create a deployment first.';
+        return;
+    }
+
+    $messages[] = $request['label'] . ' models available: ' . implode(', ', $models) . '.';
 }
 
 $settings = load_ai_settings($root, $settingsFile);
@@ -267,8 +373,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $wantsSave = isset($_POST['save_api_key']);
     $wantsTest = isset($_POST['test_connection']);
+    $wantsFetchModels = isset($_POST['fetch_models']);
+    $requiresValidation = $wantsSave || $wantsTest || $wantsFetchModels;
 
-    if ($validationError) {
+    if ($requiresValidation && $validationError) {
         $errors[] = $validationError;
     } else {
         if ($wantsSave) {
@@ -279,6 +387,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($wantsTest) {
             test_ai_provider($selectedProvider, $activeSettings, $messages, $errors);
+        }
+
+        if ($wantsFetchModels) {
+            fetch_provider_models($selectedProvider, $activeSettings, $messages, $errors);
         }
     }
 
@@ -406,6 +518,7 @@ $providerLabel = provider_label($currentProvider);
                 <div class="btn-row">
                     <button type="submit" name="save_api_key" value="1" class="btn">Save Settings</button>
                     <button type="submit" name="test_connection" value="1" class="btn-secondary">Test Connection</button>
+                    <button type="submit" name="fetch_models" value="1" class="btn-secondary">Fetch Models</button>
                 </div>
             </form>
         </div>
