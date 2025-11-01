@@ -319,6 +319,7 @@ function reopen_link($app, $permitId): string
 			align-items: center;
 			position: relative;
 			z-index: 1;
+			margin: 0;
 		}
 		.nav-actions__welcome {
 			display: inline-flex;
@@ -586,6 +587,79 @@ function reopen_link($app, $permitId): string
 			}
 			.template-modal__dialog {
 				max-height: 90vh;
+			}
+		}
+		@media (max-width: 600px) {
+			.site-shell {
+				padding: clamp(24px, 10vw, 48px) clamp(12px, 6vw, 24px) 72px;
+				gap: clamp(24px, 8vw, 40px);
+			}
+			.hero {
+				padding: clamp(28px, 9vw, 48px);
+			}
+			.hero__content {
+				text-align: center;
+				align-items: center;
+				justify-items: center;
+			}
+			.hero__lead {
+				max-width: none;
+			}
+			.hero__brand {
+				flex-direction: column;
+				align-items: center;
+				gap: 12px;
+			}
+			.hero__brand .brand-mark__logo {
+				width: 56px;
+				height: 56px;
+			}
+			.hero__brand .brand-mark__name {
+				font-size: 24px;
+			}
+			.section__header {
+				justify-items: center;
+				text-align: center;
+			}
+			.section__lead {
+				max-width: none;
+			}
+			.section {
+				padding: 24px;
+				gap: 20px;
+			}
+			.stats-grid {
+				gap: 14px;
+			}
+			.stat-card {
+				padding: 16px 18px;
+			}
+			.status-form {
+				max-width: none;
+			}
+			.status-form .btn {
+				width: 100%;
+				justify-content: center;
+			}
+			.template-grid {
+				gap: 14px;
+			}
+			.template-tile {
+				padding: 16px;
+			}
+			.permit-card,
+			.recent-card {
+				padding: 18px;
+			}
+			.permit-card__actions {
+				flex-direction: column;
+			}
+			.permit-card__actions .btn {
+				width: 100%;
+				justify-content: center;
+			}
+			.template-modal__dialog {
+				padding: clamp(20px, 6vw, 30px);
 			}
 		}
 	</style>
