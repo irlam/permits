@@ -71,6 +71,7 @@ $schemaArray = null;
 $schemaDecodeError = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $activeTemplateId = trim($_POST['template_id'] ?? '');
     $formName = trim($_POST['name'] ?? '');
     $formVersion = trim($_POST['version'] ?? '');
@@ -80,15 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($activeTemplateId === '') {
         $errors[] = 'Template identifier missing.';
     }
-
     if ($formName === '') {
         $errors[] = 'Template name is required.';
     }
-
     if ($formVersion === '' || !ctype_digit($formVersion) || (int)$formVersion < 1) {
         $errors[] = 'Version must be a positive whole number.';
     }
-
     if ($schemaInput === '') {
         $errors[] = 'Template schema cannot be empty.';
     }
@@ -101,11 +99,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Auto-generate form_structure if empty or invalid
     $decodedStructure = null;
-    if ($supportsFormStructure && $structureInput !== '') {
-        $decodedStructure = json_decode($structureInput, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $errors[] = 'Form structure JSON is invalid: ' . json_last_error_msg();
+    if ($supportsFormStructure) {
+        if ($structureInput !== '') {
+            $decodedStructure = json_decode($structureInput, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $errors[] = 'Form structure JSON is invalid: ' . json_last_error_msg();
+                $decodedStructure = null;
+            }
+        }
+        // If structure is empty or invalid, auto-generate from schema
+        if (($structureInput === '' || $decodedStructure === null) && $decodedSchema !== null) {
+            require_once __DIR__ . '/src/FormTemplateSeeder.php';
+            $decodedStructure = \Permits\FormTemplateSeeder::buildPublicFormStructure($decodedSchema);
+            $structureInput = json_encode($decodedStructure, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
     }
 
