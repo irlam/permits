@@ -15,6 +15,7 @@
 // DEBUG: Output session and cookie info for troubleshooting, before any redirect
 require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/simple_html_dom.php';
 if (isset($_GET['debug'])) {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
@@ -44,23 +45,33 @@ if (!$currentUser || $currentUser['role'] !== 'admin') {
 $messages = [];
 $errors = [];
 
+// Use Simple HTML DOM for robust field extraction
 function extract_fields_from_html($html, $source) {
-    // Simple demo: extract <li> or <label> as fields
     $fields = [];
-    if (preg_match_all('/<li[^>]*>(.*?)<\/li>/is', $html, $m)) {
-        foreach ($m[1] as $item) {
-            $label = strip_tags($item);
-            if (strlen($label) > 2) {
-                $fields[] = [ 'label' => $label, 'type' => 'text', 'required' => false ];
-            }
+    $dom = str_get_html($html);
+    if (!$dom) return $fields;
+
+    // Extract <li> checklist items
+    foreach ($dom->find('li') as $li) {
+        $label = trim($li->plaintext);
+        if (strlen($label) > 2) {
+            $fields[] = [ 'label' => $label, 'type' => 'text', 'required' => false ];
         }
     }
-    if (empty($fields) && preg_match_all('/<label[^>]*>(.*?)<\/label>/is', $html, $m)) {
-        foreach ($m[1] as $item) {
-            $label = strip_tags($item);
-            if (strlen($label) > 2) {
-                $fields[] = [ 'label' => $label, 'type' => 'text', 'required' => false ];
-            }
+    // Extract <label> fields
+    foreach ($dom->find('label') as $labelEl) {
+        $label = trim($labelEl->plaintext);
+        if (strlen($label) > 2) {
+            $fields[] = [ 'label' => $label, 'type' => 'text', 'required' => false ];
+        }
+    }
+    // Extract <input> fields with labels
+    foreach ($dom->find('input') as $input) {
+        $type = $input->type ?? 'text';
+        $name = $input->name ?? '';
+        $label = $input->getAttribute('aria-label') ?? $name;
+        if ($label && strlen($label) > 2) {
+            $fields[] = [ 'label' => $label, 'type' => $type, 'required' => $input->required ?? false ];
         }
     }
     return $fields;
