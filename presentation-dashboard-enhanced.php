@@ -942,15 +942,19 @@ $narrationSections = [
                 if (!synth) { resolve(null); return; }
                 const available = synth.getVoices();
                 if (available.length) {
-                    // Prefer UK English voices
+                    // Prefer natural male voices (ChatGPT-style)
                     selectedVoice = available.find(v => 
-                        v.lang.startsWith('en-GB') && v.name.includes('Female')
+                        v.name.includes('Google UK English Male')
+                    ) || available.find(v => 
+                        v.lang.startsWith('en-GB') && v.name.includes('Male')
+                    ) || available.find(v => 
+                        v.name.includes('Samantha')
+                    ) || available.find(v => 
+                        v.lang.startsWith('en-GB') && v.name.includes('Male')
+                    ) || available.find(v => 
+                        v.name.includes('Male')
                     ) || available.find(v => 
                         v.lang.startsWith('en-GB')
-                    ) || available.find(v => 
-                        v.name.includes('British')
-                    ) || available.find(v => 
-                        v.name.includes('Female')
                     ) || available[0];
                     if (selectedVoice) selectedVoice.lang = 'en-GB';
                     resolve(selectedVoice);
@@ -960,15 +964,19 @@ $narrationSections = [
                     const fresh = synth.getVoices();
                     if (fresh.length) {
                         synth.removeEventListener('voiceschanged', handle);
-                        // Prefer UK English voices
+                        // Prefer natural male voices (ChatGPT-style)
                         selectedVoice = fresh.find(v => 
-                            v.lang.startsWith('en-GB') && v.name.includes('Female')
+                            v.name.includes('Google UK English Male')
+                        ) || fresh.find(v => 
+                            v.lang.startsWith('en-GB') && v.name.includes('Male')
+                        ) || fresh.find(v => 
+                            v.name.includes('Samantha')
+                        ) || fresh.find(v => 
+                            v.lang.startsWith('en-GB') && v.name.includes('Male')
+                        ) || fresh.find(v => 
+                            v.name.includes('Male')
                         ) || fresh.find(v => 
                             v.lang.startsWith('en-GB')
-                        ) || fresh.find(v => 
-                            v.name.includes('British')
-                        ) || fresh.find(v => 
-                            v.name.includes('Female')
                         ) || fresh[0];
                         if (selectedVoice) selectedVoice.lang = 'en-GB';
                         resolve(selectedVoice);
