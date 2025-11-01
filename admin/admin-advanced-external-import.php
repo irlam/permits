@@ -14,6 +14,8 @@ session_start();
  */
 
 // DEBUG: Output session and cookie info for troubleshooting, before any redirect
+require __DIR__ . '/../vendor/autoload.php';
+[$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 if (isset($_GET['debug'])) {
     session_start();
     echo '<pre style="background:#222;color:#fff;padding:12px;">';
@@ -23,9 +25,6 @@ if (isset($_GET['debug'])) {
     echo '</pre>';
     exit;
 }
-
-require __DIR__ . '/../vendor/autoload.php';
-
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login.php');
