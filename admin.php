@@ -1,17 +1,4 @@
-                        <!-- Advanced External Template Importer -->
-                        <div class="admin-card">
-                                <div class="icon">🚀</div>
-                                <h3>Advanced External Template Importer</h3>
-                                <p>Batch import and parse construction templates from multiple sources (SafetyCulture, OSHA, HSE, and more). Paste multiple URLs and let the system extract fields automatically.<br><br>
-                                <strong>Features:</strong>
-                                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
-                                    <li>Batch import from multiple URLs</li>
-                                    <li>Automatic field extraction from checklists</li>
-                                    <li>Future: AI field mapping, visual editor, scheduled sync</li>
-                                </ul>
-                                </p>
-                                <a href="/admin/admin-advanced-external-import.php" class="btn">Open Advanced Importer</a>
-                        </div>
+// ...existing code...
 <?php
 /**
  * Admin Panel - Simple Version
@@ -137,6 +124,18 @@ try {
         </section>
 
         <section class="admin-grid" aria-label="Admin tools">
+            <!-- Advanced External Template Importer (moved inline) -->
+            <div class="admin-card">
+                <div class="icon">🚀</div>
+                <h3>Advanced External Template Importer</h3>
+                <p>Batch import and parse construction templates from multiple sources (SafetyCulture, OSHA, HSE, and more). Paste multiple URLs and let the system extract fields automatically.</p>
+                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
+                    <li>Batch import from multiple URLs</li>
+                    <li>Automatic field extraction from checklists</li>
+                    <li>Future: AI field mapping, visual editor, scheduled sync</li>
+                </ul>
+                <a href="/admin/admin-advanced-external-import.php" class="btn">Open Advanced Importer</a>
+            </div>
             <div class="admin-card">
                 <div class="icon">⏱️</div>
                 <h3>Permit Duration Presets</h3>
