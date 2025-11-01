@@ -471,8 +471,12 @@ function load_ai_config(string $root): ?array
     if (is_file($legacyConfigPath)) {
         $legacy = require $legacyConfigPath;
         if (is_array($legacy)) {
-            $settings['providers']['openai']['endpoint'] = $legacy['endpoint'] ?? $settings['providers']['openai']['endpoint'];
-            $settings['providers']['openai']['model'] = $legacy['model'] ?? $settings['providers']['openai']['model'];
+            if (empty(trim((string)($settings['providers']['openai']['endpoint'] ?? '')))) {
+                $settings['providers']['openai']['endpoint'] = $legacy['endpoint'] ?? $settings['providers']['openai']['endpoint'];
+            }
+            if (empty(trim((string)($settings['providers']['openai']['model'] ?? '')))) {
+                $settings['providers']['openai']['model'] = $legacy['model'] ?? $settings['providers']['openai']['model'];
+            }
             if (empty($settings['providers']['openai']['api_key']) && !empty($legacy['api_key'])) {
                 $settings['providers']['openai']['api_key'] = $legacy['api_key'];
             }
