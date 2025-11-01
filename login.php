@@ -50,19 +50,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_role'] = $user['role'];
                 
                 // Log activity if function exists
-                if (function_exists('logActivity')) {
-                    logActivity(
-                        'user_login',
-                        'auth',
-                        'user',
-                        $user['id'],
-                        "User logged in: {$user['email']}"
-                    );
-                }
-                
-                // Redirect to dashboard
-                header('Location: ' . $app->url('dashboard.php'));
-                exit;
+        if (function_exists('logActivity')) {
+          logActivity(
+            'user_login',
+            'auth',
+            'user',
+            $user['id'],
+            "User logged in: {$user['email']}"
+          );
+        }
+
+        // DEBUG: Output session and cookie info after login
+        if (isset($_GET['debug'])) {
+          echo '<pre style="background:#222;color:#fff;padding:12px;">';
+          echo 'Session ID: ' . session_id() . "\n";
+          echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
+          echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
+          echo '</pre>';
+          exit;
+        }
+
+        // Redirect to dashboard
+        header('Location: ' . $app->url('dashboard.php'));
+        exit;
             } else {
                 $error = "Invalid email or password";
             }
