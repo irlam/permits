@@ -15,17 +15,30 @@
  */
 
 // Load application bootstrap
-[$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+require __DIR__ . '/../vendor/autoload.php';
+[$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
 
-use Permits\Auth;
 use Permits\SystemSettings;
 
-// Initialize auth
-$auth = new Auth($db);
+// Start session
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
-// Check if user is authenticated and has admin role
-if (!$auth->isAuthenticated() || !$auth->hasRole('admin')) {
-    header('Location: ' . $app->url('login.php'));
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /login.php');
+    exit;
+}
+
+// Get current user and verify admin role
+$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+$stmt->execute([$_SESSION['user_id']]);
+$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$currentUser || $currentUser['role'] !== 'admin') {
+    http_response_code(403);
+    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
     exit;
 }
 
