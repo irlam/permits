@@ -1,4 +1,3 @@
-session_start();
 <?php
 /**
  * Advanced External Template Importer (Admin)
@@ -30,7 +29,6 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: /login.php');
     exit;
 }
-[$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 $stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
 $stmt->execute([$_SESSION['user_id']]);
 $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
