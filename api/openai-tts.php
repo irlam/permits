@@ -59,7 +59,6 @@ if (empty($text) || strlen($text) > 4096) {
 
 // Get OpenAI API key from config file
 $openaiApiKey = null;
-$root = dirname(__DIR__);
 $configFile = $root . '/config/ai-settings.json';
 try {
     if (file_exists($configFile)) {

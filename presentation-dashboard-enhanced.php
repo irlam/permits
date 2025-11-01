@@ -1065,6 +1065,7 @@ $narrationSections = [
                 highlightElement(id);
 
                 try {
+                    console.log('Calling TTS API for text:', text.substring(0, 50) + '...');
                     const response = await fetch('/api/openai-tts.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1075,23 +1076,33 @@ $narrationSections = [
                         })
                     });
 
-                    if (!response.ok) throw new Error('TTS request failed');
+                    console.log('TTS Response status:', response.status);
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('TTS error:', errorData);
+                        throw new Error('TTS request failed: ' + (errorData.error || response.statusText));
+                    }
                     
                     const blob = await response.blob();
+                    console.log('Received audio blob:', blob.size, 'bytes');
+                    
                     const url = URL.createObjectURL(blob);
                     currentAudio = new Audio(url);
                     
                     currentAudio.onended = () => {
+                        console.log('Audio ended, moving to next');
                         index++;
                         setTimeout(speakNextWithOpenAI, 500);
                     };
 
-                    currentAudio.onerror = () => {
-                        console.error('Audio playback error');
+                    currentAudio.onerror = (err) => {
+                        console.error('Audio playback error:', err);
                         index++;
                         setTimeout(speakNextWithOpenAI, 500);
                     };
 
+                    console.log('Starting playback');
                     currentAudio.play().catch(err => {
                         console.error('Play error:', err);
                         index++;
