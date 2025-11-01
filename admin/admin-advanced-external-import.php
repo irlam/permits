@@ -15,7 +15,8 @@
 // DEBUG: Output session and cookie info for troubleshooting, before any redirect
 require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
-require_once __DIR__ . '/../src/simple_html_dom.php';
+
+use simplehtmldom\HtmlDocument;
 if (isset($_GET['debug'])) {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
@@ -48,32 +49,89 @@ $errors = [];
 // Use Simple HTML DOM for robust field extraction
 function extract_fields_from_html($html, $source) {
     $fields = [];
-    $dom = str_get_html($html);
-    if (!$dom) return $fields;
+    $seen = [];
+    $dom = new HtmlDocument();
+    $dom->load($html, true, false);
 
-    // Extract <li> checklist items
+    $addField = function(string $label, string $type = 'text', bool $required = false, array $meta = []) use (&$fields, &$seen) {
+        $label = trim(preg_replace('/\s+/', ' ', $label));
+        if ($label === '' || strlen($label) < 3) {
+            return;
+        }
+        $key = strtolower($label . '|' . $type);
+        if (isset($seen[$key])) {
+            return;
+        }
+        $seen[$key] = true;
+        $fields[] = array_merge([
+            'label' => $label,
+            'type' => $type,
+            'required' => $required,
+        ], $meta);
+    };
+
+    // Extract list items (common in checklists)
     foreach ($dom->find('li') as $li) {
-        $label = trim($li->plaintext);
-        if (strlen($label) > 2) {
-            $fields[] = [ 'label' => $label, 'type' => 'text', 'required' => false ];
+        $addField($li->plaintext, 'checkbox');
+    }
+
+    // Extract table-based checklists (rows and headers)
+    foreach ($dom->find('table') as $table) {
+        foreach ($table->find('tr') as $row) {
+            $cells = array_map(static fn($cell) => trim($cell->plaintext), $row->find('th,td'));
+            $cells = array_filter($cells, static fn($value) => $value !== '');
+            if (count($cells) === 1) {
+                $addField(reset($cells), 'text');
+            } elseif (!empty($cells)) {
+                $addField(implode(' | ', $cells), 'text');
+            }
         }
     }
-    // Extract <label> fields
-    foreach ($dom->find('label') as $labelEl) {
-        $label = trim($labelEl->plaintext);
-        if (strlen($label) > 2) {
-            $fields[] = [ 'label' => $label, 'type' => 'text', 'required' => false ];
+
+    // Extract labels and their associated inputs/selects
+    foreach ($dom->find('label') as $labelNode) {
+        $labelText = $labelNode->plaintext;
+        $forId = $labelNode->for ?? $labelNode->getAttribute('for');
+        $required = strpos($labelText, '*') !== false;
+        $inputType = 'text';
+
+        if ($forId) {
+            $input = $dom->find("#{$forId}", 0);
+            if ($input) {
+                $tag = strtolower($input->tag);
+                if ($tag === 'input') {
+                    $inputType = $input->type ?: 'text';
+                    $required = $required || ($input->required ?? false);
+                } elseif ($tag === 'select') {
+                    $inputType = 'select';
+                } elseif ($tag === 'textarea') {
+                    $inputType = 'textarea';
+                }
+            }
         }
+
+        $addField($labelText, $inputType, $required);
     }
-    // Extract <input> fields with labels
-    foreach ($dom->find('input') as $input) {
-        $type = $input->type ?? 'text';
-        $name = $input->name ?? '';
-        $label = $input->getAttribute('aria-label') ?? $name;
-        if ($label && strlen($label) > 2) {
-            $fields[] = [ 'label' => $label, 'type' => $type, 'required' => $input->required ?? false ];
-        }
+
+    // Plain input elements without labels (fallback to placeholder/name)
+    foreach ($dom->find('input, textarea, select') as $input) {
+        $label = $input->getAttribute('aria-label')
+            ?? $input->placeholder
+            ?? $input->name
+            ?? '';
+        $type = $input->tag === 'input' ? ($input->type ?: 'text') : $input->tag;
+        $required = $input->required ?? false;
+        $addField($label, $type, $required);
     }
+
+    // Headings often describe sections/tasks
+    foreach ($dom->find('h1, h2, h3, h4, h5') as $heading) {
+        $addField($heading->plaintext, 'section');
+    }
+
+    $dom->clear();
+    unset($dom);
+
     return $fields;
 }
 
