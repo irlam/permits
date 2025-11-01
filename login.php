@@ -20,10 +20,19 @@
 // Start session
 session_start();
 
+// DEBUG: Output session and cookie info if requested, even if already logged in
+if (isset($_GET['debug'])) {
+  echo '<pre style="background:#222;color:#fff;padding:12px;">';
+  echo 'Session ID: ' . session_id() . "\n";
+  echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
+  echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
+  echo '</pre>';
+  exit;
+}
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-    header('Location: ' . $app->url('dashboard.php'));
-    exit;
+  header('Location: ' . $app->url('dashboard.php'));
+  exit;
 }
 
 // Handle login submission
