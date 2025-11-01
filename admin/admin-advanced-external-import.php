@@ -164,7 +164,7 @@ function extract_fields_from_html($html, $source) {
     return $fields;
 }
 
-function extract_fields_from_pdf_text(string $text, string $source): array
+function extract_fields_from_text(string $text, string $source): array
 {
     $fields = [];
     $seen = [];
@@ -220,6 +220,50 @@ function extract_fields_from_pdf_text(string $text, string $source): array
     return $fields;
 }
 
+function extract_text_from_docx(string $path): string
+{
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('PHP Zip extension is required to process DOCX files');
+    }
+
+    $zip = new ZipArchive();
+    if ($zip->open($path) !== true) {
+        throw new RuntimeException('Unable to open DOCX archive');
+    }
+
+    $xml = $zip->getFromName('word/document.xml');
+    $zip->close();
+
+    if ($xml === false) {
+        throw new RuntimeException('Missing document.xml in DOCX file');
+    }
+
+    $previous = libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    if (!$dom->loadXML($xml)) {
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        throw new RuntimeException('Unable to parse DOCX XML content');
+    }
+
+    $xpath = new DOMXPath($dom);
+    $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+    $paragraphs = [];
+    foreach ($xpath->query('//w:p') as $paragraph) {
+        $texts = [];
+        foreach ($xpath->query('.//w:t', $paragraph) as $node) {
+            $texts[] = $node->nodeValue;
+        }
+        $textValue = trim(implode('', $texts));
+        if ($textValue !== '') {
+            $paragraphs[] = $textValue;
+        }
+    }
+
+    libxml_use_internal_errors($previous);
+    return trim(implode("\n", $paragraphs));
+}
+
 function build_preview_from_content(array $item, string $source, bool $aiRequested, ?array $openAiConfig, array &$errors): ?array
 {
     $content = $item['content'] ?? '';
@@ -229,6 +273,8 @@ function build_preview_from_content(array $item, string $source, bool $aiRequest
     }
 
     $label = $item['label'] ?? 'Imported Source';
+    $filePath = $item['file_path'] ?? null;
+    $originalName = $item['original_name'] ?? $label;
     $contentType = 'html';
     $aiAdded = 0;
     $title = $item['title_hint'] ?? '';
@@ -238,6 +284,21 @@ function build_preview_from_content(array $item, string $source, bool $aiRequest
     $sample = strtolower(substr(ltrim($content), 0, 500));
     $isHtml = str_contains($sample, '<html') || str_contains($sample, '<!doctype');
     $isPdf = !$isHtml && str_contains(substr($content, 0, 20), '%PDF-');
+    $extension = strtolower(pathinfo((string)$originalName, PATHINFO_EXTENSION));
+    $isDocx = !$isHtml && !$isPdf && ($extension === 'docx');
+    if (!$isDocx) {
+        $binaryHeader = substr($content, 0, 4);
+        if ($binaryHeader !== false && $binaryHeader === "PK\x03\x04") {
+            if (strpos($content, '[Content_Types].xml') !== false && strpos($content, 'word/') !== false) {
+                $isDocx = true;
+            }
+        }
+    }
+
+    if (!$isHtml && !$isPdf && !$isDocx && $extension === 'doc') {
+        $errors[] = 'Legacy Word (.doc) files are not supported. Please convert the document to .docx and try again (' . $label . ').';
+        return null;
+    }
 
     if ($isHtml) {
         $fields = extract_fields_from_html($content, $source);
@@ -247,6 +308,39 @@ function build_preview_from_content(array $item, string $source, bool $aiRequest
             }
         }
         $contentType = 'html';
+    } elseif ($isDocx) {
+        $tempFile = null;
+        try {
+            $docxPath = is_string($filePath) && is_file($filePath) ? $filePath : null;
+            if ($docxPath === null) {
+                $tempFile = tempnam(sys_get_temp_dir(), 'docx-import-');
+                if ($tempFile === false) {
+                    throw new RuntimeException('Unable to create temporary file for DOCX processing');
+                }
+                if (file_put_contents($tempFile, $content) === false) {
+                    throw new RuntimeException('Failed to write DOCX content to temporary file');
+                }
+                $docxPath = $tempFile;
+            }
+
+            $textForAi = extract_text_from_docx($docxPath);
+            if (trim($textForAi) === '') {
+                throw new RuntimeException('No readable text found inside document');
+            }
+        } catch (Throwable $exception) {
+            $errors[] = 'Failed to parse Word document for ' . $label . ': ' . $exception->getMessage();
+            if ($tempFile && is_file($tempFile)) {
+                @unlink($tempFile);
+            }
+            return null;
+        }
+
+        if ($tempFile && is_file($tempFile)) {
+            @unlink($tempFile);
+        }
+
+        $fields = extract_fields_from_text($textForAi, $source);
+        $contentType = 'docx';
     } elseif ($isPdf) {
         try {
             $parser = new \Smalot\PdfParser\Parser();
@@ -268,15 +362,15 @@ function build_preview_from_content(array $item, string $source, bool $aiRequest
             return null;
         }
 
-        $fields = extract_fields_from_pdf_text($textForAi, $source);
+        $fields = extract_fields_from_text($textForAi, $source);
         $contentType = 'pdf';
     } else {
         $textForAi = trim($content);
         if ($textForAi === '') {
-            $errors[] = 'Unrecognised content for ' . $label . ' (not HTML/PDF).';
+            $errors[] = 'Unrecognised content for ' . $label . ' (not HTML/PDF/Word).';
             return null;
         }
-        $fields = extract_fields_from_pdf_text($textForAi, $source);
+        $fields = extract_fields_from_text($textForAi, $source);
         $contentType = 'text';
     }
 
@@ -652,6 +746,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'label' => 'Uploaded file: ' . $originalName,
                     'name_hint' => $baseName,
                     'title_hint' => $baseName,
+                    'file_path' => $tmpPath,
+                    'original_name' => $originalName,
                 ];
                 $hasInput = true;
             }
@@ -680,6 +776,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'content' => $raw,
                 'label' => $templateUrl,
                 'name_hint' => $nameHint,
+                'title_hint' => $nameHint,
+                'original_name' => is_string($path) ? basename($path) : $nameHint,
             ];
         }
         $sources = array_merge($sources, $uploadedSources);
@@ -796,9 +894,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </label>
                 <br><br>
                 <label><strong>Or upload template files:</strong><br>
-                    <input type="file" name="template_files[]" accept="text/html,application/pdf" multiple style="margin-top:6px;">
+                    <input type="file" name="template_files[]" accept="text/html,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" multiple style="margin-top:6px;">
                 </label>
-                <p class="muted" style="margin:6px 0 18px 0;">Upload exported HTML checklists or PDF safety forms. We’ll extract the text and run the same AI-assisted field mapping.</p>
+                <p class="muted" style="margin:6px 0 18px 0;">Upload exported HTML checklists, PDF safety forms, or Word (.docx) documents. We’ll extract the text and run the same AI-assisted field mapping.</p>
                 <?php if ($openAiAvailable): ?>
                     <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;">
                         <input type="checkbox" name="enable_ai" value="1" <?= $aiRequested ? 'checked' : '' ?>>
@@ -815,7 +913,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div style="font-size:14px;color:#94a3b8;line-height:1.6;">
                 <strong>Instructions:</strong>
                 <ol style="margin:8px 0 8px 20px;padding:0;">
-                                    <li>Choose a source and paste one or more public template/checklist URLs (one per line) or upload PDF/HTML files.</li>
+                                      <li>Choose a source and paste one or more public template/checklist URLs (one per line) or upload PDF/HTML/Word (.docx) files.</li>
                                     <li>Click <b>Preview Templates</b> to review and refine extracted fields.</li>
                   <li>Confirm the mapping to save JSON templates into your system.</li>
                   <li>Re-run the <b>Permit Template Importer</b> to sync them once you’re happy.</li>
