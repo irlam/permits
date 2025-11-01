@@ -274,7 +274,22 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                 <p>Review and approve pending permit requests. Manage the approval workflow.</p>
                 <a href="/manager-approvals.php" class="btn">View Approvals</a>
             </div>
-        </section>
+
+            <!-- QR Codes - All Permits -->
+            <div class="admin-card">
+                <div class="icon">🔲</div>
+                <h3>QR Codes - All Permits</h3>
+                <p>Generate and display QR codes for all active permits. Perfect for printing notice boards. Includes company branding. Auto-updates with new permits.</p>
+                <a href="/admin/qr-codes-all.php" class="btn">View All QR Codes</a>
+            </div>
+
+            <!-- QR Codes - Individual -->
+            <div class="admin-card">
+                <div class="icon">📋</div>
+                <h3>QR Codes - Individual</h3>
+                <p>Search permits and generate individual QR codes with full permit details. Perfect for custom notice board posts or sending to specific stakeholders.</p>
+                <a href="/admin/qr-codes-individual.php" class="btn">Generate Individual QR Code</a>
+            </div>
     </main>
 </body>
 </html>
