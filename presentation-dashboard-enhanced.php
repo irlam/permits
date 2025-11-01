@@ -7,13 +7,15 @@
  * Features:
  * - 4 Major subsections (Overview, Workflow, Performance, Insights)
  * - Interactive flowcharts (User Journey & System Architecture)
- * - Comprehensive voice narration with timing
+ * - ChatGPT natural voice narration via OpenAI TTS API
  * - Beautiful animations and transitions
  * - Professional dark theme
  * - Print-ready design
  */
 
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+
+use Permits\SystemSettings;
 
 session_start();
 
@@ -31,6 +33,16 @@ if (!$currentUser || !in_array($currentUser['role'], ['admin', 'manager'], true)
     echo '<h1>Access denied</h1><p>Manager or Administrator role required.</p>';
     exit;
 }
+
+// Get OpenAI API Key from settings
+$openaiApiKey = null;
+try {
+    $settings = SystemSettings::load($db, ['openai_api_key'], []);
+    $openaiApiKey = trim($settings['openai_api_key'] ?? '');
+    $openaiApiKey = !empty($openaiApiKey) ? $openaiApiKey : null;
+} catch (Throwable $e) {}
+
+$hasOpenAI = $openaiApiKey !== null;
 
 // Fetch metrics
 $metrics = ['total' => 0, 'active' => 0, 'pending' => 0, 'expired' => 0, 'closed' => 0, 'draft' => 0];
@@ -936,6 +948,7 @@ $narrationSections = [
         const narrationText = document.getElementById('narrationText');
         let activeSpotlight = null;
         let selectedVoice = null;
+        let currentAudio = null;
 
         async function resolveVoice() {
             return new Promise(resolve => {
@@ -1005,12 +1018,89 @@ $narrationSections = [
         }
 
         function stopNarration() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
             if (synth && synth.speaking) synth.cancel();
             indicator.classList.remove('active');
             clearHighlight();
         }
 
         async function playNarration() {
+            const useOpenAI = <?php echo $hasOpenAI ? 'true' : 'false'; ?>;
+            
+            if (useOpenAI) {
+                await playNarrationWithOpenAI();
+            } else {
+                await playNarrationWithBrowserVoice();
+            }
+        }
+
+        async function playNarrationWithOpenAI() {
+            stopNarration();
+            indicator.classList.add('active');
+
+            const allElements = document.querySelectorAll('[data-narration]');
+            let index = 0;
+
+            async function speakNextWithOpenAI() {
+                if (index >= allElements.length) {
+                    stopNarration();
+                    return;
+                }
+
+                const el = allElements[index];
+                const text = el.getAttribute('data-narration');
+                const id = el.getAttribute('data-id');
+
+                narrationText.textContent = text;
+                highlightElement(id);
+
+                try {
+                    const response = await fetch('/api/openai-tts.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: text,
+                            voice: 'onyx',
+                            model: 'tts-1'
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('TTS request failed');
+                    
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    currentAudio = new Audio(url);
+                    
+                    currentAudio.onended = () => {
+                        index++;
+                        setTimeout(speakNextWithOpenAI, 500);
+                    };
+
+                    currentAudio.onerror = () => {
+                        console.error('Audio playback error');
+                        index++;
+                        setTimeout(speakNextWithOpenAI, 500);
+                    };
+
+                    currentAudio.play().catch(err => {
+                        console.error('Play error:', err);
+                        index++;
+                        setTimeout(speakNextWithOpenAI, 500);
+                    });
+                } catch (err) {
+                    console.error('OpenAI TTS error:', err);
+                    index++;
+                    setTimeout(speakNextWithOpenAI, 500);
+                }
+            }
+
+            await speakNextWithOpenAI();
+        }
+
+        async function playNarrationWithBrowserVoice() {
             await resolveVoice();
             if (!('speechSynthesis' in window)) {
                 alert('Speech not supported');
