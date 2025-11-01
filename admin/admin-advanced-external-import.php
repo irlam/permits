@@ -43,8 +43,25 @@ if (!$currentUser || $currentUser['role'] !== 'admin') {
 }
 $messages = [];
 $errors = [];
+$previewData = [];
+$showPreview = false;
 $openAiConfig = load_openai_config($root);
 $openAiAvailable = $openAiConfig !== null;
+$fieldTypeOptions = [
+    'text' => 'Short Text',
+    'textarea' => 'Long Text',
+    'checkbox' => 'Single Checkbox',
+    'checkboxes' => 'Multiple Checkboxes',
+    'radio' => 'Radio Buttons',
+    'select' => 'Dropdown',
+    'number' => 'Number',
+    'date' => 'Date',
+    'time' => 'Time',
+    'section' => 'Section Heading',
+    'paragraph' => 'Paragraph',
+];
+$selectedSource = $_POST['source'] ?? '';
+$postedUrls = $_POST['template_urls'] ?? '';
 if ($openAiAvailable) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $aiRequested = isset($_POST['enable_ai']) && $_POST['enable_ai'] === '1';
@@ -368,46 +385,119 @@ function enhance_fields_with_openai(string $html, array $fields, string $source,
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $urls = array_filter(array_map('trim', explode("\n", $_POST['template_urls'] ?? '')));
-    $source = $_POST['source'] ?? '';
-    foreach ($urls as $templateUrl) {
-        $raw = @file_get_contents($templateUrl);
-        if ($raw && strpos($raw, '<html') !== false) {
-            // Extract title
-            if (preg_match('/<title>(.*?)<\\/title>/', $raw, $m)) {
-                $title = trim(strip_tags($m[1]));
-            } else {
+    if (isset($_POST['cancel_preview'])) {
+        $showPreview = false;
+        $previewData = [];
+    } elseif (isset($_POST['confirm_import']) && $_POST['confirm_import'] === '1') {
+        $templates = $_POST['templates'] ?? [];
+        if (empty($templates)) {
+            $errors[] = 'Nothing to import. Please run the preview again.';
+        }
+        foreach ($templates as $template) {
+            $title = trim((string)($template['title'] ?? 'Imported Template'));
+            if ($title === '') {
                 $title = 'Imported Template';
             }
-            $id = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title)) . '-adv';
-            $fields = extract_fields_from_html($raw, $source);
-            $aiAdded = 0;
-            if ($aiRequested && $openAiConfig) {
-                $aiResult = enhance_fields_with_openai($raw, $fields, $source, $openAiConfig, $errors);
-                $fields = $aiResult['fields'];
-                $aiAdded = $aiResult['added'] ?? 0;
+            $rawId = strtolower((string)($template['id'] ?? ''));
+            if ($rawId === '') {
+                $rawId = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+            }
+            $id = preg_replace('/[^a-z0-9\-]+/', '-', $rawId);
+            if ($id === '') {
+                $id = 'imported-template-' . uniqid();
+            }
+            $fields = [];
+            foreach (($template['fields'] ?? []) as $field) {
+                $include = isset($field['include']) && $field['include'] === '1';
+                if (!$include) {
+                    continue;
+                }
+                $label = trim((string)($field['label'] ?? ''));
+                if ($label === '') {
+                    continue;
+                }
+                $type = strtolower(trim((string)($field['type'] ?? 'text')));
+                if ($type === '') {
+                    $type = 'text';
+                }
+                $required = isset($field['required']) && $field['required'] === '1';
+                $helpText = trim((string)($field['help_text'] ?? ''));
+                $optionsText = (string)($field['options_text'] ?? '');
+                $options = [];
+                if ($optionsText !== '') {
+                    $options = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', $optionsText)), static fn($v) => $v !== ''));
+                }
+                $payload = [
+                    'label' => $label,
+                    'type' => $type,
+                    'required' => $required,
+                ];
+                if (!empty($options)) {
+                    $payload['options'] = $options;
+                }
+                if ($helpText !== '') {
+                    $payload['help_text'] = $helpText;
+                }
+                $fields[] = $payload;
             }
             if (empty($fields)) {
-                $fields[] = [ 'label' => 'Imported Field Example', 'type' => 'text', 'required' => false ];
+                $errors[] = 'Skipped saving "' . htmlspecialchars($title) . '" because no fields were selected.';
+                continue;
             }
-            $json = [
+            $templateData = [
                 'id' => $id,
                 'title' => $title,
                 'name' => $title,
-                'description' => 'Imported from ' . htmlspecialchars($templateUrl),
-                'fields' => $fields
+                'description' => trim((string)($template['description'] ?? 'Imported template')),
+                'fields' => array_values($fields),
             ];
             $jsonPath = $root . '/templates/forms/' . $id . '.json';
-            file_put_contents($jsonPath, json_encode($json, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
-            $aiNote = '';
-            if ($aiRequested) {
-                $aiNote = $aiAdded > 0
-                    ? ', +' . $aiAdded . ' AI-assisted fields'
-                    : ', AI review (no new fields)';
+            file_put_contents($jsonPath, json_encode($templateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $messages[] = 'Saved template "' . htmlspecialchars($title) . '" → ' . basename($jsonPath) . ' (' . count($fields) . ' fields)';
+        }
+        $previewData = [];
+        $showPreview = false;
+        $postedUrls = '';
+    } else {
+        $urls = array_filter(array_map('trim', explode("\n", $_POST['template_urls'] ?? '')));
+        $source = $_POST['source'] ?? '';
+        if (empty($urls)) {
+            $errors[] = 'Please provide at least one template URL.';
+        }
+        foreach ($urls as $templateUrl) {
+            $raw = @file_get_contents($templateUrl);
+            if ($raw && strpos($raw, '<html') !== false) {
+                if (preg_match('/<title>(.*?)<\/title>/', $raw, $m)) {
+                    $title = trim(strip_tags($m[1]));
+                } else {
+                    $title = 'Imported Template';
+                }
+                $id = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title)) . '-adv';
+                $fields = extract_fields_from_html($raw, $source);
+                $aiAdded = 0;
+                if ($aiRequested && $openAiConfig) {
+                    $aiResult = enhance_fields_with_openai($raw, $fields, $source, $openAiConfig, $errors);
+                    $fields = $aiResult['fields'];
+                    $aiAdded = $aiResult['added'] ?? 0;
+                }
+                if (empty($fields)) {
+                    $fields[] = ['label' => 'Imported Field Example', 'type' => 'text', 'required' => false];
+                }
+                $previewData[] = [
+                    'id' => $id,
+                    'title' => $title,
+                    'source_url' => $templateUrl,
+                    'description' => 'Imported from ' . $templateUrl,
+                    'fields' => $fields,
+                    'ai_added' => $aiAdded,
+                    'ai_requested' => $aiRequested,
+                ];
+            } else {
+                $errors[] = 'Failed to fetch or parse: ' . htmlspecialchars($templateUrl);
             }
-            $messages[] = 'Imported: ' . $title . ' → ' . basename($jsonPath) . ' (' . count($fields) . ' fields' . $aiNote . ')';
-        } else {
-            $errors[] = 'Failed to fetch or parse: ' . htmlspecialchars($templateUrl);
+        }
+        if (!empty($previewData)) {
+            $showPreview = true;
         }
     }
 }
@@ -430,6 +520,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .card p { color: #94a3b8; margin-bottom: 16px; }
         .btn { background: #3b82f6; border: none; color: white; padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 15px; }
         .btn:hover { background: #2563eb; }
+        .btn-secondary { background: transparent; border: 1px solid #475569; color: #e2e8f0; }
+        .btn-secondary:hover { background: #334155; }
         .alert { padding: 14px 18px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; }
         .alert-success { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); color: #bbf7d0; }
         .alert-error { background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.4); color: #fecaca; }
@@ -438,6 +530,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .muted { font-size: 13px; color: #64748b; margin-top: 12px; }
         form { margin-top: 20px; }
         textarea { width: 100%; min-height: 80px; font-size: 15px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; padding: 8px; }
+        .preview-card { margin-top: 24px; }
+        .preview-template { border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 18px; background: #0f172a; }
+        .preview-template h3 { margin: 0 0 8px 0; font-size: 18px; }
+        .preview-template .source { font-size: 13px; color: #64748b; margin-bottom: 12px; }
+        .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .field-card { border: 1px solid #334155; border-radius: 10px; padding: 12px; background: rgba(15, 23, 42, 0.65); position: relative; }
+        .field-card label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .field-card input[type="text"],
+        .field-card textarea,
+        .field-card select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 14px; }
+        .field-card textarea { min-height: 60px; }
+        .field-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 13px; color: #cbd5f5; }
+        .field-meta label { text-transform: none; letter-spacing: normal; font-size: 13px; color: #cbd5f5; margin: 0; }
+        .field-meta input[type="checkbox"] { margin-right: 6px; }
+        .field-meta span.help { color: #64748b; font-size: 12px; }
+        .template-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .template-meta input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 14px; }
+        .empty-indicator { padding: 12px; border-radius: 8px; background: rgba(248, 113, 113, 0.12); border: 1px dashed rgba(248, 113, 113, 0.4); color: #fecaca; font-size: 14px; margin-bottom: 18px; }
+        .ai-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: #bae6fd; font-size: 12px; padding: 4px 8px; border-radius: 999px; margin-left: 8px; }
+        @media (max-width: 640px) {
+            .field-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        }
     </style>
 </head>
 <body>
@@ -475,15 +589,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label><strong>Source:</strong><br>
                     <select name="source" required style="margin-top:4px;">
                         <option value="">Select Source</option>
-                        <option value="safetyculture">SafetyCulture</option>
-                        <option value="osha">OSHA</option>
-                        <option value="hse">HSE (UK)</option>
-                        <option value="other">Other</option>
+                        <option value="safetyculture" <?= $selectedSource === 'safetyculture' ? 'selected' : '' ?>>SafetyCulture</option>
+                        <option value="osha" <?= $selectedSource === 'osha' ? 'selected' : '' ?>>OSHA</option>
+                        <option value="hse" <?= $selectedSource === 'hse' ? 'selected' : '' ?>>HSE (UK)</option>
+                        <option value="other" <?= $selectedSource === 'other' ? 'selected' : '' ?>>Other</option>
                     </select>
                 </label>
                 <br><br>
                 <label><strong>Template URLs (one per line):</strong><br>
-                    <textarea name="template_urls" required placeholder="https://...\nhttps://...\n"></textarea>
+                    <textarea name="template_urls" required placeholder="https://...\nhttps://...\n"><?= htmlspecialchars($postedUrls) ?></textarea>
                 </label>
                 <br><br>
                 <?php if ($openAiAvailable): ?>
@@ -497,20 +611,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php else: ?>
                     <p class="muted" style="margin:0 0 18px 0;">Add an OpenAI API key in <a href="/admin/admin-openai-settings.php">OpenAI Settings</a> to enable AI-assisted field extraction.</p>
                 <?php endif; ?>
-                <button type="submit" class="btn">Batch Import</button>
+                <button type="submit" class="btn">Preview Templates</button>
             </form>
             <div style="font-size:14px;color:#94a3b8;line-height:1.6;">
                 <strong>Instructions:</strong>
                 <ol style="margin:8px 0 8px 20px;padding:0;">
                   <li>Choose a source and paste one or more public template/checklist URLs (one per line).</li>
-                  <li>Click <b>Batch Import</b>. The system will fetch and parse each page, creating new template files.</li>
-                  <li>Edit the imported templates in <b>Edit Permit Templates</b> to match your needs.</li>
-                  <li>Re-run the <b>Permit Template Importer</b> to sync them into your system.</li>
+                  <li>Click <b>Preview Templates</b> to review and refine extracted fields.</li>
+                  <li>Confirm the mapping to save JSON templates into your system.</li>
+                  <li>Re-run the <b>Permit Template Importer</b> to sync them once you’re happy.</li>
                 </ol>
-                <span style="color:#38bdf8">Note:</span> When OpenAI is enabled, field suggestions are refined using your secure API key. Future updates will include a visual mapping step.<br>
+                <span style="color:#38bdf8">Note:</span> When OpenAI is enabled, field suggestions are refined using your secure API key. Use the preview below to map the final fields before saving.<br>
                 <span style="color:#fbbf24">Feedback and suggestions welcome!</span>
             </div>
         </div>
+
+        <?php if ($showPreview): ?>
+            <div class="card preview-card">
+                <h2>Preview &amp; Map Fields</h2>
+                <p style="color:#94a3b8;">Review the extracted fields, tweak their labels/types, and uncheck any that you don’t want to import. Options accept one value per line.</p>
+                <form method="post">
+                    <input type="hidden" name="confirm_import" value="1">
+                    <input type="hidden" name="source" value="<?= htmlspecialchars($selectedSource) ?>">
+                    <input type="hidden" name="enable_ai" value="<?= $aiRequested ? '1' : '0' ?>">
+                    <?php foreach ($previewData as $index => $template): ?>
+                        <div class="preview-template">
+                            <h3>
+                                <?= htmlspecialchars($template['title']) ?>
+                                <?php if (!empty($template['ai_requested'])): ?>
+                                    <span class="ai-chip">AI Enhanced<?= $template['ai_added'] > 0 ? ' +' . (int)$template['ai_added'] : '' ?></span>
+                                <?php endif; ?>
+                            </h3>
+                            <p class="source">Source: <?= htmlspecialchars($template['source_url']) ?></p>
+                            <div class="template-meta">
+                                <div>
+                                    <label for="tpl-title-<?= $index ?>">Template title</label>
+                                    <input id="tpl-title-<?= $index ?>" type="text" name="templates[<?= $index ?>][title]" value="<?= htmlspecialchars($template['title']) ?>" required>
+                                </div>
+                                <div>
+                                    <label for="tpl-id-<?= $index ?>">Template ID (filename)</label>
+                                    <input id="tpl-id-<?= $index ?>" type="text" name="templates[<?= $index ?>][id]" value="<?= htmlspecialchars($template['id']) ?>" required>
+                                </div>
+                            </div>
+                            <input type="hidden" name="templates[<?= $index ?>][description]" value="<?= htmlspecialchars($template['description']) ?>">
+                            <input type="hidden" name="templates[<?= $index ?>][source_url]" value="<?= htmlspecialchars($template['source_url']) ?>">
+                            <?php if (!empty($template['fields'])): ?>
+                                <div class="field-grid">
+                                    <?php foreach ($template['fields'] as $fieldIndex => $field):
+                                        $labelValue = $field['label'] ?? '';
+                                        $typeValue = strtolower($field['type'] ?? 'text');
+                                        $requiredValue = !empty($field['required']);
+                                        $helpValue = $field['help_text'] ?? '';
+                                        $optionsValue = '';
+                                        if (!empty($field['options']) && is_array($field['options'])) {
+                                            $optionsValue = implode("\n", $field['options']);
+                                        }
+                                    ?>
+                                        <div class="field-card">
+                                            <input type="hidden" name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][include]" value="0">
+                                            <label>
+                                                <input type="checkbox" name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][include]" value="1" checked>
+                                                Include field
+                                            </label>
+                                            <label>Label</label>
+                                            <input type="text" name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][label]" value="<?= htmlspecialchars($labelValue) ?>" required>
+                                            <label>Type</label>
+                                            <select name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][type]">
+                                                <?php foreach ($fieldTypeOptions as $value => $label): ?>
+                                                    <option value="<?= $value ?>" <?= $typeValue === $value ? 'selected' : '' ?>><?= $label ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <div class="field-meta">
+                                                <label>
+                                                    <input type="hidden" name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][required]" value="0">
+                                                    <input type="checkbox" name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][required]" value="1" <?= $requiredValue ? 'checked' : '' ?>>
+                                                    Required
+                                                </label>
+                                                <span class="help">Type tweaks update downstream forms automatically.</span>
+                                            </div>
+                                            <label style="margin-top:10px;">Options (one per line)</label>
+                                            <textarea name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][options_text]" placeholder="Option A&#10;Option B"><?= htmlspecialchars($optionsValue) ?></textarea>
+                                            <label style="margin-top:10px;">Help text</label>
+                                            <textarea name="templates[<?= $index ?>][fields][<?= $fieldIndex ?>][help_text]" placeholder="Optional helper copy..."><?= htmlspecialchars($helpValue) ?></textarea>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="empty-indicator">No fields were detected for this template. Try enabling AI suggestions or review the source HTML.</div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <button type="submit" class="btn">Save Templates</button>
+                        <button type="submit" name="cancel_preview" value="1" class="btn btn-secondary">Back to Import Form</button>
+                    </div>
+                </form>
+            </div>
+        <?php endif; ?>
     </div>
 </body>
 </html>

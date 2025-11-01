@@ -1,3 +1,27 @@
+# Permits Change Log
+
+## v1.2.0 – AI-Assisted Template Importer (01/11/2025)
+
+### Highlights
+- Added a two-step preview and mapping workflow to `admin/admin-advanced-external-import.php`, letting admins review and tweak extracted fields before saving.
+- Introduced interactive controls for field labels, types, required flags, options, and help text, plus the ability to skip unwanted items.
+- Improved AI-assisted imports by surfacing the number of OpenAI-suggested fields and carrying that context into the new mapping UI.
+- Preserved original form inputs between steps so sourcing multiple templates is faster and less error prone.
+
+### Release Checklist Status
+- [x] Update change notes with latest features
+- [ ] Run automated test suite (`./vendor/bin/phpunit`)
+- [ ] Prepare deployment steps & verify generated templates on staging
+
+> Test suite currently blocked on local CLI running PHP 8.0.30. PHPUnit 10 requires PHP ≥ 8.1. Re-run in a PHP 8.1+ environment (container or CI) before tagging the release.
+
+### Deployment Prep Notes
+- Export a staging snapshot and copy new JSON templates generated during preview testing into `templates/forms/` on staging.
+- Re-run the standard `bin/import-form-presets.php` sync job to ensure importer outputs register correctly.
+- Smoke-test the advanced importer UI in staging with and without AI toggled before cutting the release tag.
+
+---
+
 # Comprehensive Code Modernization - Change Log
 
 **Date**: 21/10/2025 19:22:30 (UK)  
