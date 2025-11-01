@@ -15,7 +15,7 @@ session_start();
 
 // DEBUG: Output session and cookie info for troubleshooting, before any redirect
 require __DIR__ . '/../vendor/autoload.php';
-[$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+[$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
 if (isset($_GET['debug'])) {
     session_start();
     echo '<pre style="background:#222;color:#fff;padding:12px;">';
