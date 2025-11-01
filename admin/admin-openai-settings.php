@@ -273,17 +273,22 @@ function test_ai_provider(string $provider, array $providerSettings, array &$mes
     }
 }
 
-function fetch_provider_models(string $provider, array $providerSettings, array &$messages, array &$errors): void
+/**
+ * Retrieve available models/deployments for a provider.
+ *
+ * @return array<int,string>
+ */
+function fetch_provider_models(string $provider, array $providerSettings, array &$messages, array &$errors): array
 {
     $request = build_provider_request($provider, $providerSettings, 'models', $errors);
     if ($request === null) {
-        return;
+        return [];
     }
 
     $result = execute_provider_request($request);
     if ($result['error']) {
         $errors[] = $request['label'] . ' request failed while fetching models: ' . $result['error'];
-        return;
+        return [];
     }
 
     $response = $result['body'];
@@ -291,13 +296,13 @@ function fetch_provider_models(string $provider, array $providerSettings, array 
     if ($status < 200 || $status >= 300) {
         $snippet = trim(substr((string)$response, 0, 200));
         $errors[] = $request['label'] . ' responded with HTTP ' . $status . ' while listing models. Body snippet: ' . $snippet;
-        return;
+        return [];
     }
 
     $decoded = json_decode((string)$response, true);
     if (!is_array($decoded)) {
         $errors[] = 'Unable to parse model list response from ' . $request['label'] . '.';
-        return;
+        return [];
     }
 
     $models = [];
@@ -333,19 +338,24 @@ function fetch_provider_models(string $provider, array $providerSettings, array 
 
     if (empty($models) && isset($decoded['error'])) {
         $errors[] = $request['label'] . ' reported an error: ' . ($decoded['error']['message'] ?? json_encode($decoded['error']));
-        return;
+        return [];
     }
 
     if (empty($models)) {
         $messages[] = 'No models were returned by ' . $request['label'] . '. You may need to create a deployment first.';
-        return;
+        return [];
     }
 
     $messages[] = $request['label'] . ' models available: ' . implode(', ', $models) . '.';
+    return $models;
 }
 
 $settings = load_ai_settings($root, $settingsFile);
 $currentProvider = $settings['provider'];
+$modelOptions = [];
+foreach ($settings['providers'] as $providerKey => $_providerSettings) {
+    $modelOptions[$providerKey] = [];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedProvider = $_POST['provider'] ?? $currentProvider;
@@ -390,7 +400,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($wantsFetchModels) {
-            fetch_provider_models($selectedProvider, $activeSettings, $messages, $errors);
+            $modelOptions[$selectedProvider] = fetch_provider_models($selectedProvider, $activeSettings, $messages, $errors);
         }
     }
 
@@ -429,6 +439,7 @@ $providerLabel = provider_label($currentProvider);
         .provider-panel h3 { margin-top:0; margin-bottom:12px; font-size:18px; }
         .muted { color:#94a3b8; font-size:13px; margin-top:8px; }
         .field-grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+        .field-stack { display:grid; gap:12px; }
     </style>
 </head>
 <body>
@@ -448,14 +459,23 @@ $providerLabel = provider_label($currentProvider);
 
                 <div class="provider-panel" data-provider="openai">
                     <h3>OpenAI &amp; Compatible APIs</h3>
-                    <div class="field-grid">
+                    <div class="field-stack">
                         <div>
                             <label for="openai-key">API Key</label>
                             <input type="text" id="openai-key" name="providers[openai][api_key]" value="<?= htmlspecialchars($settings['providers']['openai']['api_key']) ?>" placeholder="sk-..." autocomplete="off">
                         </div>
                         <div>
                             <label for="openai-model">Model ID</label>
-                            <input type="text" id="openai-model" name="providers[openai][model]" value="<?= htmlspecialchars($settings['providers']['openai']['model']) ?>" placeholder="gpt-4o-mini">
+                            <input type="text" id="openai-model" name="providers[openai][model]" value="<?= htmlspecialchars($settings['providers']['openai']['model']) ?>" placeholder="gpt-4o-mini" list="openai-models">
+                            <?php if (!empty($modelOptions['openai'])): ?>
+                                <datalist id="openai-models">
+                                    <?php foreach ($modelOptions['openai'] as $modelId): ?>
+                                        <option value="<?= htmlspecialchars($modelId) ?>"></option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                            <?php else: ?>
+                                <datalist id="openai-models"></datalist>
+                            <?php endif; ?>
                         </div>
                         <div>
                             <label for="openai-endpoint">Endpoint</label>
@@ -478,7 +498,16 @@ $providerLabel = provider_label($currentProvider);
                         </div>
                         <div>
                             <label for="azure-deployment">Deployment Name</label>
-                            <input type="text" id="azure-deployment" name="providers[azure_openai][deployment]" value="<?= htmlspecialchars($settings['providers']['azure_openai']['deployment']) ?>" placeholder="gpt-4o-mini">
+                            <input type="text" id="azure-deployment" name="providers[azure_openai][deployment]" value="<?= htmlspecialchars($settings['providers']['azure_openai']['deployment']) ?>" placeholder="gpt-4o-mini" list="azure-models">
+                            <?php if (!empty($modelOptions['azure_openai'])): ?>
+                                <datalist id="azure-models">
+                                    <?php foreach ($modelOptions['azure_openai'] as $modelId): ?>
+                                        <option value="<?= htmlspecialchars($modelId) ?>"></option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                            <?php else: ?>
+                                <datalist id="azure-models"></datalist>
+                            <?php endif; ?>
                         </div>
                         <div>
                             <label for="azure-version">API Version</label>
@@ -497,7 +526,16 @@ $providerLabel = provider_label($currentProvider);
                         </div>
                         <div>
                             <label for="anthropic-model">Model ID</label>
-                            <input type="text" id="anthropic-model" name="providers[anthropic][model]" value="<?= htmlspecialchars($settings['providers']['anthropic']['model']) ?>" placeholder="claude-3-sonnet-20240229">
+                            <input type="text" id="anthropic-model" name="providers[anthropic][model]" value="<?= htmlspecialchars($settings['providers']['anthropic']['model']) ?>" placeholder="claude-3-sonnet-20240229" list="anthropic-models">
+                            <?php if (!empty($modelOptions['anthropic'])): ?>
+                                <datalist id="anthropic-models">
+                                    <?php foreach ($modelOptions['anthropic'] as $modelId): ?>
+                                        <option value="<?= htmlspecialchars($modelId) ?>"></option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                            <?php else: ?>
+                                <datalist id="anthropic-models"></datalist>
+                            <?php endif; ?>
                         </div>
                         <div>
                             <label for="anthropic-endpoint">Endpoint</label>
