@@ -171,7 +171,7 @@ $statusMap = [
 ];
 
 foreach ($statusMap as $key => $label) {
-    if ($metrics[$key] > 0) {
+    if (isset($metrics[$key]) && $metrics[$key] > 0) {
         $statusLabels[] = $label;
         $statusValues[] = $metrics[$key];
     }
