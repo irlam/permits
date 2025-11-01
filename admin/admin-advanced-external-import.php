@@ -179,13 +179,13 @@ function extract_fields_from_text(string $text, string $source): array
         }
 
         // Checkbox style lines e.g. "[ ] Harness Checked"
-        if (preg_match('/^[-*•\u2022]?\s*\[\s*[xX]?\s*\]\s*(.+)$/u', $trimmed, $matches)) {
+        if (preg_match('/^[-*•\x{2022}]?\s*\[\s*[xX]?\s*\]\s*(.+)$/u', $trimmed, $matches)) {
             add_field_candidate($fields, $seen, $matches[1], 'checkbox');
             continue;
         }
 
         // Bullet points treated as checkbox tasks
-        if (preg_match('/^[-*•\u2022]\s+(.+)$/u', $trimmed, $matches)) {
+        if (preg_match('/^[-*•\x{2022}]\s+(.+)$/u', $trimmed, $matches)) {
             add_field_candidate($fields, $seen, $matches[1], 'checkbox');
             continue;
         }
