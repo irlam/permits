@@ -34,20 +34,8 @@ if (!$currentUser || !in_array($currentUser['role'], ['admin', 'manager'], true)
     exit;
 }
 
-// Get OpenAI API Key from config file
-$openaiApiKey = null;
-$configFile = $root . '/config/ai-settings.json';
-try {
-    if (file_exists($configFile)) {
-        $configData = json_decode(file_get_contents($configFile), true);
-        if (isset($configData['providers']['openai']['api_key'])) {
-            $openaiApiKey = trim($configData['providers']['openai']['api_key']);
-            $openaiApiKey = !empty($openaiApiKey) ? $openaiApiKey : null;
-        }
-    }
-} catch (Throwable $e) {}
-
-$hasOpenAI = $openaiApiKey !== null;
+// OpenAI is disabled - using browser voice instead
+$hasOpenAI = false;
 
 // Fetch metrics
 $metrics = ['total' => 0, 'active' => 0, 'pending' => 0, 'expired' => 0, 'closed' => 0, 'draft' => 0];
