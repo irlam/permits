@@ -15,8 +15,6 @@
 // DEBUG: Output session and cookie info for troubleshooting, before any redirect
 require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
-
-use simplehtmldom\HtmlDocument;
 if (isset($_GET['debug'])) {
     if (session_status() !== PHP_SESSION_ACTIVE) {
         session_start();
@@ -45,12 +43,23 @@ if (!$currentUser || $currentUser['role'] !== 'admin') {
 }
 $messages = [];
 $errors = [];
+$openAiConfig = load_openai_config($root);
+$openAiAvailable = $openAiConfig !== null;
+if ($openAiAvailable) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $aiRequested = isset($_POST['enable_ai']) && $_POST['enable_ai'] === '1';
+    } else {
+        $aiRequested = true;
+    }
+} else {
+    $aiRequested = false;
+}
 
 // Use Simple HTML DOM for robust field extraction
 function extract_fields_from_html($html, $source) {
     $fields = [];
     $seen = [];
-    $dom = new HtmlDocument();
+    $dom = new \simplehtmldom\HtmlDocument();
     $dom->load($html, true, false);
 
     $addField = function(string $label, string $type = 'text', bool $required = false, array $meta = []) use (&$fields, &$seen) {
@@ -135,6 +144,229 @@ function extract_fields_from_html($html, $source) {
     return $fields;
 }
 
+function load_openai_config(string $root): ?array
+{
+    static $cached = null;
+    static $cachedRoot = null;
+    if ($cached !== null && $cachedRoot === $root) {
+        return $cached;
+    }
+
+    $config = [];
+    $configPath = $root . '/config/openai.php';
+    if (is_file($configPath)) {
+        $config = require $configPath;
+    }
+
+    $fileKey = $root . '/config/openai.key';
+    $apiKey = null;
+    if (is_file($fileKey)) {
+        $apiKey = trim((string)file_get_contents($fileKey));
+    }
+    if (!$apiKey) {
+        $apiKey = $config['api_key'] ?? getenv('OPENAI_API_KEY') ?: null;
+    }
+
+    if (!$apiKey || stripos($apiKey, 'YOUR_OPENAI_API_KEY_HERE') !== false) {
+        $cached = null;
+        $cachedRoot = $root;
+        return null;
+    }
+
+    $cached = [
+        'api_key' => $apiKey,
+        'endpoint' => $config['endpoint'] ?? 'https://api.openai.com/v1/chat/completions',
+        'model' => $config['model'] ?? 'gpt-4o-mini',
+    ];
+    $cachedRoot = $root;
+
+    return $cached;
+}
+
+function normalise_ai_field(array $field): ?array
+{
+    $label = trim(preg_replace('/\s+/', ' ', (string)($field['label'] ?? '')));
+    if ($label === '' || strlen($label) < 3) {
+        return null;
+    }
+
+    $type = strtolower((string)($field['type'] ?? 'text'));
+    $allowedTypes = ['text','checkbox','checkboxes','radio','select','dropdown','textarea','number','date','time','section','paragraph','boolean'];
+    if (!in_array($type, $allowedTypes, true)) {
+        $type = 'text';
+    }
+
+    $required = filter_var($field['required'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+    $options = [];
+    if (!empty($field['options']) && is_array($field['options'])) {
+        foreach ($field['options'] as $option) {
+            $option = trim((string)$option);
+            if ($option !== '') {
+                $options[] = $option;
+            }
+        }
+        $options = array_values(array_unique($options));
+    }
+
+    $result = [
+        'label' => $label,
+        'type' => $type,
+        'required' => $required,
+        'source' => $field['source'] ?? 'ai',
+    ];
+
+    if (!empty($options)) {
+        $result['options'] = $options;
+    }
+
+    if (!empty($field['help_text'])) {
+        $result['help_text'] = trim((string)$field['help_text']);
+    }
+
+    return $result;
+}
+
+function merge_fields_with_ai(array $existing, array $aiFields): array
+{
+    $merged = $existing;
+    $seen = [];
+    foreach ($existing as $field) {
+        $label = strtolower(trim((string)($field['label'] ?? '')));
+        $type = strtolower((string)($field['type'] ?? 'text'));
+        if ($label === '') {
+            continue;
+        }
+        $seen[$label . '|' . $type] = true;
+    }
+
+    $added = 0;
+    foreach ($aiFields as $field) {
+        $normalised = normalise_ai_field($field);
+        if ($normalised === null) {
+            continue;
+        }
+        $key = strtolower($normalised['label'] . '|' . $normalised['type']);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $merged[] = $normalised;
+        $added++;
+    }
+
+    return [$merged, $added];
+}
+
+function enhance_fields_with_openai(string $html, array $fields, string $source, array $config, array &$errors): array
+{
+    $text = trim(preg_replace('/\s+/', ' ', strip_tags($html)));
+    if (function_exists('mb_substr')) {
+        $text = mb_substr($text, 0, 6000);
+    } else {
+        $text = substr($text, 0, 6000);
+    }
+
+    $fieldSummary = [];
+    foreach (array_slice($fields, 0, 40) as $field) {
+        $label = trim((string)($field['label'] ?? ''));
+        if ($label === '') {
+            continue;
+        }
+        $type = $field['type'] ?? 'text';
+        $fieldSummary[] = "- {$label} ({$type})";
+    }
+    if (empty($fieldSummary)) {
+        $fieldSummary[] = '- None detected yet';
+    }
+
+    $sourceLabel = $source !== '' ? $source : 'unspecified';
+
+    $payload = [
+        'model' => $config['model'],
+        'messages' => [
+            [
+                'role' => 'system',
+                'content' => 'You are an assistant that extracts structured checklist or permit fields from raw construction safety templates. Always respond with pure JSON in the shape {"fields": [{"label": string, "type": string, "required": boolean, "options": [string], "help_text": string}]}. Use lowercase snake_case for type names (text, checkbox, select, radio, textarea, section, number, date, time). Only include "options" when multiple choices exist. Do not include explanations or prose.',
+            ],
+            [
+                'role' => 'user',
+                'content' => implode("\n", [
+                    'Source: ' . $sourceLabel,
+                    '',
+                    'Existing extracted fields:',
+                    implode("\n", $fieldSummary),
+                    '',
+                    'Raw template content snippet:',
+                    $text,
+                ]),
+            ],
+        ],
+        'temperature' => 0.1,
+    ];
+
+    $ch = curl_init($config['endpoint']);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $config['api_key'],
+            'Content-Type: application/json',
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        CURLOPT_TIMEOUT => 45,
+    ]);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        $errors[] = 'OpenAI request failed: ' . curl_error($ch);
+        curl_close($ch);
+        return ['fields' => $fields, 'added' => 0];
+    }
+
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($status >= 400) {
+        $errors[] = 'OpenAI API error (' . $status . '): ' . substr($response, 0, 200);
+        return ['fields' => $fields, 'added' => 0];
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data)) {
+        $errors[] = 'OpenAI response was not valid JSON.';
+        return ['fields' => $fields, 'added' => 0];
+    }
+
+    $content = $data['choices'][0]['message']['content'] ?? '';
+    if (!is_string($content) || trim($content) === '') {
+        $errors[] = 'OpenAI returned an empty response.';
+        return ['fields' => $fields, 'added' => 0];
+    }
+
+    $contentTrimmed = trim($content);
+    $jsonStart = strpos($contentTrimmed, '{');
+    $jsonEnd = strrpos($contentTrimmed, '}');
+    if ($jsonStart !== false && $jsonEnd !== false && $jsonEnd >= $jsonStart) {
+        $contentTrimmed = substr($contentTrimmed, $jsonStart, $jsonEnd - $jsonStart + 1);
+    }
+
+    $aiPayload = json_decode($contentTrimmed, true);
+    if (!is_array($aiPayload)) {
+        $errors[] = 'Unable to decode AI response JSON.';
+        return ['fields' => $fields, 'added' => 0];
+    }
+
+    $aiFields = $aiPayload['fields'] ?? $aiPayload;
+    if (!is_array($aiFields)) {
+        $errors[] = 'AI response did not include a "fields" array.';
+        return ['fields' => $fields, 'added' => 0];
+    }
+
+    [$merged, $added] = merge_fields_with_ai($fields, $aiFields);
+    return ['fields' => $merged, 'added' => $added];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $urls = array_filter(array_map('trim', explode("\n", $_POST['template_urls'] ?? '')));
     $source = $_POST['source'] ?? '';
@@ -149,6 +381,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $id = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title)) . '-adv';
             $fields = extract_fields_from_html($raw, $source);
+            $aiAdded = 0;
+            if ($aiRequested && $openAiConfig) {
+                $aiResult = enhance_fields_with_openai($raw, $fields, $source, $openAiConfig, $errors);
+                $fields = $aiResult['fields'];
+                $aiAdded = $aiResult['added'] ?? 0;
+            }
             if (empty($fields)) {
                 $fields[] = [ 'label' => 'Imported Field Example', 'type' => 'text', 'required' => false ];
             }
@@ -161,7 +399,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
             $jsonPath = $root . '/templates/forms/' . $id . '.json';
             file_put_contents($jsonPath, json_encode($json, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
-            $messages[] = 'Imported: ' . $title . ' → ' . basename($jsonPath) . ' (' . count($fields) . ' fields)';
+            $aiNote = '';
+            if ($aiRequested) {
+                $aiNote = $aiAdded > 0
+                    ? ', +' . $aiAdded . ' AI-assisted fields'
+                    : ', AI review (no new fields)';
+            }
+            $messages[] = 'Imported: ' . $title . ' → ' . basename($jsonPath) . ' (' . count($fields) . ' fields' . $aiNote . ')';
         } else {
             $errors[] = 'Failed to fetch or parse: ' . htmlspecialchars($templateUrl);
         }
@@ -242,6 +486,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <textarea name="template_urls" required placeholder="https://...\nhttps://...\n"></textarea>
                 </label>
                 <br><br>
+                <?php if ($openAiAvailable): ?>
+                    <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;">
+                        <input type="checkbox" name="enable_ai" value="1" <?= $aiRequested ? 'checked' : '' ?>>
+                        <span>
+                            <strong>Enhance with OpenAI suggestions</strong><br>
+                            <span class="muted">A short snippet of the template is sent securely to OpenAI to suggest refined field labels, types, and options.</span>
+                        </span>
+                    </label>
+                <?php else: ?>
+                    <p class="muted" style="margin:0 0 18px 0;">Add an OpenAI API key in <a href="/admin/admin-openai-settings.php">OpenAI Settings</a> to enable AI-assisted field extraction.</p>
+                <?php endif; ?>
                 <button type="submit" class="btn">Batch Import</button>
             </form>
             <div style="font-size:14px;color:#94a3b8;line-height:1.6;">
@@ -252,7 +507,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <li>Edit the imported templates in <b>Edit Permit Templates</b> to match your needs.</li>
                   <li>Re-run the <b>Permit Template Importer</b> to sync them into your system.</li>
                 </ol>
-                <span style="color:#38bdf8">Note:</span> This tool currently extracts list items and labels as fields. AI field extraction and visual mapping are coming soon.<br>
+                <span style="color:#38bdf8">Note:</span> When OpenAI is enabled, field suggestions are refined using your secure API key. Future updates will include a visual mapping step.<br>
                 <span style="color:#fbbf24">Feedback and suggestions welcome!</span>
             </div>
         </div>
