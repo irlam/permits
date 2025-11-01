@@ -34,12 +34,17 @@ if (!$currentUser || !in_array($currentUser['role'], ['admin', 'manager'], true)
     exit;
 }
 
-// Get OpenAI API Key from settings
+// Get OpenAI API Key from config file
 $openaiApiKey = null;
+$configFile = $root . '/config/ai-settings.json';
 try {
-    $settings = SystemSettings::load($db, ['openai_api_key'], []);
-    $openaiApiKey = trim($settings['openai_api_key'] ?? '');
-    $openaiApiKey = !empty($openaiApiKey) ? $openaiApiKey : null;
+    if (file_exists($configFile)) {
+        $configData = json_decode(file_get_contents($configFile), true);
+        if (isset($configData['providers']['openai']['api_key'])) {
+            $openaiApiKey = trim($configData['providers']['openai']['api_key']);
+            $openaiApiKey = !empty($openaiApiKey) ? $openaiApiKey : null;
+        }
+    }
 } catch (Throwable $e) {}
 
 $hasOpenAI = $openaiApiKey !== null;
@@ -1029,10 +1034,12 @@ $narrationSections = [
 
         async function playNarration() {
             const useOpenAI = <?php echo $hasOpenAI ? 'true' : 'false'; ?>;
+            console.log('Using OpenAI:', useOpenAI);
             
             if (useOpenAI) {
                 await playNarrationWithOpenAI();
             } else {
+                console.log('Falling back to browser voice');
                 await playNarrationWithBrowserVoice();
             }
         }

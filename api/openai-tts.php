@@ -57,12 +57,18 @@ if (empty($text) || strlen($text) > 4096) {
     exit;
 }
 
-// Get OpenAI API key from settings
+// Get OpenAI API key from config file
 $openaiApiKey = null;
+$root = dirname(__DIR__);
+$configFile = $root . '/config/ai-settings.json';
 try {
-    $settings = SystemSettings::load($db, ['openai_api_key'], []);
-    $openaiApiKey = trim($settings['openai_api_key'] ?? '');
-    $openaiApiKey = !empty($openaiApiKey) ? $openaiApiKey : null;
+    if (file_exists($configFile)) {
+        $configData = json_decode(file_get_contents($configFile), true);
+        if (isset($configData['providers']['openai']['api_key'])) {
+            $openaiApiKey = trim($configData['providers']['openai']['api_key']);
+            $openaiApiKey = !empty($openaiApiKey) ? $openaiApiKey : null;
+        }
+    }
 } catch (Throwable $e) {
     $openaiApiKey = null;
 }
