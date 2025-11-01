@@ -72,6 +72,26 @@ if ($openAiAvailable) {
     $aiRequested = false;
 }
 
+function add_field_candidate(array &$fields, array &$seen, string $label, string $type = 'text', bool $required = false, array $meta = []): void
+{
+    $label = trim(preg_replace('/\s+/', ' ', $label));
+    if ($label === '' || strlen($label) < 3) {
+        return;
+    }
+
+    $key = strtolower($label . '|' . $type);
+    if (isset($seen[$key])) {
+        return;
+    }
+
+    $seen[$key] = true;
+    $fields[] = array_merge([
+        'label' => $label,
+        'type' => $type,
+        'required' => $required,
+    ], $meta);
+}
+
 // Use Simple HTML DOM for robust field extraction
 function extract_fields_from_html($html, $source) {
     $fields = [];
@@ -79,26 +99,9 @@ function extract_fields_from_html($html, $source) {
     $dom = new \simplehtmldom\HtmlDocument();
     $dom->load($html, true, false);
 
-    $addField = function(string $label, string $type = 'text', bool $required = false, array $meta = []) use (&$fields, &$seen) {
-        $label = trim(preg_replace('/\s+/', ' ', $label));
-        if ($label === '' || strlen($label) < 3) {
-            return;
-        }
-        $key = strtolower($label . '|' . $type);
-        if (isset($seen[$key])) {
-            return;
-        }
-        $seen[$key] = true;
-        $fields[] = array_merge([
-            'label' => $label,
-            'type' => $type,
-            'required' => $required,
-        ], $meta);
-    };
-
     // Extract list items (common in checklists)
     foreach ($dom->find('li') as $li) {
-        $addField($li->plaintext, 'checkbox');
+        add_field_candidate($fields, $seen, $li->plaintext, 'checkbox');
     }
 
     // Extract table-based checklists (rows and headers)
@@ -107,9 +110,9 @@ function extract_fields_from_html($html, $source) {
             $cells = array_map(static fn($cell) => trim($cell->plaintext), $row->find('th,td'));
             $cells = array_filter($cells, static fn($value) => $value !== '');
             if (count($cells) === 1) {
-                $addField(reset($cells), 'text');
+                add_field_candidate($fields, $seen, reset($cells), 'text');
             } elseif (!empty($cells)) {
-                $addField(implode(' | ', $cells), 'text');
+                add_field_candidate($fields, $seen, implode(' | ', $cells), 'text');
             }
         }
     }
@@ -136,7 +139,7 @@ function extract_fields_from_html($html, $source) {
             }
         }
 
-        $addField($labelText, $inputType, $required);
+        add_field_candidate($fields, $seen, $labelText, $inputType, $required);
     }
 
     // Plain input elements without labels (fallback to placeholder/name)
@@ -147,18 +150,175 @@ function extract_fields_from_html($html, $source) {
             ?? '';
         $type = $input->tag === 'input' ? ($input->type ?: 'text') : $input->tag;
         $required = $input->required ?? false;
-        $addField($label, $type, $required);
+        add_field_candidate($fields, $seen, $label, $type, $required);
     }
 
     // Headings often describe sections/tasks
     foreach ($dom->find('h1, h2, h3, h4, h5') as $heading) {
-        $addField($heading->plaintext, 'section');
+        add_field_candidate($fields, $seen, $heading->plaintext, 'section');
     }
 
     $dom->clear();
     unset($dom);
 
     return $fields;
+}
+
+function extract_fields_from_pdf_text(string $text, string $source): array
+{
+    $fields = [];
+    $seen = [];
+    $lines = preg_split('/\r?\n/', $text) ?: [];
+
+    foreach ($lines as $line) {
+        $trimmed = trim($line);
+        if ($trimmed === '' || strlen($trimmed) < 3) {
+            continue;
+        }
+
+        // Checkbox style lines e.g. "[ ] Harness Checked"
+        if (preg_match('/^[-*•\u2022]?\s*\[\s*[xX]?\s*\]\s*(.+)$/u', $trimmed, $matches)) {
+            add_field_candidate($fields, $seen, $matches[1], 'checkbox');
+            continue;
+        }
+
+        // Bullet points treated as checkbox tasks
+        if (preg_match('/^[-*•\u2022]\s+(.+)$/u', $trimmed, $matches)) {
+            add_field_candidate($fields, $seen, $matches[1], 'checkbox');
+            continue;
+        }
+
+        // Colon separated label/value pairs → text fields
+        if (preg_match('/^(.{3,80}?)[\s:：]+(.{0,120})$/u', $trimmed, $matches)) {
+            $label = $matches[1];
+            $value = trim($matches[2]);
+            $type = 'text';
+            if (preg_match('/date/i', $label)) {
+                $type = 'date';
+            } elseif (preg_match('/time/i', $label)) {
+                $type = 'time';
+            } elseif (preg_match('/number|qty|quantity|count/i', $label)) {
+                $type = 'number';
+            }
+            add_field_candidate($fields, $seen, $label, $type);
+            continue;
+        }
+
+        // Question style lines → boolean/checkbox by default
+        if (preg_match('/\?$/', $trimmed)) {
+            add_field_candidate($fields, $seen, $trimmed, 'checkbox');
+            continue;
+        }
+
+        // Uppercase headings treated as sections
+        if (strlen($trimmed) <= 60 && strtoupper($trimmed) === $trimmed && preg_match('/[A-Z]/', $trimmed)) {
+            add_field_candidate($fields, $seen, $trimmed, 'section');
+            continue;
+        }
+    }
+
+    return $fields;
+}
+
+function build_preview_from_content(array $item, string $source, bool $aiRequested, ?array $openAiConfig, array &$errors): ?array
+{
+    $content = $item['content'] ?? '';
+    if (!is_string($content) || trim($content) === '') {
+        $errors[] = 'Empty content for ' . ($item['label'] ?? 'unknown source');
+        return null;
+    }
+
+    $label = $item['label'] ?? 'Imported Source';
+    $contentType = 'html';
+    $aiAdded = 0;
+    $title = $item['title_hint'] ?? '';
+    $fields = [];
+    $textForAi = $content;
+
+    $sample = strtolower(substr(ltrim($content), 0, 500));
+    $isHtml = str_contains($sample, '<html') || str_contains($sample, '<!doctype');
+    $isPdf = !$isHtml && str_contains(substr($content, 0, 20), '%PDF-');
+
+    if ($isHtml) {
+        $fields = extract_fields_from_html($content, $source);
+        if ($title === '') {
+            if (preg_match('/<title>(.*?)<\/title>/si', $content, $matches)) {
+                $title = trim(strip_tags($matches[1]));
+            }
+        }
+        $contentType = 'html';
+    } elseif ($isPdf) {
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf = $parser->parseContent($content);
+            $textForAi = $pdf->getText();
+            if ($title === '') {
+                $details = $pdf->getDetails();
+                if (!empty($details['Title'])) {
+                    $title = trim((string)$details['Title']);
+                }
+            }
+        } catch (\Throwable $exception) {
+            $errors[] = 'Failed to parse PDF for ' . $label . ': ' . $exception->getMessage();
+            return null;
+        }
+
+        if (!is_string($textForAi) || trim($textForAi) === '') {
+            $errors[] = 'No readable text found in PDF for ' . $label;
+            return null;
+        }
+
+        $fields = extract_fields_from_pdf_text($textForAi, $source);
+        $contentType = 'pdf';
+    } else {
+        $textForAi = trim($content);
+        if ($textForAi === '') {
+            $errors[] = 'Unrecognised content for ' . $label . ' (not HTML/PDF).';
+            return null;
+        }
+        $fields = extract_fields_from_pdf_text($textForAi, $source);
+        $contentType = 'text';
+    }
+
+    if ($title === '') {
+        $title = $item['name_hint'] ?? 'Imported Template';
+    }
+    if ($title === '') {
+        $title = 'Imported Template';
+    }
+
+    if ($aiRequested && $openAiConfig) {
+        $aiResult = enhance_fields_with_openai($textForAi, $fields, $source, $openAiConfig, $errors);
+        $fields = $aiResult['fields'];
+        $aiAdded = $aiResult['added'] ?? 0;
+    }
+
+    if (empty($fields)) {
+        $fields[] = [
+            'label' => 'Imported Field',
+            'type' => 'text',
+            'required' => false,
+        ];
+    }
+
+    $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title));
+    $slug = trim($slug, '-');
+    if ($slug === '') {
+        $slug = 'imported-template';
+    }
+    $suffix = $contentType === 'pdf' ? 'pdf' : ($contentType === 'text' ? 'txt' : 'adv');
+    $id = $slug . '-' . $suffix;
+
+    return [
+        'id' => $id,
+        'title' => $title,
+        'source_label' => $label,
+        'description' => 'Imported from ' . $label . ' (' . strtoupper($contentType) . ')',
+        'fields' => $fields,
+        'ai_added' => $aiAdded,
+        'ai_requested' => $aiRequested,
+        'content_type' => $contentType,
+    ];
 }
 
 function load_openai_config(string $root): ?array
@@ -459,41 +619,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $showPreview = false;
         $postedUrls = '';
     } else {
-        $urls = array_filter(array_map('trim', explode("\n", $_POST['template_urls'] ?? '')));
+        $urls = array_values(array_filter(array_map('trim', explode("\n", $_POST['template_urls'] ?? ''))));
         $source = $_POST['source'] ?? '';
-        if (empty($urls)) {
-            $errors[] = 'Please provide at least one template URL.';
+        $hasInput = !empty($urls);
+        $uploadedSources = [];
+
+        if (!empty($_FILES['template_files']) && is_array($_FILES['template_files']['name'])) {
+            $fileCount = count($_FILES['template_files']['name']);
+            for ($i = 0; $i < $fileCount; $i++) {
+                $errorCode = $_FILES['template_files']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                if ($errorCode === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                if ($errorCode !== UPLOAD_ERR_OK) {
+                    $errors[] = 'Upload failed for ' . ($_FILES['template_files']['name'][$i] ?? 'unknown file') . ' (error code ' . $errorCode . ').';
+                    continue;
+                }
+                $tmpPath = $_FILES['template_files']['tmp_name'][$i] ?? null;
+                if (!is_string($tmpPath) || !is_file($tmpPath)) {
+                    $errors[] = 'Temporary file missing for ' . ($_FILES['template_files']['name'][$i] ?? 'unknown file') . '.';
+                    continue;
+                }
+                $fileContents = @file_get_contents($tmpPath);
+                if ($fileContents === false || $fileContents === '') {
+                    $errors[] = 'Unable to read uploaded file ' . ($_FILES['template_files']['name'][$i] ?? 'unknown file') . '.';
+                    continue;
+                }
+                $originalName = $_FILES['template_files']['name'][$i] ?? 'uploaded-template';
+                $baseName = pathinfo($originalName, PATHINFO_FILENAME);
+                $uploadedSources[] = [
+                    'content' => $fileContents,
+                    'label' => 'Uploaded file: ' . $originalName,
+                    'name_hint' => $baseName,
+                    'title_hint' => $baseName,
+                ];
+                $hasInput = true;
+            }
         }
+
+        if (!$hasInput) {
+            $errors[] = 'Please provide at least one template URL or upload a file.';
+        }
+
+        $sources = [];
         foreach ($urls as $templateUrl) {
             $raw = @file_get_contents($templateUrl);
-            if ($raw && strpos($raw, '<html') !== false) {
-                if (preg_match('/<title>(.*?)<\/title>/', $raw, $m)) {
-                    $title = trim(strip_tags($m[1]));
-                } else {
-                    $title = 'Imported Template';
+            if ($raw === false || $raw === '') {
+                $errors[] = 'Failed to fetch: ' . $templateUrl;
+                continue;
+            }
+            $nameHint = $templateUrl;
+            $path = parse_url($templateUrl, PHP_URL_PATH);
+            if (is_string($path)) {
+                $filename = pathinfo($path, PATHINFO_FILENAME);
+                if ($filename !== '') {
+                    $nameHint = $filename;
                 }
-                $id = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title)) . '-adv';
-                $fields = extract_fields_from_html($raw, $source);
-                $aiAdded = 0;
-                if ($aiRequested && $openAiConfig) {
-                    $aiResult = enhance_fields_with_openai($raw, $fields, $source, $openAiConfig, $errors);
-                    $fields = $aiResult['fields'];
-                    $aiAdded = $aiResult['added'] ?? 0;
-                }
-                if (empty($fields)) {
-                    $fields[] = ['label' => 'Imported Field Example', 'type' => 'text', 'required' => false];
-                }
-                $previewData[] = [
-                    'id' => $id,
-                    'title' => $title,
-                    'source_url' => $templateUrl,
-                    'description' => 'Imported from ' . $templateUrl,
-                    'fields' => $fields,
-                    'ai_added' => $aiAdded,
-                    'ai_requested' => $aiRequested,
-                ];
-            } else {
-                $errors[] = 'Failed to fetch or parse: ' . htmlspecialchars($templateUrl);
+            }
+            $sources[] = [
+                'content' => $raw,
+                'label' => $templateUrl,
+                'name_hint' => $nameHint,
+            ];
+        }
+        $sources = array_merge($sources, $uploadedSources);
+
+        foreach ($sources as $sourceItem) {
+            $preview = build_preview_from_content($sourceItem, $source, $aiRequested, $openAiConfig, $errors);
+            if ($preview !== null) {
+                $previewData[] = $preview;
             }
         }
         if (!empty($previewData)) {
@@ -548,7 +742,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .template-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px; }
         .template-meta input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 14px; }
         .empty-indicator { padding: 12px; border-radius: 8px; background: rgba(248, 113, 113, 0.12); border: 1px dashed rgba(248, 113, 113, 0.4); color: #fecaca; font-size: 14px; margin-bottom: 18px; }
-        .ai-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: #bae6fd; font-size: 12px; padding: 4px 8px; border-radius: 999px; margin-left: 8px; }
+    .ai-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: #bae6fd; font-size: 12px; padding: 4px 8px; border-radius: 999px; margin-left: 8px; }
+    .content-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(148, 163, 184, 0.18); border: 1px solid rgba(148, 163, 184, 0.35); color: #e2e8f0; font-size: 12px; padding: 4px 8px; border-radius: 999px; margin-left: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
         @media (max-width: 640px) {
             .field-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
         }
@@ -585,7 +780,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="card">
             <h2>Batch Import & Parse</h2>
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 <label><strong>Source:</strong><br>
                     <select name="source" required style="margin-top:4px;">
                         <option value="">Select Source</option>
@@ -597,9 +792,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </label>
                 <br><br>
                 <label><strong>Template URLs (one per line):</strong><br>
-                    <textarea name="template_urls" required placeholder="https://...\nhttps://...\n"><?= htmlspecialchars($postedUrls) ?></textarea>
+                    <textarea name="template_urls" placeholder="https://...\nhttps://...\n"><?= htmlspecialchars($postedUrls) ?></textarea>
                 </label>
                 <br><br>
+                <label><strong>Or upload template files:</strong><br>
+                    <input type="file" name="template_files[]" accept="text/html,application/pdf" multiple style="margin-top:6px;">
+                </label>
+                <p class="muted" style="margin:6px 0 18px 0;">Upload exported HTML checklists or PDF safety forms. We’ll extract the text and run the same AI-assisted field mapping.</p>
                 <?php if ($openAiAvailable): ?>
                     <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;">
                         <input type="checkbox" name="enable_ai" value="1" <?= $aiRequested ? 'checked' : '' ?>>
@@ -616,12 +815,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div style="font-size:14px;color:#94a3b8;line-height:1.6;">
                 <strong>Instructions:</strong>
                 <ol style="margin:8px 0 8px 20px;padding:0;">
-                  <li>Choose a source and paste one or more public template/checklist URLs (one per line).</li>
-                  <li>Click <b>Preview Templates</b> to review and refine extracted fields.</li>
+                                    <li>Choose a source and paste one or more public template/checklist URLs (one per line) or upload PDF/HTML files.</li>
+                                    <li>Click <b>Preview Templates</b> to review and refine extracted fields.</li>
                   <li>Confirm the mapping to save JSON templates into your system.</li>
                   <li>Re-run the <b>Permit Template Importer</b> to sync them once you’re happy.</li>
                 </ol>
-                <span style="color:#38bdf8">Note:</span> When OpenAI is enabled, field suggestions are refined using your secure API key. Use the preview below to map the final fields before saving.<br>
+                                <span style="color:#38bdf8">Note:</span> When OpenAI is enabled, field suggestions are refined using your secure API key. Use the preview below to map the final fields before saving, even for PDFs.<br>
                 <span style="color:#fbbf24">Feedback and suggestions welcome!</span>
             </div>
         </div>
@@ -638,11 +837,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="preview-template">
                             <h3>
                                 <?= htmlspecialchars($template['title']) ?>
+                                <?php if (!empty($template['content_type'])): ?>
+                                    <span class="content-chip"><?= htmlspecialchars(strtoupper($template['content_type'])) ?></span>
+                                <?php endif; ?>
                                 <?php if (!empty($template['ai_requested'])): ?>
                                     <span class="ai-chip">AI Enhanced<?= $template['ai_added'] > 0 ? ' +' . (int)$template['ai_added'] : '' ?></span>
                                 <?php endif; ?>
                             </h3>
-                            <p class="source">Source: <?= htmlspecialchars($template['source_url']) ?></p>
+                            <p class="source">Source: <?= htmlspecialchars($template['source_label']) ?></p>
                             <div class="template-meta">
                                 <div>
                                     <label for="tpl-title-<?= $index ?>">Template title</label>
@@ -654,7 +856,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             </div>
                             <input type="hidden" name="templates[<?= $index ?>][description]" value="<?= htmlspecialchars($template['description']) ?>">
-                            <input type="hidden" name="templates[<?= $index ?>][source_url]" value="<?= htmlspecialchars($template['source_url']) ?>">
+                            <input type="hidden" name="templates[<?= $index ?>][source_label]" value="<?= htmlspecialchars($template['source_label']) ?>">
                             <?php if (!empty($template['fields'])): ?>
                                 <div class="field-grid">
                                     <?php foreach ($template['fields'] as $fieldIndex => $field):
