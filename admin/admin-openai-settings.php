@@ -6,20 +6,23 @@
  */
 
 require __DIR__ . '/../vendor/autoload.php';
-
-session_start();
-// DEBUG: Output session info for troubleshooting
+[$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
 if (isset($_GET['debug'])) {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
     echo '<pre style="background:#222;color:#fff;padding:12px;">';
     echo 'Session ID: ' . session_id() . "\n";
     echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
     echo '</pre>';
 }
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login.php');
     exit;
 }
-[$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 $stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
 $stmt->execute([$_SESSION['user_id']]);
 $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
