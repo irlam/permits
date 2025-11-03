@@ -44,101 +44,135 @@ $action = $_GET['action'] ?? '';
 $message = '';
 $messageType = 'info';
 
-// Delete user
-if ($action === 'delete' && isset($_GET['id'])) {
-    $userId = $_GET['id'];
-    
-    // Prevent deleting yourself
-    if ($userId === $_SESSION['user_id']) {
-        $message = 'Cannot delete your own account';
+// Generate CSRF token if not exists
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Delete user (CSRF protected, POST only)
+if ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'], $token)) {
+        $message = 'Invalid request';
         $messageType = 'error';
     } else {
-        try {
-            $stmt = $db->pdo->prepare("DELETE FROM users WHERE id = ?");
-            $stmt->execute([$userId]);
-            $message = 'User deleted successfully';
-            $messageType = 'success';
-        } catch (Exception $e) {
-            $message = 'Error deleting user: ' . $e->getMessage();
+        $userId = $_POST['user_id'] ?? '';
+        
+        // Prevent deleting yourself
+        if ($userId === $_SESSION['user_id']) {
+            $message = 'Cannot delete your own account';
             $messageType = 'error';
+        } else {
+            try {
+                $stmt = $db->pdo->prepare("DELETE FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $message = 'User deleted successfully';
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Error deleting user: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 }
 
 // Create user
 if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $name = trim($_POST['name'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'user';
-    $status = $_POST['status'] ?? 'active';
-    
-    if (empty($email) || empty($name) || empty($password)) {
-        $message = 'Email, name, and password are required';
+    // Verify CSRF token
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'], $token)) {
+        $message = 'Invalid request';
         $messageType = 'error';
     } else {
-        try {
-            // Check if email already exists
-            $checkStmt = $db->pdo->prepare("SELECT id FROM users WHERE email = ?");
-            $checkStmt->execute([$email]);
-            if ($checkStmt->fetch()) {
-                $message = 'Email already exists';
-                $messageType = 'error';
-            } else {
-                // Generate UUID
-                $userId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                    mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                    mt_rand(0, 0xffff),
-                    mt_rand(0, 0x0fff) | 0x4000,
-                    mt_rand(0, 0x3fff) | 0x8000,
-                    mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-                );
-                
-                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                
-                $stmt = $db->pdo->prepare("INSERT INTO users (id, email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$userId, $email, $passwordHash, $name, $role, $status]);
-                
-                $message = 'User created successfully';
-                $messageType = 'success';
-            }
-        } catch (Exception $e) {
-            $message = 'Error creating user: ' . $e->getMessage();
+        $email = trim($_POST['email'] ?? '');
+        $name = trim($_POST['name'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? 'user';
+        $status = $_POST['status'] ?? 'active';
+        
+        if (empty($email) || empty($name) || empty($password)) {
+            $message = 'Email, name, and password are required';
             $messageType = 'error';
+        } else {
+            try {
+                // Check if email already exists
+                $checkStmt = $db->pdo->prepare("SELECT id FROM users WHERE email = ?");
+                $checkStmt->execute([$email]);
+                if ($checkStmt->fetch()) {
+                    $message = 'Email already exists';
+                    $messageType = 'error';
+                } else {
+                    // Generate UUID (cryptographically secure)
+                    $userId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                        random_int(0, 0xffff), random_int(0, 0xffff),
+                        random_int(0, 0xffff),
+                        random_int(0, 0x0fff) | 0x4000,
+                        random_int(0, 0x3fff) | 0x8000,
+                        random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff)
+                    );
+                    
+                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                    
+                    $stmt = $db->pdo->prepare("INSERT INTO users (id, email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$userId, $email, $passwordHash, $name, $role, $status]);
+                    
+                    $message = 'User created successfully';
+                    $messageType = 'success';
+                }
+            } catch (Exception $e) {
+                $message = 'Error creating user: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 }
 
 // Update user
 if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $userId = $_POST['user_id'] ?? '';
-    $email = trim($_POST['email'] ?? '');
-    $name = trim($_POST['name'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'user';
-    $status = $_POST['status'] ?? 'active';
-    
-    if (empty($userId) || empty($email) || empty($name)) {
-        $message = 'User ID, email, and name are required';
+    // Verify CSRF token
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'], $token)) {
+        $message = 'Invalid request';
         $messageType = 'error';
     } else {
-        try {
-            if (!empty($password)) {
-                // Update with new password
-                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $db->pdo->prepare("UPDATE users SET email = ?, password_hash = ?, name = ?, role = ?, status = ? WHERE id = ?");
-                $stmt->execute([$email, $passwordHash, $name, $role, $status, $userId]);
-            } else {
-                // Update without changing password
-                $stmt = $db->pdo->prepare("UPDATE users SET email = ?, name = ?, role = ?, status = ? WHERE id = ?");
-                $stmt->execute([$email, $name, $role, $status, $userId]);
-            }
-            
-            $message = 'User updated successfully';
-            $messageType = 'success';
-        } catch (Exception $e) {
-            $message = 'Error updating user: ' . $e->getMessage();
+        $userId = $_POST['user_id'] ?? '';
+        $email = trim($_POST['email'] ?? '');
+        $name = trim($_POST['name'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? 'user';
+        $status = $_POST['status'] ?? 'active';
+        
+        if (empty($userId) || empty($email) || empty($name)) {
+            $message = 'User ID, email, and name are required';
             $messageType = 'error';
+        } else {
+            try {
+                // Check if email already exists for other users
+                $checkStmt = $db->pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+                $checkStmt->execute([$email, $userId]);
+                if ($checkStmt->fetch()) {
+                    $message = 'Email already exists for another user';
+                    $messageType = 'error';
+                } else {
+                    if (!empty($password)) {
+                        // Update with new password
+                        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                        $stmt = $db->pdo->prepare("UPDATE users SET email = ?, password_hash = ?, name = ?, role = ?, status = ? WHERE id = ?");
+                        $stmt->execute([$email, $passwordHash, $name, $role, $status, $userId]);
+                    } else {
+                        // Update without changing password
+                        $stmt = $db->pdo->prepare("UPDATE users SET email = ?, name = ?, role = ?, status = ? WHERE id = ?");
+                        $stmt->execute([$email, $name, $role, $status, $userId]);
+                    }
+                    
+                    $message = 'User updated successfully';
+                    $messageType = 'success';
+                }
+            } catch (Exception $e) {
+                $message = 'Error updating user: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 }
@@ -708,7 +742,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                                 <td class="timestamp"><?php echo $user['last_login'] ? date('Y-m-d H:i', strtotime($user['last_login'])) : 'Never'; ?></td>
                                 <td>
                                     <div class="actions-cell">
-                                        <button class="btn btn-secondary btn-small" onclick='openEditModal(<?php echo json_encode($user); ?>)'>Edit</button>
+                                        <button class="btn btn-secondary btn-small" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($user), ENT_QUOTES, 'UTF-8'); ?>)'>Edit</button>
                                         <?php if ($user['id'] !== $_SESSION['user_id']): ?>
                                             <button class="btn btn-danger btn-small" onclick="confirmDelete('<?php echo htmlspecialchars($user['id']); ?>', '<?php echo htmlspecialchars($user['name']); ?>')">Delete</button>
                                         <?php endif; ?>
@@ -750,6 +784,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                 <button class="close-modal" onclick="closeCreateModal()">×</button>
             </div>
             <form method="POST" action="?action=create">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <div class="form-group">
                     <label for="create_name">Name *</label>
                     <input type="text" id="create_name" name="name" required>
@@ -793,6 +828,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                 <button class="close-modal" onclick="closeEditModal()">×</button>
             </div>
             <form method="POST" action="?action=update">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" id="edit_user_id" name="user_id">
                 <div class="form-group">
                     <label for="edit_name">Name *</label>
@@ -854,7 +890,25 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
         function confirmDelete(userId, userName) {
             if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-                window.location.href = `?action=delete&id=${userId}`;
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '?action=delete';
+                
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+                form.appendChild(userIdInput);
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = '<?php echo $_SESSION['csrf_token']; ?>';
+                form.appendChild(csrfInput);
+                
+                document.body.appendChild(form);
+                form.submit();
             }
         }
 
