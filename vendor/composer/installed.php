@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'defecttracker/permits',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => 'ba5b6f6cd8e2895d9a5b196de4a16bdd3af872b1',
+        'pretty_version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
+        'version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
+        'reference' => '62204c70477f73394fe5fb3b5697f61d3f3e1ef1',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'defecttracker/permits' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => 'ba5b6f6cd8e2895d9a5b196de4a16bdd3af872b1',
+            'pretty_version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
+            'version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
+            'reference' => '62204c70477f73394fe5fb3b5697f61d3f3e1ef1',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
