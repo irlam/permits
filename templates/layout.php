@@ -196,6 +196,10 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
   </div>
 </section>
 
+<script>
+  // Expose VAPID public key for push notification subscription
+  window.VAPID_PUBLIC_KEY = <?= json_encode($app->config('VAPID_PUBLIC_KEY') ?? '') ?>;
+</script>
 <script src="<?=asset('/assets/app.js')?>"></script>
 </body>
 </html>

@@ -43,6 +43,32 @@ Modern permits management system with dashboard, notifications, export, authenti
 - `permit-expiring.php` - Expiry reminders
 - `permit-created.php` - Creation notifications
 
+### 🔔 Push Notification System
+- Real-time browser push notifications
+- Automatic subscription management
+- VAPID-based secure notifications
+- Permit expiry alerts
+- Custom notification triggers
+- Automatic cleanup of invalid subscriptions
+
+**Features:**
+- Browser push notifications (Chrome, Firefox, Edge, Safari 16+)
+- Service worker-based delivery
+- Works offline and in background
+- Click-to-navigate functionality
+- Auto-subscribe for logged-in users
+
+**Setup & Testing:**
+- Generate VAPID keys: `php generate_vapid.php`
+- Test notifications: `php bin/test-push-notification.php`
+- Cron for expiry alerts: `*/15 * * * * php /path/permits/bin/reminders.php 60`
+- Full documentation: [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md)
+
+**Subscribe Methods:**
+- Automatic on permission grant
+- Manual: `window.subscribeToPush()` in browser console
+- Programmatic via button/UI element
+
 ### 📥 Advanced Search & Export
 - CSV export with filter support
 - Export current search results
