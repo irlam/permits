@@ -36,7 +36,9 @@ $stmt->execute([$_SESSION['user_id']]);
 $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$currentUser || $currentUser['role'] !== 'admin') {
-    die('<h1>Access Denied</h1><p>Admin access required.</p>');
+    http_response_code(403);
+    $backUrl = htmlspecialchars($app->url('dashboard.php'));
+    die('<h1>Access Denied</h1><p>Admin access required. <a href="' . $backUrl . '">Back to Dashboard</a></p>');
 }
 
 // Handle actions
@@ -742,9 +744,14 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                                 <td class="timestamp"><?php echo $user['last_login'] ? date('Y-m-d H:i', strtotime($user['last_login'])) : 'Never'; ?></td>
                                 <td>
                                     <div class="actions-cell">
-                                        <button class="btn btn-secondary btn-small" onclick='openEditModal(<?php echo htmlspecialchars(json_encode($user), ENT_QUOTES, 'UTF-8'); ?>)'>Edit</button>
+                                        <button class="btn btn-secondary btn-small" 
+                                                data-user='<?php echo htmlspecialchars(json_encode($user), ENT_QUOTES, 'UTF-8'); ?>' 
+                                                onclick="openEditModalFromData(this)">Edit</button>
                                         <?php if ($user['id'] !== $_SESSION['user_id']): ?>
-                                            <button class="btn btn-danger btn-small" onclick="confirmDelete('<?php echo htmlspecialchars($user['id']); ?>', '<?php echo htmlspecialchars($user['name']); ?>')">Delete</button>
+                                            <button class="btn btn-danger btn-small" 
+                                                    data-user-id="<?php echo htmlspecialchars($user['id']); ?>" 
+                                                    data-user-name="<?php echo htmlspecialchars($user['name']); ?>" 
+                                                    onclick="confirmDeleteFromData(this)">Delete</button>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -874,6 +881,11 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
             document.getElementById('createModal').classList.remove('active');
         }
 
+        function openEditModalFromData(button) {
+            const user = JSON.parse(button.getAttribute('data-user'));
+            openEditModal(user);
+        }
+
         function openEditModal(user) {
             document.getElementById('edit_user_id').value = user.id;
             document.getElementById('edit_name').value = user.name;
@@ -886,6 +898,12 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
         function closeEditModal() {
             document.getElementById('editModal').classList.remove('active');
+        }
+
+        function confirmDeleteFromData(button) {
+            const userId = button.getAttribute('data-user-id');
+            const userName = button.getAttribute('data-user-name');
+            confirmDelete(userId, userName);
         }
 
         function confirmDelete(userId, userName) {
