@@ -46,10 +46,18 @@ $download = $_GET['download'] ?? null;
 if ($download) {
     $safeName = basename($download);
     $backupDir = __DIR__;
+    $backupDirReal = realpath($backupDir);
+    
+    // Security check: ensure backup directory exists
+    if ($backupDirReal === false) {
+        http_response_code(500);
+        exit('Backup directory not accessible');
+    }
+    
     $path = realpath($backupDir . '/' . $safeName);
     
     // Security check: ensure path is within backups directory
-    if ($path === false || !str_starts_with($path, realpath($backupDir) . DIRECTORY_SEPARATOR)) {
+    if ($path === false || !str_starts_with($path, $backupDirReal . DIRECTORY_SEPARATOR)) {
         http_response_code(404);
         exit('Backup file not found');
     }
