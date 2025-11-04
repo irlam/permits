@@ -4,7 +4,7 @@
  * 
  * File Path: /system-tools/system_analysis_report.php
  * Description: Comprehensive system health and performance analysis dashboard
- * Created: 04/11/2025
+ * Created: 2025-11-04
  * 
  * Features:
  * - System health metrics
@@ -116,21 +116,39 @@ function getApplicationStats($db) {
     $stats = [];
     
     try {
+        $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        
         // Recent activity (last 24 hours)
-        $stmt = $db->pdo->query("
-            SELECT COUNT(*) as count 
-            FROM activity_log 
-            WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 DAY)
-        ");
+        if ($driver === 'mysql') {
+            $stmt = $db->pdo->query("
+                SELECT COUNT(*) as count 
+                FROM activity_log 
+                WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 DAY)
+            ");
+        } else {
+            $stmt = $db->pdo->query("
+                SELECT COUNT(*) as count 
+                FROM activity_log 
+                WHERE timestamp > datetime('now', '-1 day')
+            ");
+        }
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $stats['activity_24h'] = $result['count'] ?? 0;
         
         // Active users (last 7 days)
-        $stmt = $db->pdo->query("
-            SELECT COUNT(DISTINCT user_id) as count 
-            FROM activity_log 
-            WHERE timestamp > DATE_SUB(NOW(), INTERVAL 7 DAY)
-        ");
+        if ($driver === 'mysql') {
+            $stmt = $db->pdo->query("
+                SELECT COUNT(DISTINCT user_id) as count 
+                FROM activity_log 
+                WHERE timestamp > DATE_SUB(NOW(), INTERVAL 7 DAY)
+            ");
+        } else {
+            $stmt = $db->pdo->query("
+                SELECT COUNT(DISTINCT user_id) as count 
+                FROM activity_log 
+                WHERE timestamp > datetime('now', '-7 days')
+            ");
+        }
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $stats['active_users_7d'] = $result['count'] ?? 0;
         
