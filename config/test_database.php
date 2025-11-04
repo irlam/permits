@@ -5,8 +5,8 @@
 
 return [
     'driver' => getenv('TEST_DB_DRIVER') ?: 'sqlite',
-    'host' => getenv('TEST_DB_HOST') ?: '127.0.0.1',
-    'port' => getenv('TEST_DB_PORT') ?: '3306',
+    'host' => getenv('TEST_DB_HOST') ?: '127.0.0.1', // Ignored for SQLite
+    'port' => (int) (getenv('TEST_DB_PORT') ?: 3306), // Ignored for SQLite
     'database' => getenv('TEST_DB_DATABASE') ?: ':memory:',
     'username' => getenv('TEST_DB_USERNAME') ?: '',
     'password' => getenv('TEST_DB_PASSWORD') ?: '',
