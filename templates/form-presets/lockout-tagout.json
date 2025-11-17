@@ -1,17 +1,91 @@
 {
-  "id": "lockout-tagout-v1",
-  "title": "Lockout/Tagout Permit",
-  "name": "Lockout/Tagout Permit",
-  "description": "Permit for lockout/tagout procedures to ensure equipment is safely isolated before maintenance or repair.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Equipment Description", "type": "text", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Isolation Points", "type": "textarea", "required": true },
-    { "label": "Lockout/Tagout Devices Applied", "type": "checkbox", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "lockout-tagout-v1",
+    "title": "Lockout/Tagout Permit",
+    "name": "Lockout/Tagout Permit",
+    "description": "Permit for lockout/tagout procedures to ensure equipment is safely isolated before maintenance or repair.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "equipmentDescription",
+                "label": "Equipment Description",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "workDescription",
+                "label": "Work Description",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "isolationPoints",
+                "label": "Isolation Points",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "lockout/TagoutDevicesApplied",
+                "label": "Lockout/Tagout Devices Applied",
+                "type": "checkbox",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "ENERGY SOURCE IDENTIFICATION",
+            "items": [
+                "All energy sources identified",
+                "Isolation points located",
+                "Stored energy (pressure, springs) identified",
+                "Secondary/backup systems checked",
+                "Energy control procedures reviewed"
+            ]
+        },
+        {
+            "title": "ISOLATION & VERIFICATION",
+            "items": [
+                "Equipment shut down properly",
+                "All isolation devices operated",
+                "Personal locks and tags applied",
+                "Isolation verified by test",
+                "Group lockout box used if multiple workers"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

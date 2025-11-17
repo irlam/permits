@@ -1,17 +1,101 @@
 {
-  "id": "electrical-work-v1",
-  "title": "Electrical Work Permit",
-  "name": "Electrical Work Permit",
-  "description": "Permit for electrical work, ensuring isolation and safety procedures are followed.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Isolation Required", "type": "checkbox", "required": true },
-    { "label": "Lockout/Tagout Applied", "type": "checkbox", "required": true },
-    { "label": "PPE Required", "type": "textarea", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "electrical-work-v1",
+    "title": "Electrical Work Permit",
+    "name": "Electrical Work Permit",
+    "description": "Permit for electrical work, ensuring isolation and safety procedures are followed.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "workDescription",
+                "label": "Work Description",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "isolationRequired",
+                "label": "Isolation Required",
+                "type": "checkbox",
+                "required": true
+            },
+            {
+                "key": "lockout/TagoutApplied",
+                "label": "Lockout/Tagout Applied",
+                "type": "checkbox",
+                "required": true
+            },
+            {
+                "key": "pPERequired",
+                "label": "PPE Required",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "ISOLATION & VERIFICATION",
+            "items": [
+                "Circuit/equipment isolated and locked out",
+                "Isolation verified with test equipment",
+                "Lock-out/Tag-out (LOTO) applied",
+                "Adjacent live equipment identified and protected",
+                "Permit-to-work issued and signed"
+            ]
+        },
+        {
+            "title": "SAFETY PRECAUTIONS",
+            "items": [
+                "Insulated tools and equipment used",
+                "Electrical PPE available (gloves, face shield)",
+                "Fire extinguisher readily available",
+                "Competent electrician assigned",
+                "Emergency procedures briefed"
+            ]
+        },
+        {
+            "title": "TESTING & ENERGIZATION",
+            "items": [
+                "Work inspected before re-energization",
+                "All persons clear of equipment",
+                "Test procedures followed",
+                "Circuit tested and commissioned",
+                "Isolation devices removed and recorded"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

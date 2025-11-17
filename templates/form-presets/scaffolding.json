@@ -1,16 +1,85 @@
 {
-  "id": "scaffolding-v1",
-  "title": "Scaffolding Permit",
-  "name": "Scaffolding Permit",
-  "description": "Permit for erection, modification, or dismantling of scaffolding, ensuring safety and compliance.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Type of Scaffolding", "type": "text", "required": true },
-    { "label": "Purpose", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Inspection Completed", "type": "checkbox", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "scaffolding-v1",
+    "title": "Scaffolding Permit",
+    "name": "Scaffolding Permit",
+    "description": "Permit for erection, modification, or dismantling of scaffolding, ensuring safety and compliance.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "typeOfScaffolding",
+                "label": "Type of Scaffolding",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "purpose",
+                "label": "Purpose",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "inspectionCompleted",
+                "label": "Inspection Completed",
+                "type": "checkbox",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "SCAFFOLD DESIGN & ERECTION",
+            "items": [
+                "Scaffold designed by competent person",
+                "Ground conditions assessed and prepared",
+                "Base plates level and secure",
+                "Vertical and horizontal bracing installed",
+                "Guardrails and toe boards fitted"
+            ]
+        },
+        {
+            "title": "INSPECTION & CERTIFICATION",
+            "items": [
+                "Scaffold inspected by competent person",
+                "Green tag attached and dated",
+                "Load capacity clearly marked",
+                "Access ladders secure",
+                "Weekly inspections scheduled"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }
