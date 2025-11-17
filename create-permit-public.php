@@ -794,6 +794,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 16px;
             text-align: center;
         }
+
+        .incomplete-field-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .quick-nav {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            max-width: 200px;
+            z-index: 50;
+        }
+
+        .quick-nav-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .quick-nav-link {
+            display: block;
+            padding: 6px 8px;
+            font-size: 13px;
+            color: #e5e7eb;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+
+        .quick-nav-link:hover {
+            background: #1f2937;
+        }
+
+        .quick-nav-link.incomplete {
+            color: #fca5a5;
+        }
+
+        .quick-nav-link.complete {
+            color: #86efac;
+        }
+
+        @media (max-width: 768px) {
+            .quick-nav {
+                display: none;
+            }
+        }
+
+        /* Print styles for permit hardcopies */
+        @media print {
+            .progress-bar-container,
+            .field-toolbar,
+            .form-actions,
+            .cancel-link,
+            .quick-nav,
+            .notification-box {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .public-card {
+                background: white;
+                border: none;
+                box-shadow: none;
+            }
+
+            .choice-pill {
+                border: 1px solid #000;
+                background: white;
+                color: black;
+            }
+
+            .choice-input:checked + .choice-pill {
+                background: #f0f0f0;
+                border: 2px solid #000;
+            }
+
+            .section-title {
+                page-break-after: avoid;
+                border-bottom: 2px solid #000;
+                color: #000;
+            }
+
+            .note-box,
+            .media-box {
+                display: block !important;
+                border: 1px solid #ddd;
+                padding: 8px;
+                margin-top: 8px;
+            }
+        }
     </style>
 </head>
 <body class="theme-dark">
@@ -1080,15 +1193,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
                             📝 Save Draft
                         </button>
-                        <button type="submit" name="action" value="submit" class="btn btn-primary">
+                        <button type="submit" name="action" value="submit" class="btn btn-primary" id="submitBtn">
                             ✅ Submit Permit for Approval
                         </button>
+                    </div>
+
+                    <!-- Validation Warning -->
+                    <div id="validationWarning" style="display: none; margin-top: 16px; padding: 16px; background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); border-radius: 12px; color: #fcd34d;">
+                        <strong>⚠️ Incomplete Permit</strong>
+                        <p style="margin: 8px 0 0; font-size: 14px;">Please complete all safety checks before submitting. Missing fields are highlighted above.</p>
                     </div>
 
                     <div class="cancel-link">
                         <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-secondary">← Cancel</a>
                     </div>
                 </form>
+
+                <!-- Quick Navigation -->
+                <div class="quick-nav" id="quickNav" style="display: none;">
+                    <div class="quick-nav-title">Sections</div>
+                    <div id="quickNavLinks"></div>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -1244,13 +1369,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Update section completion counters
             function updateSectionCounters() {
                 const form = document.getElementById('permitForm');
+                const quickNav = document.getElementById('quickNav');
+                const quickNavLinks = document.getElementById('quickNavLinks');
+                
                 if (!form) return;
 
+                let navHtml = '';
+                let hasSections = false;
+
                 // Get all sections
-                document.querySelectorAll('.section-title').forEach(sectionTitle => {
+                document.querySelectorAll('.section-title').forEach((sectionTitle, index) => {
                     const sectionId = sectionTitle.getAttribute('data-section-id');
                     const counter = document.getElementById('counter_' + sectionId);
+                    const sectionName = sectionTitle.textContent.trim().split('(')[0].trim();
+                    
                     if (!counter) return;
+
+                    hasSections = true;
 
                     // Find all fields in this section (until next section-title)
                     let currentElement = sectionTitle.nextElementSibling;
@@ -1291,8 +1426,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         } else {
                             sectionTitle.classList.remove('section-complete', 'section-incomplete');
                         }
+
+                        // Add to quick nav
+                        const statusClass = sectionComplete === sectionTotal ? 'complete' : 'incomplete';
+                        const icon = sectionComplete === sectionTotal ? '✓' : '○';
+                        navHtml += '<a href="#' + sectionId + '" class="quick-nav-link ' + statusClass + '" data-section="' + sectionId + '">' + 
+                                   icon + ' ' + sectionName + ' ' + sectionComplete + '/' + sectionTotal + '</a>';
                     }
                 });
+
+                // Update quick nav
+                if (quickNavLinks && hasSections) {
+                    quickNavLinks.innerHTML = navHtml;
+                    if (quickNav) quickNav.style.display = 'block';
+
+                    // Add click handlers for smooth scrolling
+                    quickNavLinks.querySelectorAll('a').forEach(link => {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const sectionId = this.getAttribute('data-section');
+                            const section = document.querySelector('[data-section-id="' + sectionId + '"]');
+                            if (section) {
+                                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        });
+                    });
+                }
             }
 
             // Auto-save functionality
@@ -1404,6 +1563,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 init();
             }
         })();
+
+        // Pre-submission validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitBtn = document.getElementById('submitBtn');
+            const form = document.getElementById('permitForm');
+            const validationWarning = document.getElementById('validationWarning');
+
+            if (submitBtn && form) {
+                form.addEventListener('submit', function(e) {
+                    // Only validate for final submission, not drafts
+                    const clickedButton = document.activeElement;
+                    if (clickedButton && clickedButton.value === 'save_draft') {
+                        return true;
+                    }
+
+                    // Count incomplete required fields
+                    let incompleteCount = 0;
+                    let incompleteScoreItems = 0;
+
+                    // Check radio groups
+                    const radioGroups = new Set();
+                    form.querySelectorAll('input[type="radio"]').forEach(radio => {
+                        if (!radioGroups.has(radio.name)) {
+                            radioGroups.add(radio.name);
+                            const checked = form.querySelector('input[name="' + radio.name + '"]:checked');
+                            if (!checked) {
+                                incompleteCount++;
+                                if (radio.getAttribute('data-score-item') === 'true') {
+                                    incompleteScoreItems++;
+                                }
+                            }
+                        }
+                    });
+
+                    // Show warning if there are incomplete items
+                    if (incompleteScoreItems > 0) {
+                        if (validationWarning) {
+                            validationWarning.style.display = 'block';
+                            validationWarning.innerHTML = '<strong>⚠️ Incomplete Safety Checks</strong>' +
+                                '<p style="margin: 8px 0 0; font-size: 14px;">You have ' + incompleteScoreItems + ' safety check(s) not completed. ' +
+                                'Please review all sections marked as incomplete (highlighted in red).</p>';
+                            validationWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        
+                        // Ask for confirmation
+                        if (!confirm('You have ' + incompleteScoreItems + ' safety check(s) not completed.\n\nAre you sure you want to submit this permit with incomplete safety checks?')) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    }
+
+                    // Final confirmation
+                    if (!confirm('Submit this permit for approval?\n\nPlease confirm all information is accurate and complete.')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            }
+        });
 
         // Request notification permission if checkbox is checked
         document.getElementById('enable_notifications')?.addEventListener('change', function(e) {
