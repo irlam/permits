@@ -1,15 +1,89 @@
 {
-  "id": "final-inspection-v1",
-  "title": "Final Inspection Permit",
-  "name": "Final Inspection Permit",
-  "description": "Permit for final inspections to ensure a property is ready for occupancy and meets all requirements.",
-  "fields": [
-    { "label": "Property/Area", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Inspector Name", "type": "text", "required": true },
-    { "label": "Inspection Checklist", "type": "textarea", "required": true },
-    { "label": "Deficiencies Noted", "type": "textarea", "required": false },
-    { "label": "Sign-off Authority", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "final-inspection-v1",
+    "title": "Final Inspection Permit",
+    "name": "Final Inspection Permit",
+    "description": "Permit for final inspections to ensure a property is ready for occupancy and meets all requirements.",
+    "meta": {
+        "fields": [
+            {
+                "key": "propertyArea",
+                "label": "Property/Area",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "inspectorName",
+                "label": "Inspector Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "inspectionChecklist",
+                "label": "Inspection Checklist",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "deficienciesNoted",
+                "label": "Deficiencies Noted",
+                "type": "textarea",
+                "required": false
+            },
+            {
+                "key": "signoffAuthority",
+                "label": "Sign-off Authority",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "COMPLETION VERIFICATION",
+            "items": [
+                "All works completed per specification",
+                "Defects list cleared",
+                "Testing and commissioning complete",
+                "Documentation handed over",
+                "Client sign-off obtained"
+            ]
+        },
+        {
+            "title": "HANDOVER & CLOSE-OUT",
+            "items": [
+                "Area cleaned and tidied",
+                "Temporary works removed",
+                "Safety systems reinstated",
+                "As-built drawings provided",
+                "O&M manuals delivered"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

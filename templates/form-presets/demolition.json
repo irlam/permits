@@ -1,16 +1,95 @@
 {
-  "id": "demolition-v1",
-  "title": "Demolition Permit",
-  "name": "Demolition Permit",
-  "description": "Permit for demolition activities, ensuring all safety, environmental, and regulatory requirements are met.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Structure to be Demolished", "type": "text", "required": true },
-    { "label": "Method of Demolition", "type": "textarea", "required": true },
-    { "label": "Hazardous Materials Present", "type": "checkbox", "required": false },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "demolition-v1",
+    "title": "Demolition Permit",
+    "name": "Demolition Permit",
+    "description": "Permit for demolition activities, ensuring all safety, environmental, and regulatory requirements are met.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "structureToBeDemolished",
+                "label": "Structure to be Demolished",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "methodOfDemolition",
+                "label": "Method of Demolition",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "hazardousMaterialsPresent",
+                "label": "Hazardous Materials Present",
+                "type": "checkbox",
+                "required": false
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "PRE-DEMOLITION SURVEY",
+            "items": [
+                "Structural survey completed",
+                "Hazardous materials identified",
+                "Services isolated and capped",
+                "Demolition sequence planned",
+                "Neighboring structures assessed"
+            ]
+        },
+        {
+            "title": "DEMOLITION CONTROLS",
+            "items": [
+                "Exclusion zone established",
+                "Dust suppression operating",
+                "Debris management arranged",
+                "Noise monitoring in place",
+                "Emergency procedures briefed"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

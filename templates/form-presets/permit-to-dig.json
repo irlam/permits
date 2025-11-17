@@ -1,15 +1,89 @@
 {
-  "id": "permit-to-dig-v1",
-  "title": "Permit to Dig",
-  "name": "Permit to Dig",
-  "description": "Permit for digging or breaking ground, ensuring all underground services and hazards are identified.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Purpose of Digging", "type": "textarea", "required": true },
-    { "label": "Underground Services Checked", "type": "checkbox", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "permit-to-dig-v1",
+    "title": "Permit to Dig",
+    "name": "Permit to Dig",
+    "description": "Permit for digging or breaking ground, ensuring all underground services and hazards are identified.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "purposeOfDigging",
+                "label": "Purpose of Digging",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "undergroundServicesChecked",
+                "label": "Underground Services Checked",
+                "type": "checkbox",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "SERVICE LOCATION",
+            "items": [
+                "Utility drawings obtained",
+                "Cable/pipe locator used",
+                "Trial holes dug to confirm location",
+                "Services marked on ground",
+                "Utility companies notified"
+            ]
+        },
+        {
+            "title": "EXCAVATION SAFETY",
+            "items": [
+                "Hand dig zone within 0.5m of services",
+                "Excavation supported if required",
+                "Services protected/diverted",
+                "Emergency contacts available",
+                "Backfill and reinstatement planned"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

@@ -1,16 +1,95 @@
 {
-  "id": "hazardous-materials-v1",
-  "title": "Hazardous Materials Handling Permit",
-  "name": "Hazardous Materials Handling Permit",
-  "description": "Permit for handling, storage, or transport of hazardous materials on site.",
-  "fields": [
-    { "label": "Material Name/Type", "type": "text", "required": true },
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Quantity", "type": "text", "required": false },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "PPE Required", "type": "textarea", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "hazardous-materials-v1",
+    "title": "Hazardous Materials Handling Permit",
+    "name": "Hazardous Materials Handling Permit",
+    "description": "Permit for handling, storage, or transport of hazardous materials on site.",
+    "meta": {
+        "fields": [
+            {
+                "key": "materialNameType",
+                "label": "Material Name/Type",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "quantity",
+                "label": "Quantity",
+                "type": "text",
+                "required": false
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "pPERequired",
+                "label": "PPE Required",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "MATERIAL IDENTIFICATION",
+            "items": [
+                "Material safety data sheet (MSDS) reviewed",
+                "Hazard classification confirmed",
+                "Exposure limits identified",
+                "Incompatible materials separated",
+                "Emergency procedures posted"
+            ]
+        },
+        {
+            "title": "HANDLING CONTROLS",
+            "items": [
+                "Appropriate PPE worn",
+                "Spill kit readily available",
+                "Ventilation adequate",
+                "Dispensing equipment suitable",
+                "Waste disposal arranged"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

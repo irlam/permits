@@ -1,15 +1,89 @@
 {
-  "id": "site-safety-inspection-v1",
-  "title": "Site Safety Inspection Permit",
-  "name": "Site Safety Inspection Permit",
-  "description": "Permit for conducting site safety inspections to proactively identify and address hazards.",
-  "fields": [
-    { "label": "Inspection Area", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Inspector Name", "type": "text", "required": true },
-    { "label": "Hazards Identified", "type": "textarea", "required": true },
-    { "label": "Corrective Actions Required", "type": "textarea", "required": false },
-    { "label": "Supervisor", "type": "text", "required": false },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "site-safety-inspection-v1",
+    "title": "Site Safety Inspection Permit",
+    "name": "Site Safety Inspection Permit",
+    "description": "Permit for conducting site safety inspections to proactively identify and address hazards.",
+    "meta": {
+        "fields": [
+            {
+                "key": "inspectionArea",
+                "label": "Inspection Area",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "inspectorName",
+                "label": "Inspector Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "hazardsIdentified",
+                "label": "Hazards Identified",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "correctiveActionsRequired",
+                "label": "Corrective Actions Required",
+                "type": "textarea",
+                "required": false
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": false
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "GENERAL SITE CONDITIONS",
+            "items": [
+                "Site access and egress safe",
+                "Welfare facilities adequate",
+                "Housekeeping standards met",
+                "Fire precautions in place",
+                "First aid provision checked"
+            ]
+        },
+        {
+            "title": "WORK ACTIVITIES",
+            "items": [
+                "Permits to work in place",
+                "Method statements available",
+                "Equipment inspections current",
+                "PPE being worn correctly",
+                "Environmental controls operating"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

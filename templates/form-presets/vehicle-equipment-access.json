@@ -1,16 +1,95 @@
 {
-  "id": "vehicle-equipment-access-v1",
-  "title": "Vehicle/Equipment Access Permit",
-  "name": "Vehicle/Equipment Access Permit",
-  "description": "Permit for vehicle or equipment access to controlled areas, ensuring safety and authorization.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Vehicle/Equipment Type", "type": "text", "required": true },
-    { "label": "Operator Name", "type": "text", "required": true },
-    { "label": "Purpose of Access", "type": "textarea", "required": true },
-    { "label": "Access Time", "type": "time", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "vehicle-equipment-access-v1",
+    "title": "Vehicle/Equipment Access Permit",
+    "name": "Vehicle/Equipment Access Permit",
+    "description": "Permit for vehicle or equipment access to controlled areas, ensuring safety and authorization.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "vehicleEquipmentType",
+                "label": "Vehicle/Equipment Type",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "operatorName",
+                "label": "Operator Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "purposeOfAccess",
+                "label": "Purpose of Access",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "accessTime",
+                "label": "Access Time",
+                "type": "time",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "VEHICLE/EQUIPMENT CHECKS",
+            "items": [
+                "Vehicle/equipment inspected",
+                "Operator licensed/certified",
+                "Lights and warnings functional",
+                "Load secure and within limits",
+                "Route surveyed and approved"
+            ]
+        },
+        {
+            "title": "ACCESS CONTROLS",
+            "items": [
+                "Pedestrian/vehicle segregation",
+                "Speed limits posted and enforced",
+                "Reversing aids/banksman used",
+                "Ground conditions suitable",
+                "Parking/maneuvering area designated"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }
