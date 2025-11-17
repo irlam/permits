@@ -1,16 +1,95 @@
 {
-  "id": "building-inspection-v1",
-  "title": "Building Inspection Permit",
-  "name": "Building Inspection Permit",
-  "description": "Permit for building inspections to ensure compliance with codes, regulations, and safety standards.",
-  "fields": [
-    { "label": "Building/Area", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Inspector Name", "type": "text", "required": true },
-    { "label": "Inspection Type", "type": "text", "required": true },
-    { "label": "Findings", "type": "textarea", "required": true },
-    { "label": "Corrective Actions", "type": "textarea", "required": false },
-    { "label": "Supervisor", "type": "text", "required": false },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "building-inspection-v1",
+    "title": "Building Inspection Permit",
+    "name": "Building Inspection Permit",
+    "description": "Permit for building inspections to ensure compliance with codes, regulations, and safety standards.",
+    "meta": {
+        "fields": [
+            {
+                "key": "buildingArea",
+                "label": "Building/Area",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "inspectorName",
+                "label": "Inspector Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "inspectionType",
+                "label": "Inspection Type",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "findings",
+                "label": "Findings",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "correctiveActions",
+                "label": "Corrective Actions",
+                "type": "textarea",
+                "required": false
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": false
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "INSPECTION SCOPE",
+            "items": [
+                "Inspection checklist prepared",
+                "Structural elements identified",
+                "Services systems mapped",
+                "Safety equipment tested",
+                "Documentation reviewed"
+            ]
+        },
+        {
+            "title": "FINDINGS & ACTIONS",
+            "items": [
+                "Defects noted and categorized",
+                "Photos/measurements taken",
+                "Immediate hazards addressed",
+                "Remedial actions assigned",
+                "Report issued to stakeholders"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

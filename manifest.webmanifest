@@ -4,8 +4,8 @@
   "description": "Work Permit Management System - Create and manage permits easily",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
+  "background_color": "#0f172a",
+  "theme_color": "#0ea5e9",
   "orientation": "portrait-primary",
   "icons": [
     {

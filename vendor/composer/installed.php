@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'defecttracker/permits',
-        'pretty_version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
-        'version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
-        'reference' => '62204c70477f73394fe5fb3b5697f61d3f3e1ef1',
+        'pretty_version' => 'dev-copilot/improve-overall-appearance',
+        'version' => 'dev-copilot/improve-overall-appearance',
+        'reference' => 'ce85375bade202141bf8f978f0891c2a3b2e818d',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'defecttracker/permits' => array(
-            'pretty_version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
-            'version' => 'dev-copilot/fix-13063146-1080720272-ef26d1d8-59ea-4c17-a181-f5dffb253372',
-            'reference' => '62204c70477f73394fe5fb3b5697f61d3f3e1ef1',
+            'pretty_version' => 'dev-copilot/improve-overall-appearance',
+            'version' => 'dev-copilot/improve-overall-appearance',
+            'reference' => 'ce85375bade202141bf8f978f0891c2a3b2e818d',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

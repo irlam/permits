@@ -3,15 +3,83 @@
   "title": "Working at Heights Permit",
   "name": "Working at Heights Permit",
   "description": "Permit for work performed at heights, ensuring fall protection and safety measures are in place.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Height (meters)", "type": "number", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Fall Protection Equipment", "type": "textarea", "required": true },
-    { "label": "Weather Conditions", "type": "text", "required": false },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
+  "meta": {
+    "fields": [
+      { "key": "location", "label": "Location", "type": "text", "required": true },
+      { "key": "date", "label": "Date", "type": "date", "required": true },
+      { "key": "workDescription", "label": "Work Description", "type": "textarea", "required": true },
+      { "key": "height", "label": "Height (meters)", "type": "number", "required": true },
+      { "key": "personnelInvolved", "label": "Personnel Involved", "type": "text", "required": true },
+      { "key": "fallProtection", "label": "Fall Protection Equipment", "type": "textarea", "required": true },
+      { "key": "weather", "label": "Weather Conditions", "type": "text", "required": false },
+      { "key": "supervisor", "label": "Supervisor", "type": "text", "required": true },
+      { "key": "validFrom", "label": "Valid From", "type": "datetime" },
+      { "key": "validTo", "label": "Valid To", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "FALL HAZARD ASSESSMENT",
+      "items": [
+        "Work height measured and documented",
+        "Fall risks identified and assessed",
+        "Weather conditions checked (wind, rain, ice)",
+        "Fragile surfaces identified and marked",
+        "Overhead hazards assessed (power lines, structures)"
+      ]
+    },
+    {
+      "title": "FALL PROTECTION MEASURES",
+      "items": [
+        "Collective protection provided where possible (guardrails, nets)",
+        "Personal fall arrest system (PFAS) available and inspected",
+        "Anchor points identified, tested and certified",
+        "Rescue plan established and communicated",
+        "Edge protection installed where required"
+      ]
+    },
+    {
+      "title": "ACCESS EQUIPMENT & INSPECTION",
+      "items": [
+        "Ladders/scaffolds inspected and tagged",
+        "Mobile elevated work platforms (MEWPs) certified",
+        "Equipment appropriate for task and height",
+        "Safe access and egress routes established",
+        "Equipment secured against movement"
+      ]
+    },
+    {
+      "title": "PPE & COMPETENCY",
+      "items": [
+        "Hard hats, safety boots, high-visibility clothing worn",
+        "Full body harness fitted correctly if PFAS required",
+        "Workers trained and certified for working at height",
+        "Tool lanyards used for all hand tools",
+        "Emergency rescue equipment available"
+      ]
+    },
+    {
+      "title": "ENVIRONMENTAL CONTROLS",
+      "items": [
+        "Area below secured/barriered to prevent access",
+        "Debris netting installed where required",
+        "Public/traffic excluded from work zone",
+        "Work stopped if weather conditions deteriorate"
+      ]
+    },
+    {
+      "title": "COMPLETION & HANDBACK",
+      "items": [
+        "All tools and equipment removed from height",
+        "Work area inspected and cleared",
+        "Access equipment dismantled or secured",
+        "Permit closed and signed off"
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
   ]
 }

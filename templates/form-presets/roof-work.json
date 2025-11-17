@@ -1,16 +1,95 @@
 {
-  "id": "roof-work-v1",
-  "title": "Roof Work Permit",
-  "name": "Roof Work Permit",
-  "description": "Permit for roof work, ensuring all safety protocols and fall protection measures are in place.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Fall Protection Measures", "type": "textarea", "required": true },
-    { "label": "Weather Conditions", "type": "text", "required": false },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "roof-work-v1",
+    "title": "Roof Work Permit",
+    "name": "Roof Work Permit",
+    "description": "Permit for roof work, ensuring all safety protocols and fall protection measures are in place.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "workDescription",
+                "label": "Work Description",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "fallProtectionMeasures",
+                "label": "Fall Protection Measures",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "weatherConditions",
+                "label": "Weather Conditions",
+                "type": "text",
+                "required": false
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "ACCESS & EDGE PROTECTION",
+            "items": [
+                "Safe access route established",
+                "Edge protection installed",
+                "Fragile roof areas identified",
+                "Crawling boards/platforms provided",
+                "Weather conditions suitable"
+            ]
+        },
+        {
+            "title": "FALL PREVENTION",
+            "items": [
+                "Collective protection prioritized",
+                "Personal fall arrest system if required",
+                "Rescue plan in place",
+                "Workers trained and competent",
+                "Tools secured with lanyards"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

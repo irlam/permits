@@ -1,19 +1,113 @@
 {
-  "id": "confined-space-entry-v1",
-  "title": "Confined Space Entry Permit",
-  "name": "Confined Space Entry Permit",
-  "description": "Permit for entry into confined spaces, ensuring all safety protocols are met.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Time In", "type": "time", "required": true },
-    { "label": "Time Out", "type": "time", "required": false },
-    { "label": "Entrant(s)", "type": "text", "required": true },
-    { "label": "Attendant(s)", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Atmospheric Testing Results", "type": "textarea", "required": true },
-    { "label": "PPE Required", "type": "textarea", "required": true },
-    { "label": "Rescue Plan", "type": "textarea", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "confined-space-entry-v1",
+    "title": "Confined Space Entry Permit",
+    "name": "Confined Space Entry Permit",
+    "description": "Permit for entry into confined spaces, ensuring all safety protocols are met.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "timeIn",
+                "label": "Time In",
+                "type": "time",
+                "required": true
+            },
+            {
+                "key": "timeOut",
+                "label": "Time Out",
+                "type": "time",
+                "required": false
+            },
+            {
+                "key": "entrant(s)",
+                "label": "Entrant(s)",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "attendant(s)",
+                "label": "Attendant(s)",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "atmosphericTestingResults",
+                "label": "Atmospheric Testing Results",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "pPERequired",
+                "label": "PPE Required",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "rescuePlan",
+                "label": "Rescue Plan",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "ATMOSPHERIC TESTING",
+            "items": [
+                "Oxygen level 19.5-23.5%",
+                "Flammable gas <10% LEL",
+                "Toxic gas within safe limits",
+                "Continuous monitoring equipment in use",
+                "Test results recorded and signed"
+            ]
+        },
+        {
+            "title": "VENTILATION & ISOLATION",
+            "items": [
+                "Forced ventilation operating",
+                "All energy sources isolated",
+                "Mechanical equipment locked out",
+                "Pipelines blanked or disconnected",
+                "Entry/exit routes clear and safe"
+            ]
+        },
+        {
+            "title": "EMERGENCY PREPAREDNESS",
+            "items": [
+                "Rescue equipment in place",
+                "Attendant posted at entry point",
+                "Communication system tested",
+                "Emergency services notified",
+                "Rescue plan briefed to all personnel"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

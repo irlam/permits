@@ -1,16 +1,95 @@
 {
-  "id": "water-discharge-environmental-v1",
-  "title": "Water Discharge/Environmental Permit",
-  "name": "Water Discharge/Environmental Permit",
-  "description": "Permit for water discharge or other environmental activities, ensuring compliance with environmental regulations.",
-  "fields": [
-    { "label": "Location/Discharge Point", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Type of Discharge/Activity", "type": "text", "required": true },
-    { "label": "Volume/Duration", "type": "text", "required": false },
-    { "label": "Environmental Controls in Place", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "water-discharge-environmental-v1",
+    "title": "Water Discharge/Environmental Permit",
+    "name": "Water Discharge/Environmental Permit",
+    "description": "Permit for water discharge or other environmental activities, ensuring compliance with environmental regulations.",
+    "meta": {
+        "fields": [
+            {
+                "key": "locationDischargePoint",
+                "label": "Location/Discharge Point",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "typeOfDischargeActivity",
+                "label": "Type of Discharge/Activity",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "volumeDuration",
+                "label": "Volume/Duration",
+                "type": "text",
+                "required": false
+            },
+            {
+                "key": "environmentalControlsInPlace",
+                "label": "Environmental Controls in Place",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "DISCHARGE AUTHORIZATION",
+            "items": [
+                "Discharge consent obtained",
+                "Water quality tested",
+                "Treatment system operational",
+                "Monitoring plan in place",
+                "Regulatory limits confirmed"
+            ]
+        },
+        {
+            "title": "ENVIRONMENTAL PROTECTION",
+            "items": [
+                "Pollution prevention measures active",
+                "Spill response kit available",
+                "Drainage system protected",
+                "Sampling and testing scheduled",
+                "Incident reporting procedure briefed"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

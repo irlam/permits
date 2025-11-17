@@ -52,6 +52,108 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('[App] Unhandled promise rejection:', event.reason);
 });
 
+// Toast notification system for user feedback
+window.showToast = function(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 15px;
+    font-weight: 500;
+    max-width: 400px;
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+};
+
+// Add CSS for toast animations
+if (!document.getElementById('toast-styles')) {
+  const style = document.createElement('style');
+  style.id = 'toast-styles';
+  style.textContent = `
+    @keyframes slideInRight {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Enhanced form submission handler with loading states
+function handleFormSubmit(formElement, callback) {
+  const submitBtn = formElement.querySelector('button[type="submit"]');
+  const originalText = submitBtn?.textContent || 'Submit';
+  
+  formElement.addEventListener('submit', async (e) => {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Loading...';
+      submitBtn.style.opacity = '0.6';
+    }
+    
+    try {
+      await callback(e);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      window.showToast('An error occurred. Please try again.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        submitBtn.style.opacity = '1';
+      }
+    }
+  });
+}
+
+// Add smooth scroll behavior
+document.documentElement.style.scrollBehavior = 'smooth';
+
+// Add entrance animations to elements on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const animatedElements = document.querySelectorAll('.hero-stat, .panel, .card');
+  animatedElements.forEach((el, index) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    setTimeout(() => {
+      el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 100 * index);
+  });
+});
+
 // Push Notification Functions
 async function initializePushNotifications(registration) {
   try {

@@ -3,13 +3,73 @@
   "title": "General Work Permit",
   "name": "General Work Permit",
   "description": "Permit for general work activities, ensuring all necessary safety checks are completed.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "PPE Required", "type": "textarea", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
+  "meta": {
+    "fields": [
+      { "key": "location", "label": "Location", "type": "text", "required": true },
+      { "key": "date", "label": "Date", "type": "date", "required": true },
+      { "key": "workDescription", "label": "Work Description", "type": "textarea", "required": true },
+      { "key": "personnelInvolved", "label": "Personnel Involved", "type": "text", "required": true },
+      { "key": "ppeRequired", "label": "PPE Required", "type": "textarea", "required": true },
+      { "key": "supervisor", "label": "Supervisor", "type": "text", "required": true },
+      { "key": "validFrom", "label": "Valid From", "type": "datetime" },
+      { "key": "validTo", "label": "Valid To", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "GENERAL SAFETY CHECKS",
+      "items": [
+        "Work area inspected for hazards",
+        "Risk assessment completed",
+        "Method statement available",
+        "Emergency procedures briefed",
+        "First aid provisions checked"
+      ]
+    },
+    {
+      "title": "EQUIPMENT & TOOLS",
+      "items": [
+        "Tools inspected and in good condition",
+        "Equipment certified and tested",
+        "Electrical equipment PAT tested",
+        "Guards and safety devices functional",
+        "Manual handling assessed"
+      ]
+    },
+    {
+      "title": "PPE & TRAINING",
+      "items": [
+        "Required PPE identified and available",
+        "Workers trained for task",
+        "Competency verified",
+        "Safety briefing completed",
+        "Communication systems tested"
+      ]
+    },
+    {
+      "title": "ENVIRONMENTAL CONTROLS",
+      "items": [
+        "Barriers and signage installed",
+        "Public access restricted",
+        "Housekeeping standards maintained",
+        "Waste disposal arranged",
+        "Environmental protection measures in place"
+      ]
+    },
+    {
+      "title": "WORK COMPLETION",
+      "items": [
+        "Work area cleaned and tidied",
+        "Tools and equipment removed",
+        "Barriers removed safely",
+        "Final inspection completed",
+        "Permit signed off and closed"
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
   ]
 }

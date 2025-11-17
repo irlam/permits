@@ -3,15 +3,74 @@
   "title": "Excavation Permit",
   "name": "Excavation Permit",
   "description": "Permit for excavation work, ensuring all underground hazards and safety measures are addressed.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Depth of Excavation (meters)", "type": "number", "required": true },
-    { "label": "Underground Services Checked", "type": "checkbox", "required": true },
-    { "label": "Shoring/Protection Measures", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
+  "meta": {
+    "fields": [
+      { "key": "location", "label": "Location", "type": "text", "required": true },
+      { "key": "date", "label": "Date", "type": "date", "required": true },
+      { "key": "workDescription", "label": "Work Description", "type": "textarea", "required": true },
+      { "key": "depthOfExcavation", "label": "Depth of Excavation (meters)", "type": "number", "required": true },
+      { "key": "personnelInvolved", "label": "Personnel Involved", "type": "text", "required": true },
+      { "key": "supervisor", "label": "Supervisor", "type": "text", "required": true },
+      { "key": "validFrom", "label": "Valid From", "type": "datetime" },
+      { "key": "validTo", "label": "Valid To", "type": "datetime" }
+    ]
+  },
+  "sections": [
+    {
+      "title": "PRE-WORK HAZARD ASSESSMENT",
+      "items": [
+        "Underground services (gas, electric, water, telecom) located and marked",
+        "Ground conditions assessed (stability, contamination, flooding risk)",
+        "Adjacent structures inspected for potential impact",
+        "Weather conditions checked (rain, freezing, high winds)",
+        "Emergency access and egress routes established"
+      ]
+    },
+    {
+      "title": "SAFETY CONTROLS & PROTECTION",
+      "items": [
+        "Excavation edges protected with barriers/fencing",
+        "Shoring or benching installed as per depth requirements",
+        "Ladder access provided (max 7.5m spacing)",
+        "Spoil heaps placed minimum 1.5m from excavation edge",
+        "Traffic management and signage in place",
+        "Competent person assigned to supervise excavation"
+      ]
+    },
+    {
+      "title": "PPE & EQUIPMENT REQUIREMENTS",
+      "items": [
+        "Hard hats, high-visibility clothing, safety boots mandatory",
+        "Hearing protection if mechanical excavation",
+        "Respiratory protection if contaminated ground",
+        "Fall protection if depth exceeds 2m",
+        "Gas detection equipment if required",
+        "First aid kit and emergency equipment available"
+      ]
+    },
+    {
+      "title": "MONITORING & INSPECTION",
+      "items": [
+        "Daily inspection before work starts",
+        "Atmospheric monitoring if confined space risk",
+        "Continuous monitoring during mechanical excavation",
+        "Re-inspection after weather events or ground movement"
+      ]
+    },
+    {
+      "title": "COMPLETION & REINSTATEMENT",
+      "items": [
+        "Excavation backfilled and compacted to specification",
+        "Services reinstated and tested",
+        "Surface reinstated to original condition",
+        "Area inspected and signed off",
+        "Permit closed and filed"
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
   ]
 }

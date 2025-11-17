@@ -1,16 +1,93 @@
 {
-  "id": "welding-cutting-v1",
-  "title": "Welding/Cutting Permit",
-  "name": "Welding/Cutting Permit",
-  "description": "Permit for welding or cutting operations, ensuring fire safety and hazard controls are in place.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Work Description", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Fire Watch Assigned", "type": "checkbox", "required": true },
-    { "label": "PPE Required", "type": "textarea", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "welding-cutting-v1",
+    "title": "Welding/Cutting Permit",
+    "name": "Welding/Cutting Permit",
+    "description": "Permit for welding or cutting operations, ensuring fire safety and hazard controls are in place.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "workDescription",
+                "label": "Work Description",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "fireWatchAssigned",
+                "label": "Fire Watch Assigned",
+                "type": "checkbox",
+                "required": true
+            },
+            {
+                "key": "pPERequired",
+                "label": "PPE Required",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "FIRE PREVENTION",
+            "items": [
+                "Combustibles removed or protected",
+                "Fire watch assigned and briefed",
+                "Fire extinguisher available",
+                "Hot work shields/blankets in place",
+                "Floor openings covered"
+            ]
+        },
+        {
+            "title": "VENTILATION & FUMES",
+            "items": [
+                "Adequate ventilation provided",
+                "Respiratory protection available if required",
+                "Confined space procedures followed if applicable",
+                "Warning signs posted"
+            ]
+        },
+        {
+            "title": "POST-WORK INSPECTION",
+            "items": [
+                "Area inspected immediately after work",
+                "Fire watch maintained for 60 minutes minimum",
+                "Re-inspection completed",
+                "Permit closed and filed"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }

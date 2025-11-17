@@ -1,15 +1,97 @@
 {
-  "id": "asbestos-removal-v1",
-  "title": "Asbestos Removal Permit",
-  "name": "Asbestos Removal Permit",
-  "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
-  "fields": [
-    { "label": "Location", "type": "text", "required": true },
-    { "label": "Date", "type": "date", "required": true },
-    { "label": "Area/Material to be Removed", "type": "text", "required": true },
-    { "label": "Removal Method", "type": "textarea", "required": true },
-    { "label": "Personnel Involved", "type": "text", "required": true },
-    { "label": "Supervisor", "type": "text", "required": true },
-    { "label": "Signatures", "type": "signature", "required": true }
-  ]
+    "id": "asbestos-removal-v1",
+    "title": "Asbestos Removal Permit",
+    "name": "Asbestos Removal Permit",
+    "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
+    "meta": {
+        "fields": [
+            {
+                "key": "location",
+                "label": "Location",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "date",
+                "label": "Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "key": "areaMaterialToBeRemoved",
+                "label": "Area/Material to be Removed",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "removalMethod",
+                "label": "Removal Method",
+                "type": "textarea",
+                "required": true
+            },
+            {
+                "key": "personnelInvolved",
+                "label": "Personnel Involved",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "supervisor",
+                "label": "Supervisor",
+                "type": "text",
+                "required": true
+            },
+            {
+                "key": "signatures",
+                "label": "Signatures",
+                "type": "signature",
+                "required": true
+            },
+            {
+                "key": "validFrom",
+                "label": "Valid From",
+                "type": "datetime"
+            },
+            {
+                "key": "validTo",
+                "label": "Valid To",
+                "type": "datetime"
+            }
+        ]
+    },
+    "sections": [
+        {
+            "title": "SITE PREPARATION",
+            "items": [
+                "Asbestos survey completed and reviewed",
+                "Work area sealed and isolated",
+                "Negative air pressure system installed",
+                "Decontamination unit set up",
+                "Warning signs posted"
+            ]
+        },
+        {
+            "title": "RESPIRATORY PROTECTION",
+            "items": [
+                "RPE fit-tested and assigned",
+                "Face-fit records current",
+                "Spare filters/cartridges available",
+                "Emergency escape RPE provided"
+            ]
+        },
+        {
+            "title": "WASTE DISPOSAL",
+            "items": [
+                "Licensed waste contractor engaged",
+                "Double-bagged in marked bags",
+                "Waste consignment notes prepared",
+                "Transfer station notified"
+            ]
+        }
+    ],
+    "signatures": [
+        "issuer_issue",
+        "holder_accept",
+        "issuer_close"
+    ]
 }
