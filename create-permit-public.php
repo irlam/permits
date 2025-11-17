@@ -620,6 +620,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 32px 0 16px;
             padding-bottom: 8px;
             border-bottom: 1px solid #1f2937;
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .section-title::before {
+            content: attr(data-number);
+            position: absolute;
+            left: 0;
+            top: -2px;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .section-complete {
+            border-left: 4px solid #22c55e;
+            padding-left: 36px;
+        }
+
+        .section-incomplete {
+            border-left: 4px solid #ef4444;
+            padding-left: 36px;
+        }
+
+        .progress-bar-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #111827;
+            padding: 16px;
+            margin: -32px -32px 24px;
+            border-bottom: 2px solid #1f2937;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #1f2937;
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .risk-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .risk-low {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #86efac;
+        }
+
+        .risk-medium {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: #fcd34d;
+        }
+
+        .risk-high {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+
+        .field-counter {
+            font-size: 12px;
+            color: #64748b;
+            margin-left: 8px;
+        }
+
+        .help-tooltip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 50%;
+            color: #93c5fd;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: help;
+            margin-left: 6px;
+            position: relative;
+        }
+
+        .help-tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
         }
 
         .form-actions {
@@ -682,6 +834,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="card-heading">
                     <h1>📋 <?php echo htmlspecialchars($template['name']); ?></h1>
                     <p>Please fill in all required information</p>
+                    <?php if (!empty($template['description'])): ?>
+                        <p style="font-size: 14px; color: #94a3b8; margin-top: 8px;"><?php echo htmlspecialchars($template['description']); ?></p>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-bar-container" id="progressBarContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progressText">0% Complete</span>
+                        <span class="risk-indicator risk-low" id="riskIndicator" style="display: none;">
+                            <span id="riskIcon">✓</span>
+                            <span id="riskText">Low Risk</span>
+                        </span>
+                    </div>
                 </div>
                 
                 <?php if ($error): ?>
@@ -725,12 +894,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <!-- Dynamic Form Fields -->
-                    <?php foreach ($formStructure as $section):
+                    <?php 
+                    $sectionNumber = 0;
+                    foreach ($formStructure as $section):
                         if (!isset($section['fields']) || !is_array($section['fields'])) {
                             continue;
                         }
+                        $sectionNumber++;
                     ?>
-                        <div class="section-title"><?php echo htmlspecialchars($section['title']); ?></div>
+                        <div class="section-title" data-number="<?php echo $sectionNumber; ?>" data-section-id="section_<?php echo $sectionNumber; ?>">
+                            <?php echo htmlspecialchars($section['title']); ?>
+                            <span class="field-counter" id="counter_section_<?php echo $sectionNumber; ?>"></span>
+                        </div>
                         
                         <?php foreach ($section['fields'] as $field):
                             if (!is_array($field) || empty($field['name'])) {
@@ -822,11 +997,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </div>
                                     <?php if ($isScoreItem): ?>
                                         <div class="field-toolbar">
-                                            <button type="button" class="tool-link toggle-note" data-for="<?php echo htmlspecialchars($fieldName); ?>">📝 Note</button>
-                                            <button type="button" class="tool-link toggle-media" data-for="<?php echo htmlspecialchars($fieldName); ?>">🖼️ Media</button>
+                                            <button type="button" class="tool-link toggle-note" data-for="<?php echo htmlspecialchars($fieldName); ?>">📝 Add Note</button>
+                                            <button type="button" class="tool-link toggle-media" data-for="<?php echo htmlspecialchars($fieldName); ?>">📸 Add Photo/Video</button>
+                                            <span class="help-tooltip" data-tip="For 'No' answers, please provide details in notes or supporting media">?</span>
                                         </div>
                                         <div class="note-box" id="note_<?php echo htmlspecialchars($fieldName); ?>">
-                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>_note" placeholder="Add a note..."><?php echo htmlspecialchars((string)($existingData[$fieldName . '_note'] ?? '')); ?></textarea>
+                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>_note" placeholder="Please explain any 'No' answers or provide additional context..."><?php echo htmlspecialchars((string)($existingData[$fieldName . '_note'] ?? '')); ?></textarea>
                                         </div>
                                         <div class="media-box" id="media_<?php echo htmlspecialchars($fieldName); ?>">
                                             <div class="media-actions">
@@ -835,7 +1011,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             </div>
                                             <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple>
                                             <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" multiple>
-                                            <div class="media-note">Tip: On mobile, use your camera or photo library.</div>
+                                            <div class="media-note">💡 Tip: Attach photos of safety equipment, site conditions, or documentation</div>
                                         </div>
                                     <?php endif; ?>
                                 <?php elseif ($fieldType === 'date'): ?>
@@ -918,6 +1094,317 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     
     <script>
+        // Progress tracking and risk assessment
+        (function() {
+            let totalFields = 0;
+            let completedFields = 0;
+            let scoreItems = [];
+            let autoSaveTimer = null;
+
+            // Initialize
+            function init() {
+                countFields();
+                attachFieldListeners();
+                updateProgress();
+                initAutoSave();
+                restoreAutoSavedData();
+            }
+
+            // Count all fields for progress calculation
+            function countFields() {
+                const form = document.getElementById('permitForm');
+                if (!form) return;
+
+                // Count text inputs, textareas, selects
+                totalFields += form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select').length;
+
+                // Count radio groups (count each group as 1 field)
+                const radioGroups = new Set();
+                form.querySelectorAll('input[type="radio"]').forEach(radio => {
+                    if (radio.name && !radioGroups.has(radio.name)) {
+                        radioGroups.add(radio.name);
+                        totalFields++;
+
+                        // Track score items for risk assessment
+                        const choiceGroup = radio.closest('.choice-group');
+                        if (choiceGroup && choiceGroup.classList.contains('vertical')) {
+                            scoreItems.push(radio.name);
+                        }
+                    }
+                });
+            }
+
+            // Attach listeners to all form fields
+            function attachFieldListeners() {
+                const form = document.getElementById('permitForm');
+                if (!form) return;
+
+                form.addEventListener('change', function() {
+                    updateProgress();
+                    scheduleAutoSave();
+                });
+
+                form.addEventListener('input', function(e) {
+                    if (e.target.tagName === 'TEXTAREA' || e.target.type === 'text') {
+                        scheduleAutoSave();
+                    }
+                });
+            }
+
+            // Update progress bar and risk indicator
+            function updateProgress() {
+                const form = document.getElementById('permitForm');
+                if (!form) return;
+
+                completedFields = 0;
+                let noCount = 0;
+                let yesCount = 0;
+                let naCount = 0;
+
+                // Check text inputs, textareas, selects
+                form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select').forEach(field => {
+                    // Skip holder info fields (they're required and separate)
+                    if (field.name.startsWith('holder_')) return;
+                    
+                    if (field.value.trim() !== '' && field.value !== '') {
+                        completedFields++;
+                    }
+                });
+
+                // Check radio groups
+                const checkedGroups = new Set();
+                form.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+                    if (radio.name && !radio.name.startsWith('holder_')) {
+                        checkedGroups.add(radio.name);
+                        
+                        // Track for risk assessment
+                        const value = radio.value.toLowerCase();
+                        if (scoreItems.includes(radio.name)) {
+                            if (value === 'yes') yesCount++;
+                            else if (value === 'no') noCount++;
+                            else if (value === 'na') naCount++;
+                        }
+                    }
+                });
+                completedFields += checkedGroups.size;
+
+                // Calculate percentage
+                const percentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+                
+                // Update progress bar
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                if (progressFill) progressFill.style.width = percentage + '%';
+                if (progressText) progressText.textContent = percentage + '% Complete (' + completedFields + '/' + totalFields + ' fields)';
+
+                // Update risk indicator
+                updateRiskIndicator(noCount, yesCount, naCount);
+                
+                // Update section counters
+                updateSectionCounters();
+            }
+
+            // Update risk indicator based on responses
+            function updateRiskIndicator(noCount, yesCount, naCount) {
+                const riskIndicator = document.getElementById('riskIndicator');
+                const riskIcon = document.getElementById('riskIcon');
+                const riskText = document.getElementById('riskText');
+                
+                if (!riskIndicator || !riskIcon || !riskText) return;
+
+                const totalScoreItems = noCount + yesCount + naCount;
+                if (totalScoreItems === 0) {
+                    riskIndicator.style.display = 'none';
+                    return;
+                }
+
+                riskIndicator.style.display = 'inline-flex';
+                
+                // Calculate risk level
+                const noPercentage = (noCount / totalScoreItems) * 100;
+                
+                // Remove all risk classes
+                riskIndicator.classList.remove('risk-low', 'risk-medium', 'risk-high');
+                
+                if (noPercentage >= 30) {
+                    riskIndicator.classList.add('risk-high');
+                    riskIcon.textContent = '⚠️';
+                    riskText.textContent = 'High Risk - ' + noCount + ' issues identified';
+                } else if (noPercentage >= 15 || noCount >= 3) {
+                    riskIndicator.classList.add('risk-medium');
+                    riskIcon.textContent = '⚡';
+                    riskText.textContent = 'Medium Risk - ' + noCount + ' issues to address';
+                } else {
+                    riskIndicator.classList.add('risk-low');
+                    riskIcon.textContent = '✓';
+                    riskText.textContent = 'Low Risk - ' + yesCount + ' checks passed';
+                }
+            }
+
+            // Update section completion counters
+            function updateSectionCounters() {
+                const form = document.getElementById('permitForm');
+                if (!form) return;
+
+                // Get all sections
+                document.querySelectorAll('.section-title').forEach(sectionTitle => {
+                    const sectionId = sectionTitle.getAttribute('data-section-id');
+                    const counter = document.getElementById('counter_' + sectionId);
+                    if (!counter) return;
+
+                    // Find all fields in this section (until next section-title)
+                    let currentElement = sectionTitle.nextElementSibling;
+                    let sectionTotal = 0;
+                    let sectionComplete = 0;
+
+                    while (currentElement && !currentElement.classList.contains('section-title')) {
+                        // Count radio groups
+                        const radios = currentElement.querySelectorAll('input[type="radio"]');
+                        const radioGroups = new Set();
+                        radios.forEach(radio => {
+                            if (!radioGroups.has(radio.name)) {
+                                radioGroups.add(radio.name);
+                                sectionTotal++;
+                                if (radio.checked) sectionComplete++;
+                            }
+                        });
+
+                        // Count other fields
+                        currentElement.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select').forEach(field => {
+                            sectionTotal++;
+                            if (field.value.trim() !== '') sectionComplete++;
+                        });
+
+                        currentElement = currentElement.nextElementSibling;
+                    }
+
+                    if (sectionTotal > 0) {
+                        counter.textContent = '(' + sectionComplete + '/' + sectionTotal + ')';
+                        
+                        // Add visual indicator
+                        if (sectionComplete === sectionTotal) {
+                            sectionTitle.classList.remove('section-incomplete');
+                            sectionTitle.classList.add('section-complete');
+                        } else if (sectionComplete > 0) {
+                            sectionTitle.classList.remove('section-complete');
+                            sectionTitle.classList.add('section-incomplete');
+                        } else {
+                            sectionTitle.classList.remove('section-complete', 'section-incomplete');
+                        }
+                    }
+                });
+            }
+
+            // Auto-save functionality
+            function initAutoSave() {
+                // Only enable if editing a draft
+                <?php if ($existingPermit && $isUpdate): ?>
+                console.log('Auto-save enabled for draft permit');
+                <?php endif; ?>
+            }
+
+            function scheduleAutoSave() {
+                if (autoSaveTimer) clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(saveToLocalStorage, 2000); // Save after 2 seconds of inactivity
+            }
+
+            function saveToLocalStorage() {
+                try {
+                    const form = document.getElementById('permitForm');
+                    if (!form) return;
+
+                    const formData = new FormData(form);
+                    const data = {};
+                    
+                    for (let [key, value] of formData.entries()) {
+                        if (data[key]) {
+                            // Handle multiple values (like checkboxes)
+                            if (Array.isArray(data[key])) {
+                                data[key].push(value);
+                            } else {
+                                data[key] = [data[key], value];
+                            }
+                        } else {
+                            data[key] = value;
+                        }
+                    }
+
+                    const templateId = '<?php echo htmlspecialchars($template_id); ?>';
+                    localStorage.setItem('permit_draft_' + templateId, JSON.stringify({
+                        data: data,
+                        timestamp: Date.now()
+                    }));
+                    
+                    console.log('Auto-saved to local storage');
+                } catch (e) {
+                    console.error('Auto-save failed:', e);
+                }
+            }
+
+            function restoreAutoSavedData() {
+                // Don't restore if we're already editing a permit
+                <?php if ($existingPermit): ?>
+                return;
+                <?php endif; ?>
+
+                try {
+                    const templateId = '<?php echo htmlspecialchars($template_id); ?>';
+                    const saved = localStorage.getItem('permit_draft_' + templateId);
+                    
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        const ageMinutes = (Date.now() - parsed.timestamp) / 1000 / 60;
+                        
+                        // Only restore if less than 24 hours old
+                        if (ageMinutes < 1440) {
+                            if (confirm('We found an auto-saved draft from ' + Math.round(ageMinutes) + ' minutes ago. Would you like to restore it?')) {
+                                const form = document.getElementById('permitForm');
+                                if (form) {
+                                    Object.keys(parsed.data).forEach(key => {
+                                        const field = form.elements[key];
+                                        if (field) {
+                                            if (field.type === 'radio') {
+                                                form.querySelectorAll('input[name="' + key + '"]').forEach(radio => {
+                                                    if (radio.value === parsed.data[key]) {
+                                                        radio.checked = true;
+                                                    }
+                                                });
+                                            } else {
+                                                field.value = parsed.data[key];
+                                            }
+                                        }
+                                    });
+                                    updateProgress();
+                                }
+                            } else {
+                                localStorage.removeItem('permit_draft_' + templateId);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to restore auto-saved data:', e);
+                }
+            }
+
+            // Clear auto-save on successful submit
+            document.addEventListener('DOMContentLoaded', function() {
+                const form = document.getElementById('permitForm');
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        const templateId = '<?php echo htmlspecialchars($template_id); ?>';
+                        localStorage.removeItem('permit_draft_' + templateId);
+                    });
+                }
+            });
+
+            // Initialize on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+
         // Request notification permission if checkbox is checked
         document.getElementById('enable_notifications')?.addEventListener('change', function(e) {
             if (e.target.checked && 'Notification' in window) {
@@ -981,6 +1468,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         });
+        
+        // Auto-open note box when "No" is selected
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'radio' && e.target.value.toLowerCase() === 'no') {
+                var fieldName = e.target.name;
+                var noteBox = document.getElementById('note_' + fieldName);
+                if (noteBox && noteBox.style.display !== 'block') {
+                    noteBox.style.display = 'block';
+                    var textarea = noteBox.querySelector('textarea');
+                    if (textarea) {
+                        setTimeout(function() {
+                            textarea.focus();
+                            if (!textarea.value) {
+                                textarea.placeholder = "⚠️ Please explain why this safety check cannot be met and what alternative measures are in place...";
+                            }
+                        }, 100);
+                    }
+                }
+            }
+        });
+        
         // Auto-open note box when there's existing content
         document.addEventListener('DOMContentLoaded', function(){
             document.querySelectorAll('.note-box').forEach(function(box){
