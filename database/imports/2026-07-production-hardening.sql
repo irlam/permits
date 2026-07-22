@@ -1,11 +1,14 @@
--- Production hardening migration for MySQL 8.0+
+-- Production hardening migration for MySQL 5.7+/MariaDB 10.2+
 -- Back up the database, then import with:
 -- mysql -u USER -p DATABASE < database/imports/2026-07-production-hardening.sql
 
-START TRANSACTION;
-
-ALTER TABLE forms
-  ADD COLUMN IF NOT EXISTS work_started_at DATETIME NULL AFTER approved_at;
+-- DDL implicitly commits in MySQL, so each operation is guarded and rerunnable.
+SET @sql = IF(
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'forms' AND column_name = 'work_started_at') = 0,
+  'ALTER TABLE forms ADD COLUMN work_started_at DATETIME NULL AFTER approved_at',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- User identifiers are UUID strings throughout the application.
 ALTER TABLE forms
@@ -24,5 +27,3 @@ SET @sql = IF(
   'SELECT 1'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
-COMMIT;
