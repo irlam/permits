@@ -18,7 +18,7 @@ header('Content-Type: application/json');
 
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 
-session_start();
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -90,14 +90,21 @@ try {
         exit;
     }
     
-    // Close the permit
+    if (mb_strlen($reason) > 5000) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Reason is too long']);
+        exit;
+    }
+    $now = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
+    $db->pdo->beginTransaction();
+    // Close the permit atomically
     $stmt = $db->pdo->prepare("
         UPDATE forms 
         SET status = 'closed',
             closed_by = ?,
-            closed_at = NOW(),
+            closed_at = $now,
             closure_reason = ?
-        WHERE id = ?
+        WHERE id = ? AND status = 'active'
     ");
     
     $stmt->execute([
@@ -105,6 +112,8 @@ try {
         $reason,
         $permitId
     ]);
+    if ($stmt->rowCount() !== 1) { throw new RuntimeException('Permit state changed during closure'); }
+    $db->pdo->commit();
     
     if (function_exists('logActivity')) {
         $description = sprintf(
@@ -131,9 +140,11 @@ try {
     ]);
     
 } catch (Exception $e) {
+    if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
+    error_log('Permit close failed: ' . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Error closing permit: ' . $e->getMessage()
+        'message' => 'Unable to close permit'
     ]);
 }

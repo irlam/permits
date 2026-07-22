@@ -73,7 +73,9 @@ try {
         exit;
     }
 } catch (Exception $e) {
-    die("Error loading template: " . $e->getMessage());
+    error_log('Public template load failed: ' . $e->getMessage());
+    http_response_code(500);
+    exit('Unable to load the permit template.');
 }
 
 $formStructure = [];
@@ -123,18 +125,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Validate required fields
         if (empty($holder_name) || empty($holder_email)) {
-            throw new Exception("Name and email are required");
+            throw new InvalidArgumentException("Name and email are required");
+        }
+        if (!filter_var($holder_email, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException("Enter a valid email address");
+        }
+        if (mb_strlen($holder_name) > 255 || mb_strlen($holder_email) > 255 || mb_strlen($holder_phone) > 50) {
+            throw new InvalidArgumentException("Contact details are too long");
         }
         // Generate IDs early so we can store media predictably
         if (!$isUpdate) {
-            $permit_id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                mt_rand(0, 0xffff),
-                mt_rand(0, 0x0fff) | 0x4000,
-                mt_rand(0, 0x3fff) | 0x8000,
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-            );
-            $unique_link = md5($permit_id . time() . $holder_email);
+            $permit_id = \Ramsey\Uuid\Uuid::uuid4()->toString();
+            $unique_link = bin2hex(random_bytes(32));
         }
         $ref_number = $existingPermit['ref_number'] ?? ('PTW-' . date('Y') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT));
 
@@ -181,7 +183,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_dir($baseUploadDir)) {
             @mkdir($baseUploadDir, 0775, true);
         }
-        $allowedTypes = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/quicktime','video/webm'];
+        $allowedTypes = [
+            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp',
+            'video/mp4' => 'mp4', 'video/quicktime' => 'mov', 'video/webm' => 'webm',
+        ];
+        $mimeDetector = new finfo(FILEINFO_MIME_TYPE);
         foreach ($formStructure as $section) {
             if (empty($section['fields']) || !is_array($section['fields'])) { continue; }
             foreach ($section['fields'] as $field) {
@@ -196,12 +202,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $origName = (string)$files['name'][$i];
                     if ($origName === '') { continue; }
                     $tmp = (string)$files['tmp_name'][$i];
-                    $type = (string)$files['type'][$i];
                     $err = (int)$files['error'][$i];
                     if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) { continue; }
-                    if (!in_array($type, $allowedTypes, true)) { $uploadErrors[] = 'Rejected file type for ' . $origName; continue; }
-                    $safeName = preg_replace('/[^a-zA-Z0-9._-]+/', '_', basename($origName));
-                    $target = $baseUploadDir . DIRECTORY_SEPARATOR . (time() . '_' . $i . '_' . $safeName);
+                    if ((int)$files['size'][$i] > 25 * 1024 * 1024) { $uploadErrors[] = 'File is too large: ' . $origName; continue; }
+                    $type = $mimeDetector->file($tmp);
+                    if (!isset($allowedTypes[$type])) { $uploadErrors[] = 'Rejected file type for ' . $origName; continue; }
+                    $target = $baseUploadDir . DIRECTORY_SEPARATOR . bin2hex(random_bytes(16)) . '.' . $allowedTypes[$type];
                     if (@move_uploaded_file($tmp, $target)) {
                         $uploadedAny = true;
                         $rel = 'uploads/' . $permit_id . '/' . basename($target);
@@ -217,8 +223,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Insert permit
-        $stmt = $db->pdo->prepare("
+        $now = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
+        $db->pdo->beginTransaction();
+        if ($isUpdate) {
+            $stmt = $db->pdo->prepare("UPDATE forms SET form_data=?, holder_name=?, holder_email=?, holder_phone=?, updated_at=$now WHERE id=? AND unique_link=? AND status='draft'");
+            $stmt->execute([json_encode($permit_data), $holder_name, $holder_email, $holder_phone, $permit_id, $unique_link]);
+            if ($stmt->rowCount() !== 1) { throw new RuntimeException('Draft could not be updated'); }
+        } else {
+            $stmt = $db->pdo->prepare("
             INSERT INTO forms (
                 id, 
                 ref_number, 
@@ -230,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 holder_phone,
                 unique_link,
                 created_at
-            ) VALUES (?, ?, ?, ?, 'pending_approval', ?, ?, ?, ?, NOW())
+            ) VALUES (?, ?, ?, ?, 'pending_approval', ?, ?, ?, ?, $now)
         ");
         
         $stmt->execute([
@@ -243,6 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $holder_phone,
             $unique_link
         ]);
+        }
+        $db->pdo->commit();
 
         try {
             notifyPendingApprovalRecipients($db, $root, $permit_id);
@@ -264,7 +278,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $success = true;
         
     } catch (Exception $e) {
-        $error = $e->getMessage();
+        if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
+        error_log('Public permit submission failed: ' . $e->getMessage());
+        $error = $e instanceof InvalidArgumentException ? $e->getMessage() : 'Unable to save the permit. Please try again.';
     }
 }
 ?>

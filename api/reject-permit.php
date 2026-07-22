@@ -21,7 +21,7 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../src/approval-notifications.php';
 
 // Start session
-session_start();
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // Check authentication
 if (!isset($_SESSION['user_id'])) {
@@ -64,14 +64,27 @@ try {
         echo json_encode(['success' => false, 'message' => 'Permit not found']);
         exit;
     }
+    if ($permit['status'] !== 'pending_approval') {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'Permit is not awaiting approval']);
+        exit;
+    }
+    if (mb_strlen($reason) > 5000) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Reason is too long']);
+        exit;
+    }
+    $db->pdo->beginTransaction();
     
     // Update permit status
     $updateStmt = $db->pdo->prepare("
         UPDATE forms 
-        SET status = 'rejected'
-        WHERE id = ?
+        SET status = 'rejected', approval_status = 'rejected', approval_notes = ?, approved_by = ?
+        WHERE id = ? AND status = 'pending_approval'
     ");
-    $updateStmt->execute([$permit_id]);
+    $updateStmt->execute([$reason, $user['id'], $permit_id]);
+    if ($updateStmt->rowCount() !== 1) { throw new RuntimeException('Permit state changed during rejection'); }
+    $db->pdo->commit();
 
     try {
         clearPendingApprovalNotificationFlag($db, $permit_id);
@@ -116,6 +129,7 @@ try {
     ]);
     
 } catch (Exception $e) {
+    if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
     http_response_code(500);
     error_log("Error rejecting permit: " . $e->getMessage());
     echo json_encode([

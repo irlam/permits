@@ -25,6 +25,7 @@ header('X-Content-Type-Options: nosniff');
 $root = dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 [$app, $db] = require $root . '/src/bootstrap.php';
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 function fail(int $code, string $msg): never {
     http_response_code($code);
@@ -35,6 +36,7 @@ function fail(int $code, string $msg): never {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     fail(405, 'Method not allowed');
 }
+if (empty($_SESSION['user_id'])) { fail(401, 'Authentication required'); }
 
 // Read input (JSON or form)
 $endpoint = '';
@@ -68,12 +70,8 @@ $hash = hash('sha256', $endpoint);
 
 $pdo = $db->pdo;
 $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-if ($driver !== 'mysql') {
-    fail(500, 'This endpoint requires MySQL');
-}
-
-$stmt = $pdo->prepare("DELETE FROM push_subscriptions WHERE endpoint_hash = :h");
-$stmt->execute([':h' => $hash]);
+$stmt = $pdo->prepare("DELETE FROM push_subscriptions WHERE endpoint_hash = :h AND user_id = :user_id");
+$stmt->execute([':h' => $hash, ':user_id' => $_SESSION['user_id']]);
 $deleted = $stmt->rowCount();
 
 // Idempotent success

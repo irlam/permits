@@ -19,6 +19,9 @@ RewriteRule ^ index.php [QSA,L]
 # Return 404 for private directories if requested directly
 RedirectMatch 404 ^/(bin|data|src|templates|vendor|backups)/
 
+# Uploaded content is data only; never execute scripts from this directory.
+RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$ - [F,NC,L]
+
 # Deny access to .env and other dotfiles
 <FilesMatch "^\.env">
   Require all denied

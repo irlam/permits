@@ -69,7 +69,9 @@ try {
     }
     
 } catch (Exception $e) {
-    die("Error loading permit: " . $e->getMessage());
+    error_log('Public permit view failed: ' . $e->getMessage());
+    http_response_code(500);
+    exit('Unable to load the permit.');
 }
 
 // Helper functions

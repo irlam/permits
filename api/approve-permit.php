@@ -21,7 +21,7 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../src/approval-notifications.php';
 
 // Start session
-session_start();
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // Check authentication
 if (!isset($_SESSION['user_id'])) {
@@ -64,15 +64,24 @@ try {
         exit;
     }
     
-    // Update permit status
+    if ($permit['status'] !== 'pending_approval') {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'Permit is not awaiting approval']);
+        exit;
+    }
+    $now = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
+    $db->pdo->beginTransaction();
+    // Update permit status atomically
     $updateStmt = $db->pdo->prepare("
         UPDATE forms 
         SET status = 'active',
             approved_by = ?,
-            approved_at = NOW()
-        WHERE id = ?
+            approved_at = $now
+        WHERE id = ? AND status = 'pending_approval'
     ");
     $updateStmt->execute([$user['id'], $permit_id]);
+    if ($updateStmt->rowCount() !== 1) { throw new RuntimeException('Permit state changed during approval'); }
+    $db->pdo->commit();
 
     try {
         clearPendingApprovalNotificationFlag($db, $permit_id);
@@ -87,18 +96,20 @@ try {
             'approval',
             'form',
             $permit_id,
-            "Permit {$permit['ref_number']} approved by {$user['name']}"
+            "Permit " . ($permit['ref_number'] ?? $permit['ref'] ?? $permit_id) . " approved by {$user['name']}"
         );
     }
     
     // Send email notification (if email system exists)
     if (!empty($permit['holder_email']) && function_exists('sendEmail')) {
-        $email_subject = "✅ Your Permit #{$permit['ref_number']} is Approved!";
+        $ref = $permit['ref_number'] ?? $permit['ref'] ?? $permit_id;
+        $baseUrl = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
+        $email_subject = "Your Permit #{$ref} is Approved";
         $email_body = "
             <h2>Permit Approved!</h2>
             <p>Good news! Your permit has been approved and is now active.</p>
-            <p><strong>Reference:</strong> #{$permit['ref_number']}</p>
-            <p><strong>View your permit:</strong> <a href='https://{$_SERVER['HTTP_HOST']}/view-permit-public.php?link={$permit['unique_link']}'>Click here</a></p>
+            <p><strong>Reference:</strong> #" . htmlspecialchars((string)$ref, ENT_QUOTES, 'UTF-8') . "</p>
+            <p><strong>View your permit:</strong> <a href='" . htmlspecialchars($baseUrl . '/view-permit-public.php?link=' . rawurlencode((string)$permit['unique_link']), ENT_QUOTES, 'UTF-8') . "'>Click here</a></p>
         ";
         
         sendEmail($permit['holder_email'], $email_subject, $email_body);
@@ -113,6 +124,7 @@ try {
     ]);
     
 } catch (Exception $e) {
+    if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
     http_response_code(500);
     error_log("Error approving permit: " . $e->getMessage());
     echo json_encode([

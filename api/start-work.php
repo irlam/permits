@@ -4,7 +4,7 @@
  *
  * Input (JSON or form):
  * - link: unique public link of the permit (preferred)
- * - permit_id: optional permit ID
+ * The unguessable public link is required.
  */
 
 use Permits\DatabaseMaintenance;
@@ -36,22 +36,15 @@ try {
     if (empty($data)) { $data = $_POST; }
 
     $unique_link = isset($data['link']) ? (string)$data['link'] : null;
-    $permit_id = isset($data['permit_id']) ? (string)$data['permit_id'] : null;
-
-    if (!$unique_link && !$permit_id) {
+    if (!$unique_link || strlen($unique_link) < 32) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Missing link or permit_id']);
+        echo json_encode(['success' => false, 'message' => 'A valid public link is required']);
         exit;
     }
 
     // Load permit
-    if ($unique_link) {
-        $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? LIMIT 1");
-        $stmt->execute([$unique_link]);
-    } else {
-        $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id = ? LIMIT 1");
-        $stmt->execute([$permit_id]);
-    }
+    $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? LIMIT 1");
+    $stmt->execute([$unique_link]);
 
     $permit = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$permit) {
@@ -87,6 +80,7 @@ try {
 
     echo json_encode(['success' => true, 'work_started_at' => $ts]);
 } catch (\Throwable $e) {
+    error_log('Start-work request failed: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Unable to record work start']);
 }
