@@ -15,36 +15,11 @@
 
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-// Start session
-session_start();
-
-// Get user info before destroying session (for logging)
-$userId = $_SESSION['user_id'] ?? null;
-$userEmail = $_SESSION['user_email'] ?? null;
-
-// Log logout if activity logger function exists
-if ($userId && function_exists('logActivity')) {
-    logActivity(
-        'user_logout',
-        'auth',
-        'user',
-        $userId,
-        "User logged out: {$userEmail}"
-    );
-}
-
-// Destroy the session
-$_SESSION = array();
-
-// Delete the session cookie
-if (isset($_COOKIE[session_name()])) {
-    setcookie(session_name(), '', time() - 3600, '/');
-}
-
-// Destroy session
-session_destroy();
+$auth = new Auth($db);
+$auth->logout();
 
 // Redirect to login page
-header('Location: /login.php');
+header('Location: ' . $app->url('login.php'));
 exit;

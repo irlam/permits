@@ -184,7 +184,10 @@ class FormTemplateSeeder
                                     ['value' => 'no',  'label' => 'No'],
                                     ['value' => 'na',  'label' => 'N/A'],
                                 ],
-                                'required' => false,
+                                // A safety checklist is useful only when every item has an
+                                // explicit Yes, No or N/A answer. Drafts may still be saved
+                                // incomplete; final submissions are validated server-side.
+                                'required' => true,
                                 'scoreItem' => true,
                             ];
                         }
@@ -222,7 +225,7 @@ class FormTemplateSeeder
             $options = self::normaliseOptionsForPublicForm($field['options'] ?? []);
             $name = self::resolveFieldName($field, $idx, $prefix);
 
-            $mapped[] = [
+            $mappedField = [
                 'label' => $label,
                 'name' => $name,
                 'type' => self::mapFieldType($type, !empty($options)),
@@ -230,6 +233,14 @@ class FormTemplateSeeder
                 'placeholder' => $placeholder,
                 'options' => $options,
             ];
+
+            foreach (['min', 'max', 'step'] as $numericRule) {
+                if (isset($field[$numericRule]) && is_numeric($field[$numericRule])) {
+                    $mappedField[$numericRule] = $field[$numericRule];
+                }
+            }
+
+            $mapped[] = $mappedField;
         }
 
         return $mapped;

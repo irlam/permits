@@ -7,10 +7,10 @@
  * The unguessable public link is required.
  */
 
-use Permits\DatabaseMaintenance;
-
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/Auth.php';
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 
 try {
     // Only POST
@@ -20,9 +20,13 @@ try {
         exit;
     }
 
-    // Ensure column exists
-    if (class_exists(DatabaseMaintenance::class)) {
-        try { DatabaseMaintenance::ensureFormsColumns($db); } catch (\Throwable $e) { /* ignore */ }
+    $auth = new Auth($db);
+    $currentUser = $auth->requireJson();
+
+    if (!\Permits\Csrf::validateRequest('permit-start-work')) {
+        http_response_code(419);
+        echo json_encode(['success' => false, 'message' => 'Your page token expired. Refresh the permit and try again.']);
+        exit;
     }
 
     // Parse input
@@ -35,15 +39,21 @@ try {
     // Also accept form-encoded
     if (empty($data)) { $data = $_POST; }
 
-    $unique_link = isset($data['link']) ? (string)$data['link'] : null;
-    if (!$unique_link || strlen($unique_link) < 32) {
+    $unique_link = is_scalar($data['link'] ?? null) ? trim((string) $data['link']) : '';
+    if (!$unique_link || strlen($unique_link) < 32 || strlen($unique_link) > 100) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'A valid public link is required']);
         exit;
     }
 
     // Load permit
-    $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? LIMIT 1");
+    $stmt = $db->pdo->prepare("
+        SELECT f.*, ft.form_structure, ft.json_schema
+        FROM forms f
+        INNER JOIN form_templates ft ON ft.id = f.template_id
+        WHERE f.unique_link = ?
+        LIMIT 1
+    ");
     $stmt->execute([$unique_link]);
 
     $permit = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -53,9 +63,16 @@ try {
         exit;
     }
 
-    if (strtolower((string)$permit['status']) !== 'active') {
+    $activeStatuses = ['active', 'issued', 'approved', 'open'];
+    if (!in_array(strtolower((string) $permit['status']), $activeStatuses, true)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Permit is not active']);
+        exit;
+    }
+
+    if (!\Permits\PermitAccess::canAccessPermit($currentUser, $permit)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'You do not have permission to start work on this permit']);
         exit;
     }
 
@@ -64,9 +81,93 @@ try {
         exit;
     }
 
+    $nowTimestamp = time();
+    $validFromTimestamp = !empty($permit['valid_from']) ? strtotime((string) $permit['valid_from']) : false;
+    $validToTimestamp = !empty($permit['valid_to']) ? strtotime((string) $permit['valid_to']) : false;
+    if ($validFromTimestamp !== false && $validFromTimestamp > $nowTimestamp) {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'This permit is not valid yet']);
+        exit;
+    }
+    if ($validToTimestamp !== false && $validToTimestamp <= $nowTimestamp) {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'This permit has expired']);
+        exit;
+    }
+
+    // Do not allow direct API calls to start incomplete or unsafe permits.
+    $structure = json_decode((string) ($permit['form_structure'] ?? ''), true);
+    if (!is_array($structure) || $structure === []) {
+        $schema = json_decode((string) ($permit['json_schema'] ?? ''), true);
+        $structure = is_array($schema)
+            ? \Permits\FormTemplateSeeder::buildPublicFormStructure($schema)
+            : [];
+    }
+    $answers = json_decode((string) ($permit['form_data'] ?? ''), true);
+    if (!is_array($answers)) {
+        $answers = [];
+    }
+
+    if (($answers['_applicant_declaration'] ?? '') !== 'confirmed') {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'The applicant declaration is missing']);
+        exit;
+    }
+
+    if ($structure === []) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'This permit template has no usable fields']);
+        exit;
+    }
+
+    $validationErrors = \Permits\PermitFormValidator::validate($structure, $answers, true);
+    if ($validationErrors !== []) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'This permit is incomplete and must be corrected before work starts']);
+        exit;
+    }
+
+    $yes = 0;
+    $no = 0;
+    $scoreItems = 0;
+    foreach ($structure as $section) {
+        foreach (($section['fields'] ?? []) as $field) {
+            if (!is_array($field) || empty($field['scoreItem']) || empty($field['name'])) {
+                continue;
+            }
+            $scoreItems++;
+            $answer = strtolower(trim((string) ($answers[(string) $field['name']] ?? '')));
+            if ($answer === 'yes') {
+                $yes++;
+            } elseif ($answer === 'no') {
+                $no++;
+            }
+        }
+    }
+    $scoreTotal = $yes + $no;
+    $score = $scoreTotal > 0 ? (int) round(($yes / $scoreTotal) * 100) : null;
+    if ($scoreItems > 0 && $scoreTotal === 0) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'At least one safety check must be applicable before work starts']);
+        exit;
+    }
+    if ($score !== null && $score < 80) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Safety score must be at least 80% before work starts', 'score' => $score]);
+        exit;
+    }
+
     // Update
     $nowExpr = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
-    $upd = $db->pdo->prepare("UPDATE forms SET work_started_at = $nowExpr, updated_at = $nowExpr WHERE id = ?");
+    $upd = $db->pdo->prepare("
+        UPDATE forms
+        SET work_started_at = $nowExpr, updated_at = $nowExpr
+        WHERE id = ?
+          AND status IN ('active', 'issued', 'approved', 'open')
+          AND (work_started_at IS NULL OR work_started_at = '0000-00-00 00:00:00')
+          AND (valid_from IS NULL OR valid_from <= $nowExpr)
+          AND (valid_to IS NULL OR valid_to > $nowExpr)
+    ");
     $upd->execute([$permit['id']]);
 
     // Reload timestamp
@@ -74,11 +175,21 @@ try {
     $get->execute([$permit['id']]);
     $ts = $get->fetchColumn();
 
-    if (function_exists('logActivity')) {
-        logActivity('work_started', 'permit', 'form', $permit['id'], 'Work started recorded via public view');
+    if ($upd->rowCount() !== 1 && empty($ts)) {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'Permit state changed before work could be started']);
+        exit;
     }
 
-    echo json_encode(['success' => true, 'work_started_at' => $ts]);
+    if ($upd->rowCount() === 1 && function_exists('logActivity')) {
+        try {
+            logActivity('work_started', 'permit', 'form', $permit['id'], 'Work started recorded via public view');
+        } catch (\Throwable $logError) {
+            error_log('Unable to log work start: ' . $logError->getMessage());
+        }
+    }
+
+    echo json_encode(['success' => true, 'work_started_at' => $ts, 'score' => $score]);
 } catch (\Throwable $e) {
     error_log('Start-work request failed: ' . $e->getMessage());
     http_response_code(500);

@@ -8,25 +8,14 @@
  * renderer so they can begin issuing the permit immediately.
  */
 
+use Permits\Csrf;
+
 require __DIR__ . '/vendor/autoload.php';
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $errors = [];
 $success = '';
@@ -56,6 +45,12 @@ function slugify_template_id(string $value): string
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-custom-permit')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the custom permit page and try again.</p>';
+        exit;
+    }
+
     $templateName = trim($_POST['template_name'] ?? '');
     $templateIdInput = trim($_POST['template_id'] ?? '');
     $baseTemplateId = $_POST['base_template'] ?? '__blank';
@@ -155,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                 }
 
-                header('Location: /new/' . urlencode($templateId) . '?source=custom');
+                header('Location: ' . $app->url('create-permit-public.php?template=' . rawurlencode($templateId)));
                 exit;
             } catch (Throwable $e) {
                 $errors[] = 'Unable to save template: ' . $e->getMessage();
@@ -219,6 +214,7 @@ $copySectionsChecked = $_SERVER['REQUEST_METHOD'] !== 'POST' || isset($_POST['co
 
         <div class="card">
             <form method="post">
+                <?= Csrf::getFormField('admin-custom-permit') ?>
                 <div class="form-row">
                     <label for="template_name">Template Name *</label>
                     <input type="text" id="template_name" name="template_name" placeholder="e.g. Hot Works - Night Shift" required value="<?= htmlspecialchars($_POST['template_name'] ?? '') ?>">

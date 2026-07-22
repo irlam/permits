@@ -17,164 +17,215 @@
  * - Responsive design matching activity.php theme
  */
 
+use Permits\Csrf;
+use Permits\UserAccountPolicy;
+
 require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    $backUrl = htmlspecialchars($app->url('dashboard.php'));
-    die('<h1>Access Denied</h1><p>Admin access required. <a href="' . $backUrl . '">Back to Dashboard</a></p>');
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 // Handle actions
 $action = $_GET['action'] ?? '';
 $message = '';
 $messageType = 'info';
 
-// Generate CSRF token if not exists
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+// One stable token protects all user-management mutations on this page.
+$csrfToken = Csrf::generateToken('admin-users');
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && in_array($action, ['create', 'update', 'delete'], true)
+    && !Csrf::validateRequest('admin-users')
+) {
+    http_response_code(419);
+    echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh user management and try again.</p>';
+    exit;
 }
 
-// Delete user (CSRF protected, POST only)
+// Delete user (CSRF protected, POST only).
 if ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify CSRF token
-    $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $token)) {
-        $message = 'Invalid request';
+    $userId = is_string($_POST['user_id'] ?? null) ? trim($_POST['user_id']) : '';
+
+    if ($userId === '' || $userId === (string)$_SESSION['user_id']) {
+        $message = $userId === '' ? 'Choose a valid user.' : 'You cannot delete your own account.';
         $messageType = 'error';
     } else {
-        $userId = $_POST['user_id'] ?? '';
-        
-        // Prevent deleting yourself
-        if ($userId === $_SESSION['user_id']) {
-            $message = 'Cannot delete your own account';
-            $messageType = 'error';
-        } else {
-            try {
-                $stmt = $db->pdo->prepare("DELETE FROM users WHERE id = ?");
+        try {
+            $db->pdo->beginTransaction();
+            $suffix = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+            $targetStmt = $db->pdo->prepare('SELECT id, role, status FROM users WHERE id = ? LIMIT 1' . $suffix);
+            $targetStmt->execute([$userId]);
+            $target = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$target) {
+                $message = 'That user no longer exists.';
+                $messageType = 'error';
+                $db->pdo->rollBack();
+            } elseif (UserAccountPolicy::wouldRemoveLastActiveAdmin($db->pdo, $target, null, null, true)) {
+                $message = 'At least one active administrator must remain.';
+                $messageType = 'error';
+                $db->pdo->rollBack();
+            } else {
+                $stmt = $db->pdo->prepare('DELETE FROM users WHERE id = ?');
                 $stmt->execute([$userId]);
-                $message = 'User deleted successfully';
+                $db->pdo->commit();
+                $message = 'User deleted successfully.';
                 $messageType = 'success';
-            } catch (Exception $e) {
-                $message = 'Error deleting user: ' . $e->getMessage();
-                $messageType = 'error';
             }
+        } catch (Throwable $e) {
+            if ($db->pdo->inTransaction()) {
+                $db->pdo->rollBack();
+            }
+            error_log('Admin user deletion failed: ' . $e->getMessage());
+            $message = 'The user could not be deleted. Please try again.';
+            $messageType = 'error';
         }
     }
 }
 
-// Create user
+// Create user.
 if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify CSRF token
-    $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $token)) {
-        $message = 'Invalid request';
+    $profile = UserAccountPolicy::validateProfile(
+        is_string($_POST['email'] ?? null) ? $_POST['email'] : '',
+        is_string($_POST['name'] ?? null) ? $_POST['name'] : '',
+        is_string($_POST['role'] ?? null) ? $_POST['role'] : '',
+        is_string($_POST['status'] ?? null) ? $_POST['status'] : ''
+    );
+    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
+    $passwordError = UserAccountPolicy::passwordError($password, true);
+    $validationErrors = $profile['errors'];
+    if ($passwordError !== null) {
+        $validationErrors[] = $passwordError;
+    }
+
+    if ($validationErrors !== []) {
+        $message = implode(' ', $validationErrors);
         $messageType = 'error';
     } else {
-        $email = trim($_POST['email'] ?? '');
-        $name = trim($_POST['name'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $role = $_POST['role'] ?? 'user';
-        $status = $_POST['status'] ?? 'active';
-        
-        if (empty($email) || empty($name) || empty($password)) {
-            $message = 'Email, name, and password are required';
-            $messageType = 'error';
-        } else {
-            try {
-                // Check if email already exists
-                $checkStmt = $db->pdo->prepare("SELECT id FROM users WHERE email = ?");
-                $checkStmt->execute([$email]);
-                if ($checkStmt->fetch()) {
-                    $message = 'Email already exists';
-                    $messageType = 'error';
-                } else {
-                    // Generate UUID (cryptographically secure)
-                    $userId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                        random_int(0, 0xffff), random_int(0, 0xffff),
-                        random_int(0, 0xffff),
-                        random_int(0, 0x0fff) | 0x4000,
-                        random_int(0, 0x3fff) | 0x8000,
-                        random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff)
-                    );
-                    
-                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                    
-                    $stmt = $db->pdo->prepare("INSERT INTO users (id, email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$userId, $email, $passwordHash, $name, $role, $status]);
-                    
-                    $message = 'User created successfully';
-                    $messageType = 'success';
-                }
-            } catch (Exception $e) {
-                $message = 'Error creating user: ' . $e->getMessage();
+        try {
+            $checkStmt = $db->pdo->prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1');
+            $checkStmt->execute([$profile['email']]);
+            if ($checkStmt->fetchColumn() !== false) {
+                $message = 'That email address is already in use.';
                 $messageType = 'error';
+            } else {
+                $userId = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+                    random_int(0, 0xffff), random_int(0, 0xffff),
+                    random_int(0, 0xffff),
+                    random_int(0, 0x0fff) | 0x4000,
+                    random_int(0, 0x3fff) | 0x8000,
+                    random_int(0, 0xffff), random_int(0, 0xffff), random_int(0, 0xffff)
+                );
+                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                if (!is_string($passwordHash) || $passwordHash === '') {
+                    throw new RuntimeException('Password hashing failed.');
+                }
+
+                $stmt = $db->pdo->prepare('INSERT INTO users (id, email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?, ?)');
+                $stmt->execute([
+                    $userId,
+                    $profile['email'],
+                    $passwordHash,
+                    $profile['name'],
+                    $profile['role'],
+                    $profile['status'],
+                ]);
+
+                $message = 'User created successfully.';
+                $messageType = 'success';
             }
+        } catch (Throwable $e) {
+            error_log('Admin user creation failed: ' . $e->getMessage());
+            $message = 'The user could not be created. Check the details and try again.';
+            $messageType = 'error';
         }
     }
 }
 
-// Update user
+// Update user.
 if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify CSRF token
-    $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $token)) {
-        $message = 'Invalid request';
+    $userId = is_string($_POST['user_id'] ?? null) ? trim($_POST['user_id']) : '';
+    $profile = UserAccountPolicy::validateProfile(
+        is_string($_POST['email'] ?? null) ? $_POST['email'] : '',
+        is_string($_POST['name'] ?? null) ? $_POST['name'] : '',
+        is_string($_POST['role'] ?? null) ? $_POST['role'] : '',
+        is_string($_POST['status'] ?? null) ? $_POST['status'] : ''
+    );
+    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
+    $passwordError = UserAccountPolicy::passwordError($password, false);
+    $validationErrors = $profile['errors'];
+    if ($userId === '') {
+        $validationErrors[] = 'Choose a valid user.';
+    }
+    if ($passwordError !== null) {
+        $validationErrors[] = $passwordError;
+    }
+    if ($userId === (string)$_SESSION['user_id'] && ($profile['role'] !== 'admin' || $profile['status'] !== 'active')) {
+        $validationErrors[] = 'You cannot remove your own administrator access or deactivate your own account.';
+    }
+
+    if ($validationErrors !== []) {
+        $message = implode(' ', array_unique($validationErrors));
         $messageType = 'error';
     } else {
-        $userId = $_POST['user_id'] ?? '';
-        $email = trim($_POST['email'] ?? '');
-        $name = trim($_POST['name'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $role = $_POST['role'] ?? 'user';
-        $status = $_POST['status'] ?? 'active';
-        
-        if (empty($userId) || empty($email) || empty($name)) {
-            $message = 'User ID, email, and name are required';
-            $messageType = 'error';
-        } else {
-            try {
-                // Check if email already exists for other users
-                $checkStmt = $db->pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-                $checkStmt->execute([$email, $userId]);
-                if ($checkStmt->fetch()) {
-                    $message = 'Email already exists for another user';
-                    $messageType = 'error';
-                } else {
-                    if (!empty($password)) {
-                        // Update with new password
-                        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                        $stmt = $db->pdo->prepare("UPDATE users SET email = ?, password_hash = ?, name = ?, role = ?, status = ? WHERE id = ?");
-                        $stmt->execute([$email, $passwordHash, $name, $role, $status, $userId]);
-                    } else {
-                        // Update without changing password
-                        $stmt = $db->pdo->prepare("UPDATE users SET email = ?, name = ?, role = ?, status = ? WHERE id = ?");
-                        $stmt->execute([$email, $name, $role, $status, $userId]);
-                    }
-                    
-                    $message = 'User updated successfully';
-                    $messageType = 'success';
-                }
-            } catch (Exception $e) {
-                $message = 'Error updating user: ' . $e->getMessage();
+        try {
+            $db->pdo->beginTransaction();
+            $suffix = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : '';
+            $targetStmt = $db->pdo->prepare('SELECT id, role, status FROM users WHERE id = ? LIMIT 1' . $suffix);
+            $targetStmt->execute([$userId]);
+            $target = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+            $checkStmt = $db->pdo->prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id <> ? LIMIT 1');
+            $checkStmt->execute([$profile['email'], $userId]);
+
+            if (!$target) {
+                $message = 'That user no longer exists.';
                 $messageType = 'error';
+                $db->pdo->rollBack();
+            } elseif ($checkStmt->fetchColumn() !== false) {
+                $message = 'That email address is already in use.';
+                $messageType = 'error';
+                $db->pdo->rollBack();
+            } elseif (UserAccountPolicy::wouldRemoveLastActiveAdmin(
+                $db->pdo,
+                $target,
+                $profile['role'],
+                $profile['status']
+            )) {
+                $message = 'At least one active administrator must remain.';
+                $messageType = 'error';
+                $db->pdo->rollBack();
+            } else {
+                $values = [$profile['email'], $profile['name'], $profile['role'], $profile['status']];
+                $passwordSql = '';
+                if ($password !== '') {
+                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                    if (!is_string($passwordHash) || $passwordHash === '') {
+                        throw new RuntimeException('Password hashing failed.');
+                    }
+                    $passwordSql = ', password_hash = ?';
+                    $values[] = $passwordHash;
+                }
+                $values[] = $userId;
+
+                $stmt = $db->pdo->prepare(
+                    'UPDATE users SET email = ?, name = ?, role = ?, status = ?' . $passwordSql . ' WHERE id = ?'
+                );
+                $stmt->execute($values);
+                $db->pdo->commit();
+
+                $message = 'User updated successfully.';
+                $messageType = 'success';
             }
+        } catch (Throwable $e) {
+            if ($db->pdo->inTransaction()) {
+                $db->pdo->rollBack();
+            }
+            error_log('Admin user update failed: ' . $e->getMessage());
+            $message = 'The user could not be updated. Check the details and try again.';
+            $messageType = 'error';
         }
     }
 }
@@ -791,18 +842,19 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                 <button class="close-modal" onclick="closeCreateModal()">×</button>
             </div>
             <form method="POST" action="?action=create">
-                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                <?= Csrf::getFormField('admin-users') ?>
                 <div class="form-group">
                     <label for="create_name">Name *</label>
-                    <input type="text" id="create_name" name="name" required>
+                    <input type="text" id="create_name" name="name" maxlength="255" autocomplete="name" required>
                 </div>
                 <div class="form-group">
                     <label for="create_email">Email *</label>
-                    <input type="email" id="create_email" name="email" required>
+                    <input type="email" id="create_email" name="email" maxlength="255" autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="create_password">Password *</label>
-                    <input type="password" id="create_password" name="password" required>
+                    <input type="password" id="create_password" name="password" minlength="12" maxlength="4096" autocomplete="new-password" required>
+                    <small>At least 12 characters, including upper and lowercase letters and a number.</small>
                 </div>
                 <div class="form-group">
                     <label for="create_role">Role</label>
@@ -835,19 +887,20 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                 <button class="close-modal" onclick="closeEditModal()">×</button>
             </div>
             <form method="POST" action="?action=update">
-                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                <?= Csrf::getFormField('admin-users') ?>
                 <input type="hidden" id="edit_user_id" name="user_id">
                 <div class="form-group">
                     <label for="edit_name">Name *</label>
-                    <input type="text" id="edit_name" name="name" required>
+                    <input type="text" id="edit_name" name="name" maxlength="255" autocomplete="name" required>
                 </div>
                 <div class="form-group">
                     <label for="edit_email">Email *</label>
-                    <input type="email" id="edit_email" name="email" required>
+                    <input type="email" id="edit_email" name="email" maxlength="255" autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="edit_password">New Password (leave blank to keep current)</label>
-                    <input type="password" id="edit_password" name="password">
+                    <input type="password" id="edit_password" name="password" minlength="12" maxlength="4096" autocomplete="new-password">
+                    <small>Leave blank to keep it. New passwords need 12+ characters, upper and lowercase letters, and a number.</small>
                 </div>
                 <div class="form-group">
                     <label for="edit_role">Role</label>
@@ -922,7 +975,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';
                 csrfInput.name = 'csrf_token';
-                csrfInput.value = '<?php echo $_SESSION['csrf_token']; ?>';
+                csrfInput.value = <?php echo json_encode($csrfToken, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
                 form.appendChild(csrfInput);
                 
                 document.body.appendChild(form);

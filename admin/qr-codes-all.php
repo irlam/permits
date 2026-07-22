@@ -22,30 +22,17 @@ require __DIR__ . '/../vendor/autoload.php';
 use Permits\SystemSettings;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+require_once __DIR__ . '/../src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    die('<h1>Access Denied</h1><p>Admin access required.</p>');
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 // Get company info
-$companyName = SystemSettings::companyName($db) ?? 'Permits System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db);
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 
 // Get all active permits
 try {
@@ -53,7 +40,7 @@ try {
         SELECT f.*, ft.name as template_name
         FROM forms f
         JOIN form_templates ft ON f.template_id = ft.id
-        WHERE f.status IN ('active', 'pending_approval')
+        WHERE f.status IN ('active', 'issued', 'approved', 'open')
         ORDER BY f.created_at DESC
     ");
     $stmt->execute();
@@ -90,11 +77,12 @@ foreach ($permits as $permit) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Codes - All Permits</title>
+    <title>QR Codes - <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
+    <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
     <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
     <style>
         body {
@@ -131,7 +119,7 @@ foreach ($permits as $permit) {
         }
 
         .btn-print {
-            background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
+            background: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
             color: white;
             padding: 12px 24px;
             border: none;
@@ -167,7 +155,7 @@ foreach ($permits as $permit) {
         }
 
         .qr-card:hover {
-            border-color: #0ea5e9;
+            border-color: var(--brand-primary);
             box-shadow: 0 8px 24px rgba(6, 182, 212, 0.15);
             transform: translateY(-4px);
         }
@@ -247,9 +235,14 @@ foreach ($permits as $permit) {
 
             .qr-header,
             .qr-actions,
-            .site-header,
-            .site-container {
+            .site-header {
                 display: none;
+            }
+
+            .site-container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
             }
 
             .qr-grid {
@@ -334,7 +327,7 @@ foreach ($permits as $permit) {
         }
 
         .stat-badge {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.05) 100%);
+            background: linear-gradient(135deg, rgba(var(--brand-primary-light-rgb), 0.1) 0%, rgba(var(--brand-primary-rgb), 0.05) 100%);
             border: 1px solid rgba(6, 182, 212, 0.3);
             border-radius: 8px;
             padding: 12px;
@@ -349,7 +342,7 @@ foreach ($permits as $permit) {
         }
 
         .stat-value {
-            color: #06b6d4;
+            color: var(--brand-primary-light);
             font-size: 24px;
             font-weight: 700;
             margin-top: 4px;
@@ -359,9 +352,12 @@ foreach ($permits as $permit) {
 <body class="theme-dark">
     <header class="site-header">
         <div class="brand-mark">
+            <?php if ($companyLogoUrl): ?>
+                <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> logo" class="brand-mark__logo">
+            <?php endif; ?>
             <div>
-                <div class="brand-mark__name">QR Code Manager</div>
-                <div class="brand-mark__sub">📋 All Permits</div>
+                <div class="brand-mark__name"><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
+                <div class="brand-mark__sub">QR Code Manager · All Permits</div>
             </div>
         </div>
         <div class="site-header__actions">
@@ -375,11 +371,11 @@ foreach ($permits as $permit) {
             <div class="company-header">
                 <?php if ($companyLogoUrl): ?>
                     <div class="company-logo">
-                        <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?>">
+                        <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
                     </div>
                 <?php endif; ?>
                 <div class="company-info">
-                    <h2><?= htmlspecialchars($companyName) ?></h2>
+                    <h2><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h2>
                     <p>📋 QR Code Display for All Active Permits</p>
                 </div>
             </div>
@@ -387,7 +383,7 @@ foreach ($permits as $permit) {
             <div class="qr-title-section">
                 <div>
                     <h1>🔲 Permit QR Codes</h1>
-                    <p style="color: #94a3b8; margin-top: 4px;">All <?= count($permits); ?> active and pending permits</p>
+                    <p style="color: #94a3b8; margin-top: 4px;"><?= count($permits); ?> approved or live permits</p>
                 </div>
                 <div class="qr-actions">
                     <button onclick="window.print()" class="btn-print">🖨️ Print / Save as PDF</button>
@@ -400,12 +396,12 @@ foreach ($permits as $permit) {
 
             <div class="stats-row">
                 <div class="stat-badge">
-                    <div class="stat-label">Total Active</div>
-                    <div class="stat-value"><?= count(array_filter($permits, fn($p) => $p['status'] === 'active')); ?></div>
+                    <div class="stat-label">Active / Open</div>
+                    <div class="stat-value"><?= count(array_filter($permits, fn($p) => in_array($p['status'], ['active', 'open'], true))); ?></div>
                 </div>
                 <div class="stat-badge">
-                    <div class="stat-label">Pending Approval</div>
-                    <div class="stat-value"><?= count(array_filter($permits, fn($p) => $p['status'] === 'pending_approval')); ?></div>
+                    <div class="stat-label">Approved / Issued</div>
+                    <div class="stat-value"><?= count(array_filter($permits, fn($p) => in_array($p['status'], ['approved', 'issued'], true))); ?></div>
                 </div>
                 <div class="stat-badge">
                     <div class="stat-label">Total Permits</div>
@@ -422,8 +418,8 @@ foreach ($permits as $permit) {
             <div class="qr-grid">
                 <div class="qr-empty">
                     <div style="font-size: 48px; margin-bottom: 12px;">📭</div>
-                    <p>No active or pending permits found.</p>
-                    <p style="font-size: 12px; margin-top: 8px;">Create some permits first, then return here to generate QR codes.</p>
+                    <p>No approved or live permits found.</p>
+                    <p style="font-size: 12px; margin-top: 8px;">Approve a permit first, then return here to generate its QR code.</p>
                 </div>
             </div>
         <?php else: ?>
@@ -433,7 +429,7 @@ foreach ($permits as $permit) {
                         <div class="qr-card-header">
                             <div class="qr-ref"><?= htmlspecialchars($permit['ref_number'] ?? 'N/A'); ?></div>
                             <div class="qr-type"><?= htmlspecialchars($permit['template_name']); ?></div>
-                            <span class="qr-status <?= $permit['status'] === 'active' ? 'active' : 'pending'; ?>">
+                            <span class="qr-status active">
                                 <?= ucfirst(str_replace('_', ' ', $permit['status'])); ?>
                             </span>
                         </div>

@@ -1,374 +1,110 @@
-# Permits System (PHP + Composer + PWA) — Advanced Features
+# Permits System
 
-Modern permits management system with dashboard, notifications, export, authentication, and mobile support.
+A mobile-first permit-to-work application for creating, approving, displaying and closing safety permits. Administrators manage users, permit templates, branding, email delivery and QR displays from a desktop-friendly control panel.
 
-## Quick Start
+The plain-language customer documentation is available in [`customer-guide/index.html`](customer-guide/index.html). It covers first-time setup, everyday permit use, administration, installation and troubleshooting.
 
-1) `composer install --no-dev --classmap-authoritative`
-2) Copy `.env.example` to `.env`, set `APP_URL`, database credentials and fresh secrets
-3) Import `database/database.sql` for a new installation
-4) For an existing installation, import `database/imports/2026-07-production-hardening.sql`
-5) Run `php bin/migrate.php` to verify additive runtime columns
-6) Local dev: `composer run serve` then open http://localhost:8080
+## Main features
 
-## Features
+- Public, mobile-friendly permit applications
+- Draft, approval, rejection, active, expired and closed workflows
+- Manager approval queue and audit history
+- Public verification pages and per-permit QR codes
+- Printable permits and QR notice-board views
+- User and role management
+- Company name, logo and colour branding
+- Configurable SMTP email and approval recipients
+- Permit template editor and import tools
+- Scheduled expiry, reminders and queued email delivery
+- Installable PWA shell that does not cache sensitive permit or admin pages
 
-### 📊 Dashboard with Statistics
-- Real-time permit metrics and statistics
-- Active permits count
-- Permits expiring in 7/30 days
-- Status breakdown (draft, pending, issued, active, expired, closed)
-- Recent activity timeline
-- Quick action buttons
+## Requirements
 
-**Access:** `/dashboard`
+- PHP 8.1 or newer
+- MySQL 5.7+ or MariaDB 10.2+
+- Composer 2
+- HTTPS in production
+- PHP extensions listed in `composer.json`
 
-### 📧 Email Notification System
-- Automated email notifications for permit events
-- Permit approval/rejection notifications
-- Expiry reminder emails
-- New permit creation alerts
-- Template-based HTML emails
-- Configurable SMTP / logging drivers
-- Queue processor with retry-safe status tracking
+## New installation
 
-**Features:**
-- Email queue for reliable delivery
-- Queue worker: `*/2 * * * * php /path/permits/bin/process-email-queue.php`
-- Customizable email templates in `templates/emails/`
-- Cron job for expiry reminders: `*/5 * * * * php /path/permits/bin/send-notifications.php`
+1. Upload the application to the website document root.
+2. Run `composer install --no-dev --classmap-authoritative`.
+3. Import `database/database.sql` into an empty database.
+4. Copy `.env.example` to `.env`, enter the production URL, database credentials and fresh secrets, and prepare the external writable `BACKUP_PATH` folder if you set one.
+5. Run `php bin/migrate.php` to verify and complete the schema.
+6. Load the supplied permit types with `php bin/import-form-presets.php`.
+7. Create the first administrator with `php bin/create-admin.php --email=owner@example.com --name="Site Administrator"`.
+8. Copy the generated one-time password, sign in over HTTPS, change it immediately from **My Account**, then configure branding and email. Open **Admin → Backups** once to create and verify the private backup folder.
+9. Complete a labelled test permit before opening the service to users.
 
-**Templates:**
-- `permit-approved.php` - Approval notifications
-- `permit-rejected.php` - Rejection notifications
-- `permit-expiring.php` - Expiry reminders
-- `permit-created.php` - Creation notifications
+Push notifications are optional. Generate fresh keys with `php bin/generate-vapid.php`, copy them into `.env`, and set `VAPID_SUBJECT` to an email address or HTTPS URL controlled by your organisation.
 
-### 🔔 Push Notification System
-- Real-time browser push notifications
-- Automatic subscription management
-- VAPID-based secure notifications
-- Permit expiry alerts
-- Custom notification triggers
-- Automatic cleanup of invalid subscriptions
+## Existing installation
 
-**Features:**
-- Browser push notifications (Chrome, Firefox, Edge, Safari 16+)
-- Service worker-based delivery
-- Works offline and in background
-- Click-to-navigate functionality
-- Auto-subscribe for logged-in users
+1. Back up the database and uploaded files.
+2. Deploy the new code and run `composer install --no-dev --classmap-authoritative`.
+3. Import every SQL file in `database/imports` that has not previously been applied, in filename order.
+4. Run `php bin/migrate.php`.
+5. Clear the service-worker/browser cache and complete the lifecycle test in the customer guide.
 
-**Setup & Testing:**
-- Generate VAPID keys: `php generate_vapid.php`
-- Test notifications: `php bin/test-push-notification.php`
-- Cron for expiry alerts: `*/15 * * * * php /path/permits/bin/reminders.php 60`
-- Full documentation: [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md)
+The migrations are designed to be safely re-run on supported MySQL and MariaDB versions. They add required tables and columns, normalise legacy role/identifier data, and replace older non-unique identifier indexes where safe.
 
-**Subscribe Methods:**
-- Automatic on permission grant
-- Manual: `window.subscribeToPush()` in browser console
-- Programmatic via button/UI element
+For this release, the upgrade imports are:
 
-### 📥 Advanced Search & Export
-- CSV export with filter support
-- Export current search results
-- Custom column selection
-- Date range filtering
-- Status and template filtering
-
-**Access:** Click "Export CSV" button on homepage or visit `/api/export/csv`
-
-### 🔐 User Management & Authentication
-- Secure login/logout functionality
-- Password hashing with bcrypt
-- Session management with cookies
-- Role-based access control (Admin, Manager, Viewer)
-- Remember me functionality (30 days)
-
-**Roles:**
-- **Admin:** Full system access
-- **Manager:** Manage permits and users
-- **Viewer:** Read-only access
-
-**Routes:**
-- `/login` - Login page
-- `/logout` - Logout
-- `/settings` - User settings and configuration
-
-### 📱 Enhanced Mobile & PWA Experience
-- Touch-friendly buttons (minimum 44x44px)
-- Swipe gesture support
-- Pull-to-refresh functionality
-- Mobile-optimized forms and layouts
-- Responsive grid system
-- Touch feedback animations
-- Offline-first caching for the core shell
-- Installable PWA with generated maskable icons
-
-**Mobile Features:**
-- Bottom navigation on small screens
-- Hamburger menu support
-- Gesture detection (swipe left/right)
-- Viewport height fix for mobile browsers
-- Prevent double-tap zoom on buttons
-
-### 🎨 Theme Customization
-- Dark theme (default)
-- Light theme option
-- Theme toggle button
-- Customizable color schemes
-- CSS custom properties for easy theming
-
-**Access:** `/settings` for theme configuration
-
-**Themes Available:**
-- Dark (default) - Modern dark blue-black theme
-- Light - Clean white theme with subtle grays
-
-## Database Setup
-
-### New Tables
-
-Run the migration to create new feature tables:
-
-```bash
-php bin/migrate-features.php
+```text
+database/imports/2026-07-activity-admin-compatibility.sql
+database/imports/2026-07-email-queue.sql
+database/imports/2026-07-production-hardening.sql
+database/imports/2026-07-production-identifiers.sql
+database/imports/2026-07-public-rate-limits.sql
+database/imports/2026-07-security-login-rate-limits.sql
+database/imports/2026-07-worker-locks.sql
 ```
 
-This creates:
-- `email_queue` - Email notification queue
-- `users` - User accounts and authentication
-- `sessions` - User session management
-- `settings` - Application configuration
+If command-line access is available, `php bin/migrate.php` safely performs the same schema checks and reports anything it could not apply. The identifier import deliberately stops short of creating unique indexes when duplicate references or private links exist; resolve any reported duplicates before launch.
 
-### Default Settings
+## Private backups
 
-After migration, configure settings in the `settings` table:
-- `theme` - UI theme (dark/light)
-- `email_enabled` - Enable/disable email notifications
-- `smtp_host` - SMTP server hostname
-- `smtp_port` - SMTP port (default: 587)
-- `smtp_user` - SMTP username
-- `smtp_from` - From email address
+The admin backup screen stores archives outside the website directory. By default it creates a sibling folder named `permits-private-backups`. On managed hosting, set `BACKUP_PATH` in `.env` to an absolute writable path outside the document root. Download each backup into encrypted off-site storage and remove the server copy after verifying it.
 
-## Cron Jobs
+## Scheduled tasks
 
-### Email Queue Processor
-Flush queued emails via the SMTP/log transport:
-```bash
-*/2 * * * * php /path/permits/bin/process-email-queue.php
+Use PHP CLI tasks rather than public web endpoints. Adjust `/path/to/permits` for the server.
+
+```cron
+*/2 * * * * php /path/to/permits/bin/process-email-queue.php
+*/5 * * * * php /path/to/permits/bin/send-notifications.php
+*/15 * * * * php /path/to/permits/bin/reminders.php 60
+* * * * * php /path/to/permits/bin/auto-status-update.php
 ```
 
-### Email Notifications
-Send proactive expiry reminder emails:
-```bash
-*/5 * * * * php /path/permits/bin/send-notifications.php
+Email delivery is disabled by default. Configure and enable it in **Admin → Email Settings** before scheduling live delivery. Disabling email leaves queued notices waiting. The `log` delivery method writes complete test messages to the private `data/mail` folder and must not be used as a live substitute for SMTP.
+
+## Validation
+
+Run before deployment:
+
+```text
+composer validate --strict
+composer audit
+composer check
+php bin/health-check.php
 ```
 
-### Existing Reminders
-Push notifications for expiring permits:
-```bash
-*/5 * * * * php /path/permits/bin/reminders.php
-```
+CI runs syntax checks, PHPUnit tests and the Composer security audit on every push and pull request.
 
-### Auto Status Updates
-Automatically update permit statuses:
-```bash
-0 2 * * * php /path/permits/bin/auto-status-update.php
-```
+## Production safety
 
-## Configuration
+- Never commit `.env`, database exports, uploaded files, backups or generated API keys.
+- Rotate credentials that have ever been copied into tickets, chat, email or source control.
+- Keep `APP_DEBUG=false`, `SESSION_COOKIE_SECURE=true` and the correct HTTPS `APP_URL` in production.
+- Rotate the first administrator password immediately and never retain a supplied or sample password on a live site.
+- Restrict database and hosting accounts to the minimum permissions required.
+- Store backups away from the web root and test restoration regularly.
+- For Nginx or another non-Apache server, explicitly deny web access to `bin`, `config`, `data`, `database`, `src`, `storage`, `templates`, `tests` and `vendor`.
+- Review inactive accounts and the activity log routinely.
 
-### Environment Variables (.env)
+## Licence
 
-```
-APP_ENV=dev
-APP_URL=https://your-domain.com
-DB_DSN=mysql:host=localhost;dbname=permits;charset=utf8mb4
-DB_USER=your_db_user
-DB_PASS=your_db_password
-ADMIN_KEY=your-random-admin-key
-```
-
-### Email Configuration
-
-Configure SMTP settings in the database `settings` table or via `/settings`:
-
-```sql
-UPDATE settings SET value='true' WHERE `key`='email_enabled';
-UPDATE settings SET value='smtp.example.com' WHERE `key`='smtp_host';
-UPDATE settings SET value='587' WHERE `key`='smtp_port';
-UPDATE settings SET value='user@example.com' WHERE `key`='smtp_user';
-UPDATE settings SET value='noreply@example.com' WHERE `key`='smtp_from';
-```
-
-## Production Deployment
-
-### Apache
-- Set this folder as DocumentRoot
-- Keep provided `.htaccess` for routing
-- Ensure mod_rewrite is enabled
-
-### Nginx
-Route all requests to `index.php` if no file exists:
-
-```nginx
-location / {
-    try_files $uri $uri/ /index.php?$query_string;
-}
-```
-
-### Security
-- Change `ADMIN_KEY` in `.env` to a long random string
-- Use HTTPS in production
-- Configure firewall rules
-- Set proper file permissions (755 for directories, 644 for files)
-- Keep database credentials secure
-
-## File Structure
-
-```
-permits/
-├── bin/
-│   ├── auto-status-update.php    # Auto status updates (cron)
-│   ├── reminders.php              # Push notification reminders (cron)
-│   ├── send-notifications.php    # Email sender (cron)
-│   ├── process-email-queue.php   # Queue worker (cron)
-│   └── migrate-features.php      # Database migration [NEW]
-├── src/
-│   ├── bootstrap.php              # App initialization
-│   ├── Db.php                     # Database connection
-│   ├── routes.php                 # Route definitions
-│   ├── Email.php                  # Email manager [NEW]
-│   ├── Export.php                 # Data export [NEW]
-│   └── Auth.php                   # Authentication [NEW]
-├── templates/
-│   ├── layout.php                 # Homepage template
-│   ├── dashboard.php              # Dashboard template [NEW]
-│   ├── emails/                    # Email templates [NEW]
-│   │   ├── permit-approved.php
-│   │   ├── permit-rejected.php
-│   │   ├── permit-expiring.php
-│   │   └── permit-created.php
-│   └── forms/                     # Form templates
-├── assets/
-│   ├── app.css                    # Main stylesheet (enhanced mobile)
-│   ├── app.js                     # JavaScript (enhanced mobile)
-│   └── themes.css                 # Theme definitions
-├── dashboard.php                  # Dashboard page
-├── login.php                      # Login page
-├── settings.php                   # Settings page
-├── index.php                      # Application entry point
-└── README.md                      # This file
-```
-
-## API Endpoints
-
-### Core Routes
-- `GET /` - Homepage with search
-- `GET /dashboard` - Dashboard [NEW]
-- `GET /new/{templateId}` - Create new form
-- `GET /form/{formId}` - View form
-- `GET /form/{formId}/edit` - Edit form
-- `GET /form/{formId}/duplicate` - Duplicate form
-
-### API Routes
-- `POST /api/forms` - Create form
-- `PUT /api/forms/{formId}` - Update form
-- `DELETE /api/forms/{formId}` - Delete form
-- `GET /api/templates` - List templates
-- `POST /api/forms/{formId}/attachments` - Upload attachment
-- `DELETE /api/attachments/{id}` - Delete attachment
-- `POST /api/push/subscribe` - Push subscription
-- `GET /api/export/csv` - Export to CSV [NEW]
-
-### Authentication Routes [NEW]
-- `GET /login` - Login page
-- `POST /login` - Process login
-- `GET /logout` - Logout
-- `GET /settings` - Settings page
-- `POST /settings` - Update settings
-
-## Development
-
-### Adding New Email Templates
-
-1. Create template file in `templates/emails/`:
-```php
-<?php
-// templates/emails/my-template.php
-?>
-<!DOCTYPE html>
-<html>
-<head>...</head>
-<body>
-  <!-- Your email HTML -->
-</body>
-</html>
-```
-
-2. Use in code:
-```php
-$email = new \Permits\Email($db, $root);
-$email->queue($to, $subject, $email->renderTemplate('my-template', $data));
-```
-
-### Creating Users
-
-```php
-use Permits\Auth;
-
-$auth = new Auth($db);
-$userId = $auth->createUser('username', 'email@example.com', 'password', 'admin');
-```
-
-Or via database:
-```sql
-INSERT INTO users (id, username, email, password_hash, role)
-VALUES (UUID(), 'admin', 'admin@example.com', '$2y$12$...', 'admin');
-```
-
-### Automated Tests
-
-```bash
-composer run test
-```
-
-Runs the PHPUnit suite located in `tests/` covering the mail transport and queue processor.
-
-## Troubleshooting
-
-### Email Not Sending
-1. Check settings: `SELECT * FROM settings WHERE \`key\` LIKE 'smtp_%'`
-2. Verify email_enabled is 'true'
-3. Check cron job is running
-4. Review logs for errors
-
-### Authentication Issues
-1. Ensure users table exists: `php bin/migrate-features.php`
-2. Clear browser cookies
-3. Check session timeout in Auth.php
-4. Verify database connection
-
-### Mobile Features Not Working
-1. Clear browser cache
-2. Check browser console for errors
-3. Ensure JavaScript is enabled
-4. Test on actual mobile device
-
-## Browser Support
-
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Mobile browsers (iOS Safari, Chrome Mobile)
-- Progressive Web App (PWA) capable
-
-## License
-
-Proprietary - All rights reserved
-
-## Support
-
-For issues or questions, contact the development team.
+Proprietary. All rights reserved.

@@ -6,16 +6,15 @@
  * - Versioned cache keys for safe roll-outs
  */
 
-const SW_VERSION = 'permits-sw-v1.2.0';
+const SW_VERSION = 'permits-sw-v2.1.0';
 const PRECACHE = `permits-precache-${SW_VERSION}`;
 const RUNTIME = `permits-runtime-${SW_VERSION}`;
 
 const PRECACHE_URLS = [
-  '/',
+  '/offline.html',
   '/manifest.webmanifest',
   '/assets/app.css',
   '/assets/app.js',
-  '/assets/themes.css',
   '/icon-192.png',
   '/icon-512.png',
   '/assets/pwa/icon-192.png',
@@ -52,23 +51,31 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkOnlyNavigation(request));
     return;
   }
 
-  // Serve precached assets straight from cache
+  const url = new URL(request.url);
+  const isStaticAsset = url.pathname.startsWith('/assets/')
+    || url.pathname === '/manifest.webmanifest'
+    || url.pathname === '/icon-192.png'
+    || url.pathname === '/icon-512.png';
+
+  // Never cache API responses, permit/QR URLs, downloads or other dynamic data.
+  if (!isStaticAsset) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(cacheFirst(request));
 });
 
-async function networkFirst(request) {
+async function networkOnlyNavigation(request) {
   try {
-    const response = await fetch(request);
-    const cache = await caches.open(RUNTIME);
-    cache.put(request, response.clone());
-    return response;
+    return await fetch(request);
   } catch (error) {
     const cache = await caches.open(PRECACHE);
-    return (await cache.match('/')) || Response.error();
+    return (await cache.match('/offline.html')) || Response.error();
   }
 }
 
@@ -139,7 +146,15 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const { url } = event.notification.data || {};
-  const targetUrl = typeof url === 'string' && url.length ? url : '/';
+  let targetUrl = '/';
+  try {
+    const candidate = new URL(typeof url === 'string' && url.length ? url : '/', self.location.origin);
+    if (candidate.origin === self.location.origin) {
+      targetUrl = `${candidate.pathname}${candidate.search}${candidate.hash}`;
+    }
+  } catch {
+    targetUrl = '/';
+  }
 
   event.waitUntil((async () => {
     const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

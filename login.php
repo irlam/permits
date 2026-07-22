@@ -1,118 +1,111 @@
 <?php
+declare(strict_types=1);
+
+use Permits\Csrf;
 use Permits\SystemSettings;
 /**
- * Login Page - Simple Version
+ * Team login page.
  * 
  * File Path: /login.php
- * Description: User login without Auth class dependencies
+ * Description: Secure team authentication
  * Created: 24/10/2025
  * Last Modified: 24/10/2025
  * 
- * Features:
- * - Simple login form
- * - Works with bootstrap.php only
- * - No Auth class needed
- * - Session-based authentication
  */
 
-// Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
+/** Accept only a local application path for post-login redirects. */
+function safeLoginRedirect(string $candidate): string
+{
+    $candidate = trim($candidate);
+    if (
+        $candidate === ''
+        || $candidate[0] !== '/'
+        || str_starts_with($candidate, '//')
+        || str_contains($candidate, '\\')
+        || preg_match('/[\x00-\x1f\x7f]/', $candidate) === 1
+    ) {
+        return '/dashboard.php';
+    }
+
+    $parts = parse_url($candidate);
+    if ($parts === false || isset($parts['scheme']) || isset($parts['host'])) {
+        return '/dashboard.php';
+    }
+
+    $path = strtolower((string)($parts['path'] ?? ''));
+    if (in_array($path, ['/login.php', '/logout.php'], true)) {
+        return '/dashboard.php';
+    }
+
+    return $candidate;
 }
 
-// DEBUG: Output session and cookie info if requested, even if already logged in
-if (isset($_GET['debug'])) {
-  echo '<pre style="background:#222;color:#fff;padding:12px;">';
-  echo 'Session Name: ' . session_name() . "\n";
-  echo 'Session ID: ' . session_id() . "\n";
-  echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
-  echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
-  echo '</pre>';
-  exit;
-}
-// Redirect if already logged in
-if (isset($_SESSION['user_id'])) {
-  header('Location: ' . $app->url('dashboard.php'));
-  exit;
+$auth = new Auth($db);
+$redirectPath = safeLoginRedirect((string)($_POST['redirect'] ?? $_GET['redirect'] ?? '/dashboard.php'));
+
+if ($auth->isLoggedIn()) {
+    header('Location: ' . $app->url($redirectPath));
+    exit;
 }
 
-// Handle login submission
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    if (!Csrf::validateRequest('login')) {
+        http_response_code(419);
+        $error = 'This login form has expired. Please refresh the page and try again.';
+    }
+
+    $emailInput = $_POST['email'] ?? '';
+    $passwordInput = $_POST['password'] ?? '';
+    $email = is_string($emailInput) ? strtolower(trim($emailInput)) : '';
+    $password = is_string($passwordInput) ? $passwordInput : '';
     
-    if (empty($email) || empty($password)) {
-        $error = "Please enter both email and password";
+    if ($error !== null) {
+        // Keep the clear page-expired message set above.
+    } elseif (
+        $email === ''
+        || $password === ''
+        || strlen($email) > 255
+        || strlen($password) > 4096
+        || filter_var($email, FILTER_VALIDATE_EMAIL) === false
+    ) {
+        $error = 'Please enter both email and password.';
     } else {
-        try {
-            // Get user by email
-            $stmt = $db->pdo->prepare("SELECT * FROM users WHERE email = ? AND status = 'active' LIMIT 1");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($user && password_verify($password, $user['password_hash'])) {
-                // Login successful
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_name'] = $user['name'];
-                $_SESSION['user_role'] = $user['role'];
-                
-                // Log activity if function exists
-        if (function_exists('logActivity')) {
-          logActivity(
-            'user_login',
-            'auth',
-            'user',
-            $user['id'],
-            "User logged in: {$user['email']}"
-          );
+        $result = $auth->login($email, $password);
+        if (!empty($result['success'])) {
+            header('Location: ' . $app->url($redirectPath));
+            exit;
         }
 
-        // DEBUG: Output session and cookie info after login
-        if (isset($_GET['debug'])) {
-          echo '<pre style="background:#222;color:#fff;padding:12px;">';
-          echo 'Session ID: ' . session_id() . "\n";
-          echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
-          echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
-          echo '</pre>';
-          exit;
-        }
-
-        // Redirect to dashboard
-        header('Location: ' . $app->url('dashboard.php'));
-        exit;
-            } else {
-                $error = "Invalid email or password";
-            }
-        } catch (Exception $e) {
-            $error = "An error occurred. Please try again.";
-            error_log("Login error: " . $e->getMessage());
-        }
+        $error = isset($result['retry_after'])
+            ? 'Too many login attempts. Please wait 15 minutes and try again.'
+            : 'Invalid email or password.';
     }
 }
 
-$companyName = SystemSettings::companyName($db) ?? 'Permits System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db);
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Permit System</title>
+    <title>Team Sign In - <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
     <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
     <style>
       /* Minimal input styling to blend with dark theme */
       .form-group label{display:block;font-weight:600;margin:0 0 6px;color:#cbd5e1}
       .form-group input{width:100%;padding:10px 12px;background:#0b1220;border:1px solid #334155;border-radius:8px;color:#e5e7eb}
-      .form-group input:focus{outline:none;border-color:#3b82f6}
+      .form-group input:focus{outline:none;border-color:var(--brand-primary);box-shadow:0 0 0 3px rgba(var(--brand-primary-rgb),.18)}
       .login-card{max-width:420px;margin:0 auto}
     </style>
     </head>
@@ -120,44 +113,46 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
   <header class="site-header">
     <div class="brand-mark">
       <?php if ($companyLogoUrl): ?>
-        <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?> logo" class="brand-mark__logo">
+        <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> logo" class="brand-mark__logo">
       <?php endif; ?>
       <div>
-        <div class="brand-mark__name"><?= htmlspecialchars($companyName) ?></div>
-        <div class="brand-mark__sub">� Manager Login</div>
+        <div class="brand-mark__name"><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
+        <div class="brand-mark__sub">Team sign in</div>
       </div>
     </div>
     <div class="site-header__actions">
-      <a class="btn btn-secondary" href="<?=htmlspecialchars($app->url('/'))?>">🏠 Home</a>
+      <a class="btn btn-secondary" href="<?= htmlspecialchars($app->url('/'), ENT_QUOTES, 'UTF-8') ?>">Home</a>
     </div>
   </header>
   <main class="site-container">
     <section class="surface-card login-card">
       <div class="card-header">
-        <h3>🔐 Manager Login</h3>
+        <h3>Team sign in</h3>
       </div>
 
       <?php if ($error): ?>
         <div class="alert alert-error" role="alert">
-          <?php echo htmlspecialchars($error); ?>
+          <?= htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
         </div>
       <?php endif; ?>
 
-      <form method="POST" action="<?php echo htmlspecialchars($app->url('login.php')); ?>">
+      <form method="POST" action="<?= htmlspecialchars($app->url('login.php'), ENT_QUOTES, 'UTF-8') ?>">
+        <?= Csrf::getFormField('login') ?>
+        <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectPath, ENT_QUOTES, 'UTF-8') ?>">
         <div class="form-group" style="margin-bottom:14px;">
           <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" required autofocus value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+          <input type="email" id="email" name="email" required autofocus autocomplete="username" value="<?= htmlspecialchars((string)($_POST['email'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
         </div>
         <div class="form-group" style="margin-bottom:18px;">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%">Login</button>
+        <button type="submit" class="btn btn-primary" style="width:100%">Sign in</button>
       </form>
     </section>
 
     <div style="text-align:center;color:#94a3b8;margin-top:16px;">
-      <a class="btn btn-ghost" href="<?=htmlspecialchars($app->url('/'))?>">← Back to Homepage</a>
+      <a class="btn btn-ghost" href="<?= htmlspecialchars($app->url('/'), ENT_QUOTES, 'UTF-8') ?>">&larr; Back to Homepage</a>
     </div>
   </main>
 </body>

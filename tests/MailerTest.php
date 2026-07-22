@@ -26,6 +26,7 @@ final class MailerTest extends TestCase
     public function testLogDriverWritesPayload(): void
     {
         $mailer = new Mailer([
+            'enabled'       => true,
             'driver'        => 'log',
             'log_directory' => $this->logDir,
             'from'          => 'qa@example.com',
@@ -42,6 +43,59 @@ final class MailerTest extends TestCase
         $this->assertIsArray($payload);
         $this->assertSame('recipient@example.com', $payload['to'] ?? null);
         $this->assertSame('Test Subject', $payload['subject'] ?? null);
+    }
+
+    public function testDisabledMailerDoesNotWriteMessageContentToLog(): void
+    {
+        $mailer = new Mailer([
+            'enabled' => false,
+            'driver' => 'log',
+            'log_directory' => $this->logDir,
+            'from' => 'qa@example.com',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        try {
+            $mailer->send('recipient@example.com', 'Private permit', '<a href="?link=bearer-secret">View</a>');
+        } finally {
+            self::assertSame([], glob($this->logDir . DIRECTORY_SEPARATOR . '*.log') ?: []);
+        }
+    }
+
+    public function testRejectsRecipientHeaderInjection(): void
+    {
+        $mailer = new Mailer([
+            'enabled' => true,
+            'driver' => 'log',
+            'log_directory' => $this->logDir,
+            'from' => 'qa@example.com',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $mailer->send("recipient@example.com\r\nBcc: attacker@example.com", 'Subject', '<p>Hello</p>');
+    }
+
+    public function testRejectsSubjectHeaderInjection(): void
+    {
+        $mailer = new Mailer([
+            'enabled' => true,
+            'driver' => 'log',
+            'log_directory' => $this->logDir,
+            'from' => 'qa@example.com',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $mailer->send('recipient@example.com', "Subject\r\nBcc: attacker@example.com", '<p>Hello</p>');
+    }
+
+    public function testRejectsSenderHeaderInjection(): void
+    {
+        $this->expectException(RuntimeException::class);
+        new Mailer([
+            'enabled' => true,
+            'driver' => 'log',
+            'from' => "qa@example.com\r\nBcc: attacker@example.com",
+        ]);
     }
 
     private function deleteDir(string $dir): void

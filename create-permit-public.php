@@ -19,13 +19,26 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 require_once __DIR__ . '/src/approval-notifications.php';
+require_once __DIR__ . '/src/Auth.php';
+
+// Authentication remains optional on this public form. When a signed-in,
+// active user creates a permit, retain that relationship so the permit appears
+// in their dashboard without changing anonymous access to the form.
+$auth = new Auth($db);
+$currentUser = $auth->isLoggedIn() ? $auth->getCurrentUser() : null;
+
+$branding = \Permits\SystemSettings::branding($db, 'Permit System');
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = \Permits\SystemSettings::brandingCssVariables($branding);
 
 // Get template ID from query string or resume an existing draft via unique link
-$template_id = $_GET['template'] ?? null;
-$draft_link = $_GET['draft'] ?? null;
-$reopen_permit_id = $_GET['reopen'] ?? null;
+$template_id = isset($_GET['template']) && is_string($_GET['template']) ? trim($_GET['template']) : null;
+$draft_link = isset($_GET['draft']) && is_string($_GET['draft']) ? trim($_GET['draft']) : null;
+$reopen_link = isset($_GET['reopen']) && is_string($_GET['reopen']) ? trim($_GET['reopen']) : null;
 
-if (!$template_id && !$draft_link && !$reopen_permit_id) {
+if (!$template_id && !$draft_link && !$reopen_link) {
     header('Location: ' . $app->url('/'));
     exit;
 }
@@ -33,7 +46,7 @@ if (!$template_id && !$draft_link && !$reopen_permit_id) {
 // Load existing draft if present
 $existingPermit = null;
 $isUpdate = false;  // true = edit draft, false = create new
-if ($draft_link) {
+if ($draft_link && strlen($draft_link) >= 32 && strlen($draft_link) <= 100) {
     try {
         $st = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? AND status = 'draft' LIMIT 1");
         $st->execute([$draft_link]);
@@ -48,10 +61,12 @@ if ($draft_link) {
 }
 
 // Load permit to reopen if present - creates a NEW permit based on existing data
-if ($reopen_permit_id) {
+if ($reopen_link && strlen($reopen_link) >= 32 && strlen($reopen_link) <= 100) {
     try {
-        $st = $db->pdo->prepare("SELECT * FROM forms WHERE id = ? LIMIT 1");
-        $st->execute([$reopen_permit_id]);
+        // The unguessable public link is required. Accepting a database ID here
+        // allowed permit contents to be copied without possession of its link.
+        $st = $db->pdo->prepare("SELECT * FROM forms WHERE unique_link = ? AND status IN ('active', 'issued', 'approved', 'closed', 'expired', 'rejected') LIMIT 1");
+        $st->execute([(string) $reopen_link]);
         $existingPermit = $st->fetch(PDO::FETCH_ASSOC) ?: null;
         if ($existingPermit) {
             $template_id = $existingPermit['template_id'];
@@ -64,7 +79,14 @@ if ($reopen_permit_id) {
 
 // Get template details
 try {
-    $stmt = $db->pdo->prepare("SELECT * FROM form_templates WHERE id = ?");
+    // Direct links may only start permits from templates currently published by
+    // an administrator. A bearer link to an existing draft or previous permit
+    // can still be completed even if that template has since been retired.
+    $templateSql = 'SELECT * FROM form_templates WHERE id = ?';
+    if ($existingPermit === null) {
+        $templateSql .= ' AND active = 1';
+    }
+    $stmt = $db->pdo->prepare($templateSql);
     $stmt->execute([$template_id]);
     $template = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -103,6 +125,15 @@ $success = false;
 $error = null;
 $permit_id = null;
 $unique_link = null;
+$isDraftAction = false;
+$holder_name = $isUpdate
+    ? (string) ($existingPermit['holder_name'] ?? '')
+    : (string) ($currentUser['name'] ?? '');
+$holder_email = $isUpdate
+    ? (string) ($existingPermit['holder_email'] ?? '')
+    : (string) ($currentUser['email'] ?? '');
+$holder_phone = $isUpdate ? (string) ($existingPermit['holder_phone'] ?? '') : '';
+$uploadedTargets = [];
 // Prefill data when editing a draft
 $existingData = [];
 if ($existingPermit && $isUpdate) {
@@ -111,17 +142,52 @@ if ($existingPermit && $isUpdate) {
     $unique_link = $existingPermit['unique_link'];
     $existingData = json_decode((string)($existingPermit['form_data'] ?? ''), true) ?: [];
 } elseif ($existingPermit && !$isUpdate) {
-    // When reopening a permit, only use the form data, not the IDs
+    // A similar permit may reuse descriptive details, but its dates, safety
+    // checks and evidence must be completed afresh for the new job.
     $existingData = json_decode((string)($existingPermit['form_data'] ?? ''), true) ?: [];
+    foreach ($formStructure as $section) {
+        foreach (($section['fields'] ?? []) as $field) {
+            if (!is_array($field) || empty($field['name'])) {
+                continue;
+            }
+            $fieldName = (string) $field['name'];
+            $fieldType = strtolower((string) ($field['type'] ?? 'text'));
+            if (
+                !empty($field['scoreItem'])
+                || in_array($fieldType, ['date', 'time', 'datetime'], true)
+                || preg_match('/(?:^|_)(?:permit_?no|permit_?number)$/i', $fieldName) === 1
+            ) {
+                $existingData[$fieldName] = '';
+            }
+            unset($existingData[$fieldName . '_note'], $existingData[$fieldName . '_media']);
+        }
+    }
+    unset($existingData['_applicant_declaration'], $existingData['_applicant_declared_at']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        if (!\Permits\Csrf::validateRequest('public-permit-submit', true)) {
+            http_response_code(419);
+            throw new InvalidArgumentException('Your form session expired. Please refresh the page and try again.');
+        }
+        $isDraftAction = (string) ($_POST['action'] ?? 'submit') === 'save_draft';
+        $targetStatus = $isDraftAction ? 'draft' : 'pending_approval';
+
         // Collect form data
-        $holder_name = trim($_POST['holder_name'] ?? '');
-        $holder_email = trim($_POST['holder_email'] ?? '');
-        $holder_phone = trim($_POST['holder_phone'] ?? '');
-        $notification_enabled = isset($_POST['enable_notifications']) ? 1 : 0;
+        foreach (['holder_name', 'holder_email', 'holder_phone'] as $contactField) {
+            if (isset($_POST[$contactField]) && !is_scalar($_POST[$contactField])) {
+                throw new InvalidArgumentException('Contact details contain an invalid value.');
+            }
+        }
+        if (isset($_POST['applicant_declaration']) && !is_scalar($_POST['applicant_declaration'])) {
+            throw new InvalidArgumentException('The applicant declaration contains an invalid value.');
+        }
+        $holder_name = trim((string) ($_POST['holder_name'] ?? ''));
+        $holder_email = strtolower(trim((string) ($_POST['holder_email'] ?? '')));
+        $holder_phone = trim((string) ($_POST['holder_phone'] ?? ''));
+        $applicantDeclaration = isset($_POST['applicant_declaration'])
+            && hash_equals('1', (string) $_POST['applicant_declaration']);
         
         // Validate required fields
         if (empty($holder_name) || empty($holder_email)) {
@@ -133,15 +199,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (mb_strlen($holder_name) > 255 || mb_strlen($holder_email) > 255 || mb_strlen($holder_phone) > 50) {
             throw new InvalidArgumentException("Contact details are too long");
         }
+
+        if (!empty($_POST['website'])) {
+            throw new InvalidArgumentException('Unable to submit this permit. Please refresh the page and try again.');
+        }
+
+        $issuer_id = isset($currentUser['id'])
+            ? (string) $currentUser['id']
+            : ($isUpdate ? ($existingPermit['issuer_id'] ?? null) : null);
+        $holder_id = null;
+        if (
+            isset($currentUser['id'], $currentUser['email'])
+            && hash_equals(strtolower(trim((string) $currentUser['email'])), $holder_email)
+        ) {
+            $holder_id = (string) $currentUser['id'];
+        } elseif (
+            $isUpdate
+            && !empty($existingPermit['holder_id'])
+            && hash_equals(strtolower(trim((string) ($existingPermit['holder_email'] ?? ''))), $holder_email)
+        ) {
+            // Preserve the established owner when their draft is resumed using
+            // its private link without requiring them to sign in again.
+            $holder_id = (string) $existingPermit['holder_id'];
+        }
+        if (!$isDraftAction && !$applicantDeclaration) {
+            throw new InvalidArgumentException('Confirm the applicant declaration before submitting the permit.');
+        }
         // Generate IDs early so we can store media predictably
         if (!$isUpdate) {
             $permit_id = \Ramsey\Uuid\Uuid::uuid4()->toString();
             $unique_link = bin2hex(random_bytes(32));
         }
-        $ref_number = $existingPermit['ref_number'] ?? ('PTW-' . date('Y') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT));
+
+        // A renewed permit is a new record and must never reuse its source reference.
+        // Legacy drafts without a reference receive one when next saved.
+        $ref_number = $isUpdate ? trim((string) ($existingPermit['ref_number'] ?? '')) : '';
+        $referenceFactory = null;
+        if ($ref_number === '') {
+            try {
+                $referenceSettings = \Permits\SystemSettings::load(
+                    $db,
+                    ['permit_prefix'],
+                    ['permit_prefix' => 'PTW']
+                );
+                $permitPrefix = strtoupper(trim((string) ($referenceSettings['permit_prefix'] ?? 'PTW')));
+            } catch (Throwable $settingsError) {
+                error_log('Unable to load permit prefix: ' . $settingsError->getMessage());
+                $permitPrefix = 'PTW';
+            }
+            if (preg_match('/^[A-Z0-9-]{2,10}$/', $permitPrefix) !== 1) {
+                $permitPrefix = 'PTW';
+            }
+
+            $referenceFactory = static fn(): string => $permitPrefix . '-' . date('Y') . '-' .
+                str_pad((string)random_int(0, 9_999_999_999), 10, '0', STR_PAD_LEFT);
+            $ref_number = $referenceFactory();
+        }
+
+        // Keep the stored values separately while rebuilding the submitted data.
+        // This preserves existing evidence when a draft is saved without selecting
+        // the same files again.
+        $previousData = $existingData;
 
         // Collect permit data using the parsed structure (values + optional notes)
         $permit_data = [];
+        $submittedValues = [];
         foreach ($formStructure as $section) {
             if (!isset($section['fields']) || !is_array($section['fields'])) {
                 continue;
@@ -153,11 +275,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $fieldName = (string)$field['name'];
-                $rawValue = $_POST[$fieldName] ?? ($existingData[$fieldName] ?? '');
+                $rawValue = array_key_exists($fieldName, $_POST)
+                    ? $_POST[$fieldName]
+                    : ($previousData[$fieldName] ?? '');
+                $submittedValues[$fieldName] = $rawValue;
 
                 if (is_array($rawValue)) {
-                    $rawValue = array_values(array_filter(array_map('trim', $rawValue), static function ($value) {
-                        return $value !== '' && $value !== null;
+                    $rawValue = array_values(array_filter(array_map(static function ($item): string {
+                        return is_scalar($item) ? trim((string) $item) : '';
+                    }, $rawValue), static function (string $value): bool {
+                        return $value !== '';
                     }));
                     $value = implode(', ', $rawValue);
                 } else {
@@ -169,19 +296,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Optional note paired with tri-state or any field
                 $noteKey = $fieldName . '_note';
                 if (isset($_POST[$noteKey])) {
-                    $permit_data[$noteKey] = trim((string)$_POST[$noteKey]);
-                } elseif (isset($existingData[$noteKey])) {
-                    $permit_data[$noteKey] = trim((string)$existingData[$noteKey]);
+                    if (is_array($_POST[$noteKey])) {
+                        throw new InvalidArgumentException('A field note has an invalid value.');
+                    }
+                    $note = trim((string) $_POST[$noteKey]);
+                    if (mb_strlen($note, 'UTF-8') > 5000) {
+                        throw new InvalidArgumentException('Field notes must be 5000 characters or fewer.');
+                    }
+                    $permit_data[$noteKey] = $note;
+                    $submittedValues[$noteKey] = $note;
+                } elseif (isset($previousData[$noteKey])) {
+                    $permit_data[$noteKey] = trim((string)$previousData[$noteKey]);
+                    $submittedValues[$noteKey] = $permit_data[$noteKey];
+                }
+
+                $mediaKey = $fieldName . '_media';
+                if (!empty($_FILES[$mediaKey]['name'])) {
+                    $submittedValues[$mediaKey] = $_FILES[$mediaKey]['name'];
+                } elseif (isset($previousData[$mediaKey])) {
+                    $submittedValues[$mediaKey] = $previousData[$mediaKey];
                 }
             }
+        }
+
+        $permit_data['_applicant_declaration'] = $applicantDeclaration ? 'confirmed' : '';
+        if (!$isDraftAction && $applicantDeclaration) {
+            $permit_data['_applicant_declared_at'] = date('Y-m-d H:i:s');
+        } elseif (!empty($previousData['_applicant_declared_at'])) {
+            $permit_data['_applicant_declared_at'] = (string) $previousData['_applicant_declared_at'];
+        }
+
+        // Re-render the values the user just submitted if validation or storage
+        // fails, which is especially important on long mobile permit forms.
+        $existingData = $permit_data;
+
+        // Drafts deliberately allow incomplete answers. Final submissions do not:
+        // required template fields and every safety checklist item are enforced here.
+        if (!$isDraftAction) {
+            if ($formStructure === []) {
+                throw new InvalidArgumentException('This permit template has no usable fields. Please contact an administrator.');
+            }
+            $fieldErrors = \Permits\PermitFormValidator::validate($formStructure, $submittedValues, true);
+            if ($fieldErrors !== []) {
+                $messages = array_slice(array_values($fieldErrors), 0, 5);
+                $remaining = count($fieldErrors) - count($messages);
+                $message = implode(' ', $messages);
+                if ($remaining > 0) {
+                    $message .= sprintf(' Please complete %d more required field%s.', $remaining, $remaining === 1 ? '' : 's');
+                }
+                throw new InvalidArgumentException($message);
+            }
+        }
+
+        $publicLimiter = new \Permits\PublicRateLimiter($db->pdo);
+        $rateLimit = $isDraftAction
+            ? $publicLimiter->consumePermitDraft(
+                (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+                $holder_email,
+                $currentUser !== null
+            )
+            : $publicLimiter->consumePermitSubmission(
+                (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+                $holder_email,
+                $currentUser !== null
+            );
+        if ($rateLimit['limited']) {
+            http_response_code(429);
+            header('Retry-After: ' . $rateLimit['retry_after']);
+            throw new InvalidArgumentException(
+                $isDraftAction
+                    ? 'Too many draft saves. Please wait before trying again.'
+                    : 'Too many permit submissions. Please wait before trying again.'
+            );
         }
 
         // Handle media uploads (images/videos) for fields ending with _media
         $uploadErrors = [];
         $uploadedAny = false;
+        $maxUploadFilesPerField = 5;
+        $maxTotalUploadFiles = 10;
+        $maxUploadFileBytes = ($currentUser !== null ? 25 : 10) * 1024 * 1024;
+        $maxTotalUploadBytes = ($currentUser !== null ? 50 : 20) * 1024 * 1024;
+        $totalUploadCount = 0;
+        $totalUploadBytes = 0;
         $baseUploadDir = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . $permit_id;
-        if (!is_dir($baseUploadDir)) {
-            @mkdir($baseUploadDir, 0775, true);
+        $uploadRoot = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'uploads';
+        $hasPendingUploads = false;
+        foreach ($_FILES as $fileGroup) {
+            $names = $fileGroup['name'] ?? [];
+            $names = is_array($names) ? $names : [$names];
+            if (array_filter($names, static fn($name): bool => is_scalar($name) && trim((string)$name) !== '') !== []) {
+                $hasPendingUploads = true;
+                break;
+            }
+        }
+        if ($hasPendingUploads) {
+            $freeBytes = @disk_free_space($uploadRoot);
+            if ($freeBytes !== false && $freeBytes < $maxTotalUploadBytes + (256 * 1024 * 1024)) {
+                throw new RuntimeException('Permit attachments are temporarily unavailable because storage is running low.');
+            }
         }
         $allowedTypes = [
             'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp',
@@ -197,38 +410,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($_FILES[$mediaKey]) || empty($_FILES[$mediaKey]['name'])) { continue; }
                 $files = $_FILES[$mediaKey];
                 $paths = [];
-                $count = is_array($files['name']) ? count($files['name']) : 0;
+                if (
+                    !is_array($files['name'] ?? null)
+                    || !is_array($files['tmp_name'] ?? null)
+                    || !is_array($files['error'] ?? null)
+                ) {
+                    $uploadErrors[] = 'An attachment was submitted in an invalid format.';
+                    continue;
+                }
+                $count = count($files['name']);
+                $fieldUploadCount = 0;
                 for ($i=0; $i<$count; $i++) {
-                    $origName = (string)$files['name'][$i];
+                    $origName = basename(str_replace('\\', '/', (string)$files['name'][$i]));
+                    $origName = preg_replace('/[\x00-\x1F\x7F]+/u', '', $origName) ?? '';
+                    $origName = mb_substr($origName, 0, 180, 'UTF-8');
                     if ($origName === '') { continue; }
-                    $tmp = (string)$files['tmp_name'][$i];
-                    $err = (int)$files['error'][$i];
-                    if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) { continue; }
-                    if ((int)$files['size'][$i] > 25 * 1024 * 1024) { $uploadErrors[] = 'File is too large: ' . $origName; continue; }
+                    $fieldUploadCount++;
+                    $totalUploadCount++;
+                    if ($fieldUploadCount > $maxUploadFilesPerField) {
+                        $uploadErrors[] = 'Choose no more than 5 files for each permit question.';
+                        continue;
+                    }
+                    if ($totalUploadCount > $maxTotalUploadFiles) {
+                        $uploadErrors[] = 'Choose no more than 10 files for one permit.';
+                        continue;
+                    }
+
+                    $tmp = (string)($files['tmp_name'][$i] ?? '');
+                    $err = (int)($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+                    if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) {
+                        $uploadErrors[] = 'Unable to upload file: ' . $origName;
+                        continue;
+                    }
+                    $actualSize = filesize($tmp);
+                    if ($actualSize === false) {
+                        $uploadErrors[] = 'Unable to check file: ' . $origName;
+                        continue;
+                    }
+                    if ($actualSize > $maxUploadFileBytes) {
+                        $uploadErrors[] = 'File is too large: ' . $origName;
+                        continue;
+                    }
+                    $totalUploadBytes += $actualSize;
+                    if ($totalUploadBytes > $maxTotalUploadBytes) {
+                        $uploadErrors[] = 'Attachments must be 50 MB or less in total.';
+                        continue;
+                    }
                     $type = $mimeDetector->file($tmp);
                     if (!isset($allowedTypes[$type])) { $uploadErrors[] = 'Rejected file type for ' . $origName; continue; }
+                    if (!is_dir($baseUploadDir) && !@mkdir($baseUploadDir, 0775, true) && !is_dir($baseUploadDir)) {
+                        throw new RuntimeException('Unable to create the permit attachment folder.');
+                    }
                     $target = $baseUploadDir . DIRECTORY_SEPARATOR . bin2hex(random_bytes(16)) . '.' . $allowedTypes[$type];
                     if (@move_uploaded_file($tmp, $target)) {
                         $uploadedAny = true;
+                        $uploadedTargets[] = $target;
                         $rel = 'uploads/' . $permit_id . '/' . basename($target);
                         $paths[] = $rel;
+                    } else {
+                        $uploadErrors[] = 'Unable to save file: ' . $origName;
                     }
                 }
                 if (!empty($paths)) {
                     $permit_data[$mediaKey] = implode(', ', $paths);
-                } elseif (!empty($existingData[$mediaKey])) {
+                } elseif (!empty($previousData[$mediaKey])) {
                     // Preserve previously uploaded media when editing and no new files were added
-                    $permit_data[$mediaKey] = (string)$existingData[$mediaKey];
+                    $permit_data[$mediaKey] = (string)$previousData[$mediaKey];
                 }
             }
         }
+
+        if ($uploadErrors !== []) {
+            foreach ($uploadedTargets as $uploadedTarget) {
+                @unlink($uploadedTarget);
+            }
+            $uploadedTargets = [];
+            throw new InvalidArgumentException(implode(' ', $uploadErrors));
+        }
         
         $now = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
+        $recordChanged = true;
+        $isDuplicateKey = static function (PDOException $exception): bool {
+            $driverCode = (int) ($exception->errorInfo[1] ?? 0);
+            return in_array((string) $exception->getCode(), ['23000', '23505'], true)
+                || in_array($driverCode, [19, 1062, 2067], true);
+        };
         $db->pdo->beginTransaction();
         if ($isUpdate) {
-            $stmt = $db->pdo->prepare("UPDATE forms SET form_data=?, holder_name=?, holder_email=?, holder_phone=?, updated_at=$now WHERE id=? AND unique_link=? AND status='draft'");
-            $stmt->execute([json_encode($permit_data), $holder_name, $holder_email, $holder_phone, $permit_id, $unique_link]);
-            if ($stmt->rowCount() !== 1) { throw new RuntimeException('Draft could not be updated'); }
+            $stmt = $db->pdo->prepare("UPDATE forms SET ref_number=?, form_data=?, holder_name=?, holder_email=?, holder_phone=?, holder_id=?, issuer_id=?, status=?, updated_at=$now WHERE id=? AND unique_link=? AND status='draft'");
+            for ($updateAttempt = 0; ; $updateAttempt++) {
+                try {
+                    $stmt->execute([$ref_number, json_encode($permit_data), $holder_name, $holder_email, $holder_phone, $holder_id, $issuer_id, $targetStatus, $permit_id, $unique_link]);
+                    break;
+                } catch (PDOException $updateError) {
+                    if (!$isDuplicateKey($updateError) || !$referenceFactory || $updateAttempt >= 9) {
+                        throw $updateError;
+                    }
+                    $ref_number = $referenceFactory();
+                }
+            }
+            if ($stmt->rowCount() !== 1) {
+                $stateCheck = $db->pdo->prepare('SELECT status FROM forms WHERE id = ? AND unique_link = ? LIMIT 1');
+                $stateCheck->execute([$permit_id, $unique_link]);
+                $currentStatus = strtolower((string) $stateCheck->fetchColumn());
+                if ($currentStatus !== $targetStatus) {
+                    throw new RuntimeException('Draft could not be updated');
+                }
+                $recordChanged = false;
+            }
         } else {
             $stmt = $db->pdo->prepare("
             INSERT INTO forms (
@@ -240,56 +529,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 holder_name,
                 holder_email,
                 holder_phone,
+                holder_id,
+                issuer_id,
                 unique_link,
                 created_at
-            ) VALUES (?, ?, ?, ?, 'pending_approval', ?, ?, ?, ?, $now)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, $now)
         ");
-        
-        $stmt->execute([
-            $permit_id,
-            $ref_number,
-            $template_id,
-            json_encode($permit_data),
-            $holder_name,
-            $holder_email,
-            $holder_phone,
-            $unique_link
-        ]);
+
+            // The database unique indexes are the final authority. If two
+            // concurrent requests happen to choose the same short reference,
+            // retry the statement with a fresh reference and bearer token.
+            $inserted = false;
+            for ($insertAttempt = 0; $insertAttempt < 10; $insertAttempt++) {
+                try {
+                    $stmt->execute([
+                        $permit_id,
+                        $ref_number,
+                        $template_id,
+                        json_encode($permit_data),
+                        $targetStatus,
+                        $holder_name,
+                        $holder_email,
+                        $holder_phone,
+                        $holder_id,
+                        $issuer_id,
+                        $unique_link
+                    ]);
+                    $inserted = true;
+                    break;
+                } catch (PDOException $insertError) {
+                    if (!$isDuplicateKey($insertError) || !$referenceFactory || $insertAttempt === 9) {
+                        throw $insertError;
+                    }
+                    $ref_number = $referenceFactory();
+                    $unique_link = bin2hex(random_bytes(32));
+                }
+            }
+            if (!$inserted) {
+                throw new RuntimeException('Unable to allocate unique permit identifiers.');
+            }
         }
         $db->pdo->commit();
 
-        try {
-            notifyPendingApprovalRecipients($db, $root, $permit_id);
-        } catch (\Throwable $notificationError) {
-            error_log('Failed to queue approval notification: ' . $notificationError->getMessage());
+        if (!$recordChanged && $uploadedTargets !== []) {
+            foreach ($uploadedTargets as $uploadedTarget) {
+                @unlink($uploadedTarget);
+            }
+            $uploadedTargets = [];
+        }
+
+        if (!$isDraftAction && $recordChanged) {
+            try {
+                notifyPendingApprovalRecipients($db, $root, $permit_id);
+            } catch (\Throwable $notificationError) {
+                error_log('Failed to queue approval notification: ' . $notificationError->getMessage());
+            }
         }
         
         // Log activity
         if (function_exists('logActivity')) {
-            logActivity(
-                'public_permit_created',
-                'permit',
-                'form',
-                $permit_id,
-                "Public permit created: {$ref_number} by {$holder_email}"
-            );
+            try {
+                logActivity(
+                    $isDraftAction ? 'public_permit_draft_saved' : 'public_permit_created',
+                    'permit',
+                    'form',
+                    $permit_id,
+                    ($isDraftAction ? 'Public permit draft saved' : 'Public permit submitted') . ": {$ref_number} by {$holder_email}"
+                );
+            } catch (Throwable $logError) {
+                error_log('Unable to log public permit submission: ' . $logError->getMessage());
+            }
         }
         
         $success = true;
         
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
+        foreach ($uploadedTargets as $uploadedTarget) {
+            @unlink($uploadedTarget);
+        }
         error_log('Public permit submission failed: ' . $e->getMessage());
         $error = $e instanceof InvalidArgumentException ? $e->getMessage() : 'Unable to save the permit. Please try again.';
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $existingPermit ? 'Edit Draft' : 'Create Permit'; ?> - <?php echo htmlspecialchars($template['name']); ?></title>
+    <title><?php echo $isUpdate ? 'Edit Draft' : ($existingPermit ? 'Create Similar Permit' : 'Create Permit'); ?> - <?php echo htmlspecialchars($template['name']); ?></title>
     <link rel="stylesheet" href="<?= asset('/assets/app.css') ?>">
     <style>
         :root {
@@ -310,7 +639,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .public-wrap {
             max-width: 960px;
             margin: 0 auto;
-            padding: 32px 16px 80px;
+            padding: 20px 16px 80px;
+        }
+
+        .public-brand-header {
+            margin-bottom: 16px;
+        }
+
+        .public-brand-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 100%;
+            color: #f8fafc;
+            text-decoration: none;
+            border-radius: 12px;
+            padding: 8px 10px;
+        }
+
+        .public-brand-link:hover {
+            background: rgba(var(--brand-primary-rgb), 0.12);
+        }
+
+        .public-brand-link:focus-visible {
+            outline: 3px solid rgba(var(--brand-primary-light-rgb), 0.55);
+            outline-offset: 2px;
+        }
+
+        .public-brand-logo,
+        .public-brand-symbol {
+            width: 44px;
+            height: 44px;
+            flex: 0 0 44px;
+            border-radius: 10px;
+        }
+
+        .public-brand-logo {
+            object-fit: contain;
+            background: #ffffff;
+            padding: 4px;
+        }
+
+        .public-brand-symbol {
+            display: grid;
+            place-items: center;
+            background: var(--brand-primary);
+            color: var(--brand-on-primary);
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .public-brand-copy {
+            min-width: 0;
+        }
+
+        .public-brand-name {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 16px;
+            font-weight: 750;
+        }
+
+        .public-brand-subtitle {
+            display: block;
+            color: #94a3b8;
+            font-size: 13px;
         }
 
         .public-card {
@@ -381,8 +776,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         textarea:focus,
         select:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+            border-color: var(--brand-primary-light);
+            box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.25);
         }
 
         textarea {
@@ -391,8 +786,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .notification-box {
-            background: rgba(59, 130, 246, 0.12);
-            border: 1px solid rgba(59, 130, 246, 0.35);
+            background: rgba(var(--brand-primary-rgb), 0.12);
+            border: 1px solid rgba(var(--brand-primary-light-rgb), 0.35);
             border-radius: 12px;
             padding: 16px;
             margin: 24px 0;
@@ -458,12 +853,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .choice-pill:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            border-color: var(--brand-primary-light);
+            box-shadow: 0 4px 12px rgba(var(--brand-primary-rgb), 0.2);
+        }
+
+        .form-honeypot {
+            position: fixed !important;
+            left: -10000px !important;
+            top: auto !important;
+            width: 1px !important;
+            height: 1px !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
         .choice-input:focus + .choice-pill {
-            outline: 2px solid #3b82f6;
+            outline: 2px solid var(--brand-primary-light);
             outline-offset: 2px;
         }
 
@@ -524,9 +930,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #bfdbfe;
-            background: rgba(59, 130, 246, 0.18);
-            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: var(--brand-primary-light);
+            background: rgba(var(--brand-primary-rgb), 0.18);
+            border: 1px solid rgba(var(--brand-primary-light-rgb), 0.35);
             padding: 8px 12px;
             border-radius: 10px;
             font-weight: 600;
@@ -536,7 +942,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .tool-link:hover {
-            background: rgba(59, 130, 246, 0.3);
+            background: rgba(var(--brand-primary-rgb), 0.3);
         }
 
         .note-box,
@@ -559,7 +965,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: block;
             width: 100%;
             padding: 10px;
-            border: 1px dashed rgba(59, 130, 246, 0.45);
+            border: 1px dashed rgba(var(--brand-primary-light-rgb), 0.45);
             border-radius: 10px;
             background: rgba(15, 23, 42, 0.8);
             color: #cbd5f5;
@@ -647,7 +1053,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             top: -2px;
             width: 32px;
             height: 32px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary-dark));
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -760,8 +1166,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             width: 18px;
             height: 18px;
-            background: rgba(59, 130, 246, 0.2);
-            border: 1px solid rgba(59, 130, 246, 0.4);
+            background: rgba(var(--brand-primary-rgb), 0.2);
+            border: 1px solid rgba(var(--brand-primary-light-rgb), 0.4);
             border-radius: 50%;
             color: #93c5fd;
             font-size: 12px;
@@ -800,6 +1206,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-actions .btn {
             flex: 1 1 200px;
             justify-content: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary));
+            border-color: var(--brand-primary);
+            color: var(--brand-on-primary);
+            box-shadow: 0 4px 14px rgba(var(--brand-primary-rgb), 0.35);
+        }
+
+        .btn-primary:hover,
+        .btn-primary:active {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+            border-color: var(--brand-primary-dark);
         }
 
         .btn-block {
@@ -874,6 +1293,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .quick-nav {
                 display: none;
             }
+
+            .public-wrap {
+                padding: 12px 10px 56px;
+            }
+
+            .public-card {
+                padding: 18px 14px;
+                border-radius: 14px;
+            }
+
+            .progress-bar-container {
+                margin: -18px -14px 22px;
+                padding: 14px;
+            }
+
+            .card-heading h1 {
+                font-size: 22px;
+                line-height: 1.25;
+            }
         }
 
         /* Print styles for permit hardcopies */
@@ -927,12 +1365,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body class="theme-dark">
     <div class="public-wrap">
+        <header class="public-brand-header">
+            <a class="public-brand-link" href="<?= htmlspecialchars($app->url('/'), ENT_QUOTES, 'UTF-8') ?>" aria-label="<?= htmlspecialchars('Return to ' . $companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                <?php if ($companyLogoUrl): ?>
+                    <img class="public-brand-logo" src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="">
+                <?php else: ?>
+                    <span class="public-brand-symbol" aria-hidden="true"><?= htmlspecialchars(mb_strtoupper(mb_substr($companyName, 0, 1, 'UTF-8'), 'UTF-8'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+                <?php endif; ?>
+                <span class="public-brand-copy">
+                    <span class="public-brand-name"><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+                    <span class="public-brand-subtitle">Permit centre · Home</span>
+                </span>
+            </a>
+        </header>
         <div class="public-card">
             <?php if ($success): ?>
                 <!-- Success Message -->
                 <div class="success-message">
                     <?php if (!empty($isDraftAction)): ?>
                         <h2>📝 Draft Saved</h2>
+                        <p><strong>Reference:</strong> #<?php echo htmlspecialchars($ref_number ?? 'N/A'); ?></p>
                         <p>You can resume editing this permit using the link below.</p>
                     <?php else: ?>
                         <h2>✅ Permit Submitted Successfully!</h2>
@@ -941,17 +1393,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
                     <p class="success-reminder">
                         You can check the status anytime on the homepage<br>
-                        by entering your email address.
+                        using your email address and permit reference.
                     </p>
-                    <?php if (!empty($unique_link)): ?>
+                    <?php if (!empty($unique_link) && $isDraftAction): ?>
                         <div class="success-meta">
                             <div><strong>Edit Link:</strong> <a href="<?php echo htmlspecialchars($app->url('create-permit-public.php?draft=' . urlencode($unique_link))); ?>">Resume editing</a></div>
                         </div>
-                    <?php endif; ?>
-                    <?php if (!empty($notification_enabled)): ?>
-                        <p class="success-reminder">
-                            🔔 We'll send you a notification when your permit is approved!
-                        </p>
+                    <?php elseif (!empty($unique_link)): ?>
+                        <div class="success-meta">
+                            <div><strong>Permit Link:</strong> <a href="<?php echo htmlspecialchars($app->url('view-permit-public.php?link=' . urlencode($unique_link))); ?>">View your submitted permit</a></div>
+                        </div>
                     <?php endif; ?>
                     <div class="success-actions">
                         <a href="<?php echo htmlspecialchars($app->url('/')); ?>" class="btn btn-primary btn-block">← Back to Homepage</a>
@@ -989,7 +1440,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
                 
                 <form method="POST" id="permitForm" enctype="multipart/form-data">
-                    <?php if ($existingPermit): ?>
+                    <?php echo \Permits\Csrf::getFormField('public-permit-submit'); ?>
+                    <div class="form-honeypot" aria-hidden="true">
+                        <label for="website">Website</label>
+                        <input type="text" id="website" name="website" value="" tabindex="-1" autocomplete="off">
+                    </div>
+                    <?php if ($existingPermit && $isUpdate): ?>
                         <input type="hidden" name="permit_id" value="<?php echo htmlspecialchars($existingPermit['id']); ?>">
                     <?php endif; ?>
                     
@@ -998,28 +1454,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div class="form-group">
                         <label>Your Name <span class="required">*</span></label>
-                        <input type="text" name="holder_name" required placeholder="John Smith" value="<?php echo htmlspecialchars($existingPermit['holder_name'] ?? ''); ?>">
+                        <input type="text" name="holder_name" required maxlength="255" autocomplete="name" placeholder="John Smith" value="<?php echo htmlspecialchars($holder_name); ?>">
                     </div>
                     
                     <div class="form-group">
                         <label>Your Email <span class="required">*</span></label>
-                        <input type="email" name="holder_email" required placeholder="john@example.com" value="<?php echo htmlspecialchars($existingPermit['holder_email'] ?? ''); ?>">
+                        <input type="email" name="holder_email" required maxlength="255" inputmode="email" autocomplete="email" placeholder="john@example.com" value="<?php echo htmlspecialchars($holder_email); ?>">
                     </div>
                     
                     <div class="form-group">
                         <label>Your Phone Number</label>
-                        <input type="tel" name="holder_phone" placeholder="+44 7700 900000" value="<?php echo htmlspecialchars($existingPermit['holder_phone'] ?? ''); ?>">
+                        <input type="tel" name="holder_phone" maxlength="50" inputmode="tel" autocomplete="tel" placeholder="+44 7700 900000" value="<?php echo htmlspecialchars($holder_phone); ?>">
                     </div>
                     
-                    <!-- Push Notifications -->
                     <div class="notification-box">
-                        <div class="checkbox-group">
-                            <input type="checkbox" name="enable_notifications" id="enable_notifications">
-                            <label for="enable_notifications">
-                                🔔 <strong>Get notified when your permit is approved</strong><br>
-                                <span>We'll send you a browser notification (optional)</span>
-                            </label>
-                        </div>
+                        <strong>Decision updates</strong><br>
+                        <span>Approval or rejection updates are sent to the email address above.</span>
                     </div>
                     
                     <!-- Dynamic Form Fields -->
@@ -1044,7 +1494,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $fieldType = $field['type'] ?? 'text';
                             $fieldName = (string)$field['name'];
                             $fieldLabel = (string)($field['label'] ?? $fieldName);
-                            $fieldRequired = !empty($field['required']);
+                            // Safety checklist items are always mandatory when submitting.
+                            // The Save Draft action removes required attributes before submit.
+                            $fieldRequired = !empty($field['required']) || !empty($field['scoreItem']);
                             $fieldPlaceholder = (string)($field['placeholder'] ?? '');
                             $fieldOptions = $field['options'] ?? [];
                         ?>
@@ -1060,6 +1512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <textarea 
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        maxlength="5000"
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                     ><?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?></textarea>
                                 <?php elseif ($fieldType === 'select'): ?>
@@ -1120,7 +1573,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 $optionId = $fieldName . '_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower($optionValue));
                                                 $variant = in_array(strtolower($optionValue), ['yes','no','na'], true) ? 'choice-' . strtolower($optionValue) : '';
                                         ?>
-                                            <input class="choice-input" type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" <?php echo ($fieldRequired && $firstOption) ? 'required' : ''; ?> <?php echo ($existingVal !== '' && (string)$existingVal === (string)$optionValue) ? 'checked' : ''; ?>>
+                                            <input class="choice-input" type="radio" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars($optionValue); ?>" id="<?php echo htmlspecialchars($optionId); ?>" data-score-item="<?php echo $isScoreItem ? 'true' : 'false'; ?>" <?php echo ($fieldRequired && $firstOption) ? 'required' : ''; ?> <?php echo ($existingVal !== '' && (string)$existingVal === (string)$optionValue) ? 'checked' : ''; ?>>
                                             <label class="choice-pill <?php echo htmlspecialchars($variant); ?>" for="<?php echo htmlspecialchars($optionId); ?>"><?php echo htmlspecialchars($optionLabel); ?></label>
                                         <?php $firstOption = false; endforeach; ?>
                                     </div>
@@ -1140,7 +1593,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             </div>
                                             <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" capture="environment" multiple>
                                             <input class="hidden-input" type="file" name="<?php echo htmlspecialchars($fieldName); ?>_media[]" accept="image/*,video/*" multiple>
-                                            <div class="media-note">💡 Tip: Attach photos of safety equipment, site conditions, or documentation</div>
+                                            <div class="media-note">Attach up to 5 photos or videos here (<?php echo $currentUser !== null ? '25 MB each; 50 MB total' : '10 MB each; 20 MB total'; ?> per permit).</div>
                                         </div>
                                     <?php endif; ?>
                                 <?php elseif ($fieldType === 'date'): ?>
@@ -1172,6 +1625,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         type="number" 
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        <?php echo isset($field['min']) ? 'min="' . htmlspecialchars((string) $field['min']) . '"' : ''; ?>
+                                        <?php echo isset($field['max']) ? 'max="' . htmlspecialchars((string) $field['max']) . '"' : ''; ?>
+                                        <?php echo isset($field['step']) ? 'step="' . htmlspecialchars((string) $field['step']) . '"' : 'step="any"'; ?>
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                         value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
@@ -1180,6 +1636,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         type="email" 
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        maxlength="255"
+                                        inputmode="email"
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                         value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
@@ -1188,6 +1646,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         type="tel" 
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        maxlength="50"
+                                        inputmode="tel"
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                         value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
@@ -1196,6 +1656,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         type="text" 
                                         name="<?php echo htmlspecialchars($fieldName); ?>"
                                         <?php echo $fieldRequired ? 'required' : ''; ?>
+                                        maxlength="1000"
                                         placeholder="<?php echo htmlspecialchars($fieldPlaceholder); ?>"
                                         value="<?php echo htmlspecialchars((string)($existingData[$fieldName] ?? '')); ?>"
                                     >
@@ -1203,10 +1664,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         <?php endforeach; ?>
                     <?php endforeach; ?>
+
+                    <div class="notification-box">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="applicant_declaration" value="1" id="applicant_declaration" required <?php echo !empty($existingData['_applicant_declaration']) ? 'checked' : ''; ?>>
+                            <label for="applicant_declaration">
+                                <strong>I confirm this information is accurate</strong><br>
+                                <span>I understand the controls listed and will not start work until the permit is approved.</span>
+                            </label>
+                        </div>
+                    </div>
                     
                     <!-- Submit -->
                     <div class="form-actions">
-                        <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
+                        <button type="submit" name="action" value="save_draft" class="btn btn-secondary" formnovalidate>
                             📝 Save Draft
                         </button>
                         <button type="submit" name="action" value="submit" class="btn btn-primary" id="submitBtn">
@@ -1241,6 +1712,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             let completedFields = 0;
             let scoreItems = [];
             let autoSaveTimer = null;
+            const autoSaveEnabled = <?php echo $currentUser !== null ? 'true' : 'false'; ?>;
+            const autoSaveKey = 'permit_session_draft_<?php echo hash('sha256', (string)($currentUser['id'] ?? 'guest') . '|' . (string)$template_id); ?>';
+            const requiredValueSelector = [
+                'input[type="text"][required]',
+                'input[type="email"][required]',
+                'input[type="tel"][required]',
+                'input[type="date"][required]',
+                'input[type="time"][required]',
+                'input[type="datetime-local"][required]',
+                'input[type="number"][required]',
+                'textarea[required]',
+                'select[required]'
+            ].join(',');
 
             // Initialize
             function init() {
@@ -1251,26 +1735,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 restoreAutoSavedData();
             }
 
-            // Count all fields for progress calculation
+            function requiredRadioGroups(scope) {
+                const groups = new Set();
+                scope.querySelectorAll('input[type="radio"][required], input[type="radio"][data-score-item="true"]').forEach(radio => {
+                    if (radio.name) groups.add(radio.name);
+                });
+                return groups;
+            }
+
+            // Progress reflects only fields required for a final submission.
             function countFields() {
                 const form = document.getElementById('permitForm');
                 if (!form) return;
 
-                // Count text inputs, textareas, selects
-                totalFields += form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select').length;
-
-                // Count radio groups (count each group as 1 field)
-                const radioGroups = new Set();
+                totalFields = form.querySelectorAll(requiredValueSelector).length;
+                totalFields += form.querySelectorAll('input[type="checkbox"][required]').length;
+                const radioGroups = requiredRadioGroups(form);
+                totalFields += radioGroups.size;
+                scoreItems = [];
                 form.querySelectorAll('input[type="radio"]').forEach(radio => {
-                    if (radio.name && !radioGroups.has(radio.name)) {
-                        radioGroups.add(radio.name);
-                        totalFields++;
-
-                        // Track score items for risk assessment
-                        const choiceGroup = radio.closest('.choice-group');
-                        if (choiceGroup && choiceGroup.classList.contains('vertical')) {
-                            scoreItems.push(radio.name);
-                        }
+                    if (radio.name && radio.dataset.scoreItem === 'true' && !scoreItems.includes(radio.name)) {
+                        scoreItems.push(radio.name);
                     }
                 });
             }
@@ -1302,20 +1787,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 let yesCount = 0;
                 let naCount = 0;
 
-                // Check text inputs, textareas, selects
-                form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select').forEach(field => {
-                    // Skip holder info fields (they're required and separate)
-                    if (field.name.startsWith('holder_')) return;
-                    
+                form.querySelectorAll(requiredValueSelector).forEach(field => {
                     if (field.value.trim() !== '' && field.value !== '') {
                         completedFields++;
                     }
                 });
 
-                // Check radio groups
+                form.querySelectorAll('input[type="checkbox"][required]').forEach(field => {
+                    if (field.checked) completedFields++;
+                });
+
                 const checkedGroups = new Set();
                 form.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
-                    if (radio.name && !radio.name.startsWith('holder_')) {
+                    if (radio.name && requiredRadioGroups(form).has(radio.name)) {
                         checkedGroups.add(radio.name);
                         
                         // Track for risk assessment
@@ -1330,7 +1814,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 completedFields += checkedGroups.size;
 
                 // Calculate percentage
-                const percentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+                const percentage = totalFields > 0 ? Math.min(100, Math.round((completedFields / totalFields) * 100)) : 0;
                 
                 // Update progress bar
                 const progressFill = document.getElementById('progressFill');
@@ -1361,24 +1845,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 riskIndicator.style.display = 'inline-flex';
                 
-                // Calculate risk level
-                const noPercentage = (noCount / totalScoreItems) * 100;
+                // Match server/start-work scoring: N/A responses are excluded.
+                const applicableChecks = yesCount + noCount;
+                const passPercentage = applicableChecks > 0 ? (yesCount / applicableChecks) * 100 : 100;
                 
                 // Remove all risk classes
                 riskIndicator.classList.remove('risk-low', 'risk-medium', 'risk-high');
                 
-                if (noPercentage >= 30) {
+                if (passPercentage < 60) {
                     riskIndicator.classList.add('risk-high');
                     riskIcon.textContent = '⚠️';
                     riskText.textContent = 'High Risk - ' + noCount + ' issues identified';
-                } else if (noPercentage >= 15 || noCount >= 3) {
+                } else if (passPercentage < 80) {
                     riskIndicator.classList.add('risk-medium');
                     riskIcon.textContent = '⚡';
                     riskText.textContent = 'Medium Risk - ' + noCount + ' issues to address';
                 } else {
                     riskIndicator.classList.add('risk-low');
                     riskIcon.textContent = '✓';
-                    riskText.textContent = 'Low Risk - ' + yesCount + ' checks passed';
+                    riskText.textContent = applicableChecks > 0
+                        ? 'Controls passed - ' + Math.round(passPercentage) + '%'
+                        : 'Checks marked not applicable';
                 }
             }
 
@@ -1410,18 +1897,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     while (currentElement && !currentElement.classList.contains('section-title')) {
                         // Count radio groups
-                        const radios = currentElement.querySelectorAll('input[type="radio"]');
-                        const radioGroups = new Set();
-                        radios.forEach(radio => {
-                            if (!radioGroups.has(radio.name)) {
-                                radioGroups.add(radio.name);
-                                sectionTotal++;
-                                if (radio.checked) sectionComplete++;
+                        const radioGroups = requiredRadioGroups(currentElement);
+                        radioGroups.forEach(name => {
+                            sectionTotal++;
+                            if (currentElement.querySelector('input[type="radio"][name="' + CSS.escape(name) + '"]:checked')) {
+                                sectionComplete++;
                             }
                         });
 
-                        // Count other fields
-                        currentElement.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"], textarea, select').forEach(field => {
+                        currentElement.querySelectorAll(requiredValueSelector).forEach(field => {
                             sectionTotal++;
                             if (field.value.trim() !== '') sectionComplete++;
                         });
@@ -1472,18 +1956,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Auto-save functionality
             function initAutoSave() {
-                // Only enable if editing a draft
-                <?php if ($existingPermit && $isUpdate): ?>
-                console.log('Auto-save enabled for draft permit');
-                <?php endif; ?>
+                // Browser recovery is session-scoped and only enabled for a
+                // signed-in user; anonymous/kiosk users never share saved PII.
             }
 
             function scheduleAutoSave() {
+                if (!autoSaveEnabled) return;
                 if (autoSaveTimer) clearTimeout(autoSaveTimer);
-                autoSaveTimer = setTimeout(saveToLocalStorage, 2000); // Save after 2 seconds of inactivity
+                autoSaveTimer = setTimeout(saveToSessionStorage, 2000);
             }
 
-            function saveToLocalStorage() {
+            function saveToSessionStorage() {
+                if (!autoSaveEnabled) return;
                 try {
                     const form = document.getElementById('permitForm');
                     if (!form) return;
@@ -1492,6 +1976,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     const data = {};
                     
                     for (let [key, value] of formData.entries()) {
+                        if (
+                            key === 'csrf_token'
+                            || key === 'website'
+                            || key === 'holder_name'
+                            || key === 'holder_email'
+                            || key === 'holder_phone'
+                            || key === 'applicant_declaration'
+                            || value instanceof File
+                        ) {
+                            continue;
+                        }
                         if (data[key]) {
                             // Handle multiple values (like checkboxes)
                             if (Array.isArray(data[key])) {
@@ -1504,38 +1999,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    const templateId = '<?php echo htmlspecialchars($template_id); ?>';
-                    localStorage.setItem('permit_draft_' + templateId, JSON.stringify({
+                    sessionStorage.setItem(autoSaveKey, JSON.stringify({
                         data: data,
                         timestamp: Date.now()
                     }));
-                    
-                    console.log('Auto-saved to local storage');
                 } catch (e) {
                     console.error('Auto-save failed:', e);
                 }
             }
 
             function restoreAutoSavedData() {
+                if (!autoSaveEnabled) return;
                 // Don't restore if we're already editing a permit
                 <?php if ($existingPermit): ?>
                 return;
                 <?php endif; ?>
 
                 try {
-                    const templateId = '<?php echo htmlspecialchars($template_id); ?>';
-                    const saved = localStorage.getItem('permit_draft_' + templateId);
+                    const saved = sessionStorage.getItem(autoSaveKey);
                     
                     if (saved) {
                         const parsed = JSON.parse(saved);
                         const ageMinutes = (Date.now() - parsed.timestamp) / 1000 / 60;
                         
-                        // Only restore if less than 24 hours old
-                        if (ageMinutes < 1440) {
+                        // Session recovery expires after two hours.
+                        if (ageMinutes < 120) {
                             if (confirm('We found an auto-saved draft from ' + Math.round(ageMinutes) + ' minutes ago. Would you like to restore it?')) {
                                 const form = document.getElementById('permitForm');
                                 if (form) {
                                     Object.keys(parsed.data).forEach(key => {
+                                        if (key === 'csrf_token') return;
                                         const field = form.elements[key];
                                         if (field) {
                                             if (field.type === 'radio') {
@@ -1552,8 +2045,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     updateProgress();
                                 }
                             } else {
-                                localStorage.removeItem('permit_draft_' + templateId);
+                                sessionStorage.removeItem(autoSaveKey);
                             }
+                        } else {
+                            sessionStorage.removeItem(autoSaveKey);
                         }
                     }
                 } catch (e) {
@@ -1561,16 +2056,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Clear auto-save on successful submit
-            document.addEventListener('DOMContentLoaded', function() {
-                const form = document.getElementById('permitForm');
-                if (form) {
-                    form.addEventListener('submit', function() {
-                        const templateId = '<?php echo htmlspecialchars($template_id); ?>';
-                        localStorage.removeItem('permit_draft_' + templateId);
-                    });
-                }
-            });
+            <?php if ($success && $currentUser !== null): ?>
+            sessionStorage.removeItem(autoSaveKey);
+            <?php endif; ?>
 
             // Initialize on DOM ready
             if (document.readyState === 'loading') {
@@ -1639,17 +2127,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        // Request notification permission if checkbox is checked
-        document.getElementById('enable_notifications')?.addEventListener('change', function(e) {
-            if (e.target.checked && 'Notification' in window) {
-                Notification.requestPermission().then(permission => {
-                    if (permission !== 'granted') {
-                        e.target.checked = false;
-                        alert('Please allow notifications in your browser settings');
-                    }
-                });
-            }
-        });
         // Save Draft should bypass HTML5 required on dynamic fields
         (function(){
             var form = document.getElementById('permitForm');

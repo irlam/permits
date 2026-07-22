@@ -7,6 +7,9 @@
 // Returns: { ok: true, deleted: n }
 
 declare(strict_types=1);
+
+use Permits\Csrf;
+
 date_default_timezone_set('Europe/London');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -22,10 +25,10 @@ header('X-Content-Type-Options: nosniff');
 //     exit;
 // }
 
-$root = dirname(__DIR__);
+$root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 [$app, $db] = require $root . '/src/bootstrap.php';
-if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
+require_once $root . '/src/Auth.php';
 
 function fail(int $code, string $msg): never {
     http_response_code($code);
@@ -36,12 +39,23 @@ function fail(int $code, string $msg): never {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     fail(405, 'Method not allowed');
 }
-if (empty($_SESSION['user_id'])) { fail(401, 'Authentication required'); }
+$auth = new Auth($db);
+$currentUser = $auth->requireJson();
+if (!Csrf::validateRequest('push-subscription')) {
+    fail(419, 'Page expired. Refresh the page and try again.');
+}
 
 // Read input (JSON or form)
 $endpoint = '';
 $ct = $_SERVER['CONTENT_TYPE'] ?? '';
-$raw = file_get_contents('php://input') ?: '';
+$maximumBytes = 16 * 1024;
+if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $maximumBytes) {
+    fail(413, 'Request too large');
+}
+$raw = file_get_contents('php://input', false, null, 0, $maximumBytes + 1) ?: '';
+if (strlen($raw) > $maximumBytes) {
+    fail(413, 'Request too large');
+}
 
 if (stripos($ct, 'application/json') !== false) {
     $data = json_decode($raw, true);
@@ -62,7 +76,7 @@ if (stripos($ct, 'application/json') !== false) {
     }
 }
 
-if ($endpoint === '') {
+if ($endpoint === '' || strlen($endpoint) > \Permits\PushSubscriptionValidator::MAX_ENDPOINT_LENGTH) {
     fail(422, 'Missing endpoint');
 }
 
@@ -71,7 +85,7 @@ $hash = hash('sha256', $endpoint);
 $pdo = $db->pdo;
 $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
 $stmt = $pdo->prepare("DELETE FROM push_subscriptions WHERE endpoint_hash = :h AND user_id = :user_id");
-$stmt->execute([':h' => $hash, ':user_id' => $_SESSION['user_id']]);
+$stmt->execute([':h' => $hash, ':user_id' => $currentUser['id']]);
 $deleted = $stmt->rowCount();
 
 // Idempotent success

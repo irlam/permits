@@ -3,25 +3,14 @@
  * Approval Notification Recipients Admin UI
  */
 
+use Permits\Csrf;
+
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 require_once __DIR__ . '/src/approval-notifications.php';
+require_once __DIR__ . '/src/Auth.php';
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $successMessage = '';
 $errorMessage = '';
@@ -34,6 +23,12 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-approval-notifications')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the notification settings and try again.</p>';
+        exit;
+    }
+
     $action = $_POST['action'] ?? '';
 
     try {
@@ -128,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php foreach ($recipients as $recipient): ?>
                             <?php $formId = 'update-' . htmlspecialchars($recipient['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
                             <form id="<?= $formId; ?>" method="post" style="display: contents;">
+                                <?= Csrf::getFormField('admin-approval-notifications') ?>
                                 <input type="hidden" name="action" value="update">
                                 <input type="hidden" name="id" value="<?= htmlspecialchars($recipient['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
                             </form>
@@ -142,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="actions">
                                         <button form="<?= $formId; ?>" type="submit" class="btn btn-secondary">Save</button>
                                         <form method="post" onsubmit="return confirm('Remove this recipient?');">
+                                            <?= Csrf::getFormField('admin-approval-notifications') ?>
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= htmlspecialchars($recipient['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
                                             <button type="submit" class="btn btn-danger">Delete</button>
@@ -158,6 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <h2>Add recipient</h2>
             <form method="post" style="margin-top: 16px; display: grid; gap: 16px;">
+                <?= Csrf::getFormField('admin-approval-notifications') ?>
                 <input type="hidden" name="action" value="add">
                 <div style="display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
                     <div>

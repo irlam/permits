@@ -5,11 +5,15 @@
 
 # Composer
 /vendor/
+/.composer-cache/
 # Application lockfile is committed for reproducible deployments.
 
 # User uploads
 /uploads/*
 !/uploads/.gitkeep
+!/uploads/.htaccess
+!/uploads/branding/
+!/uploads/branding/.gitkeep
 
 # Logs
 *.log
@@ -49,6 +53,7 @@ package-lock.json
 # Runtime/generated and local database material
 /backups/
 /data/*.sqlite
+/data/mail/
 /admin/test.txt
 /config/ai-settings.json
 /.phpunit.cache/

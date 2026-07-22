@@ -5,6 +5,10 @@
 // Returns: { ok: true, id: "...", action: "created"|"updated" }
 
 declare(strict_types=1);
+
+use Permits\Csrf;
+use Permits\PushSubscriptionValidator;
+
 date_default_timezone_set('Europe/London');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -14,12 +18,10 @@ header('X-Content-Type-Options: nosniff');
 // header('Access-Control-Allow-Origin: https://permits.defecttracker.uk');
 // header('Vary: Origin');
 
-$root = dirname(__DIR__);
+$root = dirname(__DIR__, 2);
 require $root . '/vendor/autoload.php';
 [$app, $db] = require $root . '/src/bootstrap.php';
-
-if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
-$userId = $_SESSION['user_id'] ?? null;
+require_once $root . '/src/Auth.php';
 
 function fail(int $code, string $msg): never {
     http_response_code($code);
@@ -28,7 +30,16 @@ function fail(int $code, string $msg): never {
 }
 
 function read_json(): array {
-    $raw = file_get_contents('php://input') ?: '';
+    $maximumBytes = 16 * 1024;
+    $declaredLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($declaredLength > $maximumBytes) {
+        fail(413, 'Request too large');
+    }
+
+    $raw = file_get_contents('php://input', false, null, 0, $maximumBytes + 1) ?: '';
+    if (strlen($raw) > $maximumBytes) {
+        fail(413, 'Request too large');
+    }
     $data = json_decode($raw, true);
     if (!is_array($data)) {
         fail(400, 'Invalid JSON');
@@ -43,24 +54,27 @@ function uuidv4(): string {
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($d), 4));
 }
 
-$payload = read_json();
-
-if (!$userId) { fail(401, 'Authentication required'); }
-$userCheck = $db->pdo->prepare("SELECT id FROM users WHERE id = ? AND status = 'active'");
-$userCheck->execute([$userId]);
-if (!$userCheck->fetchColumn()) { fail(401, 'Authentication required'); }
-
-$endpoint = trim((string)($payload['endpoint'] ?? ''));
-$p256dh   = (string)($payload['keys']['p256dh'] ?? '');
-$auth     = (string)($payload['keys']['auth'] ?? '');
-
-if ($endpoint === '' || $p256dh === '' || $auth === '') {
-    fail(422, 'Missing endpoint or keys');
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') { fail(405, 'Method not allowed'); }
+$auth = new Auth($db);
+$currentUser = $auth->requireJson();
+$userId = (string)$currentUser['id'];
+if (!Csrf::validateRequest('push-subscription')) {
+    fail(419, 'Page expired. Refresh the page and try again.');
 }
 
-// Basic length sanity to avoid oversized rows
-if (strlen($p256dh) > 255 || strlen($auth) > 255) {
-    fail(422, 'Key length too long');
+$payload = read_json();
+
+$endpoint = (string)($payload['endpoint'] ?? '');
+$p256dh = (string)($payload['keys']['p256dh'] ?? '');
+$authKey = (string)($payload['keys']['auth'] ?? '');
+
+try {
+    $validated = PushSubscriptionValidator::validate($endpoint, $p256dh, $authKey);
+    $endpoint = $validated['endpoint'];
+    $p256dh = $validated['p256dh'];
+    $authKey = $validated['auth'];
+} catch (InvalidArgumentException $exception) {
+    fail(422, $exception->getMessage());
 }
 
 $endpointHash = hash('sha256', $endpoint);
@@ -94,7 +108,7 @@ $ok = $stmt->execute([
     ':endpoint'      => $endpoint,
     ':endpoint_hash' => $endpointHash,
     ':p256dh'        => $p256dh,
-    ':auth'          => $auth,
+    ':auth'          => $authKey,
 ]);
 
 if (!$ok) {

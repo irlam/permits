@@ -3,41 +3,40 @@
  * Admin Backup Utility
  *
  * Creates full application backups (files + database) that can be
- * restored on a different server. Produces a timestamped ZIP inside
- * the project "backups" directory and offers direct download.
+ * restored on a different server. Archives are stored in a private
+ * directory outside the document root and are available to admins only.
  */
 
 require __DIR__ . '/../vendor/autoload.php';
+use Permits\Csrf;
+use Permits\BackupStorage;
+
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/Auth.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT role FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$user = $stmt->fetchColumn();
-if ($user !== 'admin') {
-    http_response_code(403);
-    echo 'Access denied';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $errors = [];
 $messages = [];
-$backupDir = $root . '/backups';
-if (!is_dir($backupDir)) {
-    @mkdir($backupDir, 0755, true);
+$backupDir = null;
+try {
+    $backupDir = BackupStorage::ensure($root);
+} catch (Throwable $storageError) {
+    $errors[] = $storageError->getMessage();
 }
 
 $download = $_GET['download'] ?? null;
 if ($download) {
+    if (!is_string($backupDir)) {
+        http_response_code(503);
+        exit('Backup storage is unavailable');
+    }
     $safeName = basename($download);
+    if (preg_match('/^permits_backup_\d{8}_\d{6}\.zip$/', $safeName) !== 1) {
+        http_response_code(404);
+        exit('Backup not found');
+    }
     $path = realpath($backupDir . '/' . $safeName);
     if ($path === false || !str_starts_with($path, realpath($backupDir) . DIRECTORY_SEPARATOR)) {
         http_response_code(404);
@@ -50,17 +49,26 @@ if ($download) {
     header('Content-Type: application/zip');
     header('Content-Disposition: attachment; filename="' . $safeName . '"');
     header('Content-Length: ' . filesize($path));
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('X-Content-Type-Options: nosniff');
     readfile($path);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !Csrf::validateRequest('admin-backup', true)) {
+    http_response_code(419);
+    echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the backup page and try again.</p>';
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_backup'])) {
     $includeVendor = isset($_POST['include_vendor']);
-    $includeBackups = isset($_POST['include_backups']);
     try {
-        $result = create_full_backup($root, $db->pdo, [
+        if (!is_string($backupDir)) {
+            throw new RuntimeException('Private backup storage is unavailable.');
+        }
+        $result = create_full_backup($root, $backupDir, $db->pdo, [
             'includeVendor'  => $includeVendor,
-            'includeBackups' => $includeBackups,
         ]);
         $messages[] = 'Backup created: ' . htmlspecialchars($result['name']) . ' (' . format_bytes($result['size']) . ')';
     } catch (Throwable $e) {
@@ -68,9 +76,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_backup'])) {
     }
 }
 
-$existingBackups = list_backups($backupDir);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_backup'])) {
+    try {
+        if (!is_string($backupDir)) {
+            throw new RuntimeException('Private backup storage is unavailable.');
+        }
+        $safeName = basename((string)$_POST['delete_backup']);
+        if (preg_match('/^permits_backup_\d{8}_\d{6}\.zip$/', $safeName) !== 1) {
+            throw new RuntimeException('Backup not found.');
+        }
+        $path = realpath($backupDir . DIRECTORY_SEPARATOR . $safeName);
+        if ($path === false || !str_starts_with($path, $backupDir . DIRECTORY_SEPARATOR) || !is_file($path)) {
+            throw new RuntimeException('Backup not found.');
+        }
+        if (!@unlink($path)) {
+            throw new RuntimeException('Unable to delete the backup.');
+        }
+        $messages[] = 'Backup deleted.';
+    } catch (Throwable $deleteError) {
+        $errors[] = $deleteError->getMessage();
+    }
+}
 
-function create_full_backup(string $root, PDO $pdo, array $options): array
+$existingBackups = is_string($backupDir) ? list_backups($backupDir) : [];
+
+function create_full_backup(string $root, string $backupDir, PDO $pdo, array $options): array
 {
     if (!class_exists('ZipArchive')) {
         throw new RuntimeException('ZipArchive extension required.');
@@ -78,27 +108,29 @@ function create_full_backup(string $root, PDO $pdo, array $options): array
     set_time_limit(0);
     $timestamp = date('Ymd_His');
     $zipName = 'permits_backup_' . $timestamp . '.zip';
-    $zipPath = $root . '/backups/' . $zipName;
+    $zipPath = $backupDir . DIRECTORY_SEPARATOR . $zipName;
 
     $zip = new ZipArchive();
-    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-        throw new RuntimeException('Unable to create backup archive.');
-    }
+    try {
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Unable to create backup archive.');
+        }
 
     $includeVendor = !empty($options['includeVendor']);
-    $includeBackups = !empty($options['includeBackups']);
-
     $excludePrefixes = [
         '.git',
         '.github',
+        '.phpunit.cache',
         '.vscode',
+        'backups',
+        'data/mail',
+        'database/database.sql',
         'node_modules',
+        'storage',
+        'work-composer.phar',
     ];
     if (!$includeVendor) {
         $excludePrefixes[] = 'vendor';
-    }
-    if (!$includeBackups) {
-        $excludePrefixes[] = 'backups';
     }
 
     $filterIterator = new RecursiveCallbackFilterIterator(
@@ -140,24 +172,36 @@ function create_full_backup(string $root, PDO $pdo, array $options): array
         $zip->addFromString('database/database.sql', $sqlDump);
     }
 
-    $manifest = build_manifest($root, $databaseName, $includeVendor, $includeBackups);
+    $manifest = build_manifest($databaseName, $includeVendor);
     $zip->addFromString('MANIFEST.txt', $manifest);
 
     $readme = build_readme($databaseName);
     $zip->addFromString('README.md', $readme);
 
-    $zip->close();
-    @chmod($zipPath, 0640);
+        if (!$zip->close()) {
+            throw new RuntimeException('Unable to finish the backup archive.');
+        }
+        @chmod($zipPath, 0640);
+        $archiveSize = filesize($zipPath) ?: 0;
+    } catch (Throwable $backupError) {
+        @$zip->close();
+        @unlink($zipPath);
+        throw $backupError;
+    }
 
     return [
         'path' => $zipPath,
         'name' => $zipName,
-        'size' => filesize($zipPath) ?: 0,
+        'size' => $archiveSize,
     ];
 }
 
 function should_exclude(string $relativePath, array $prefixes): bool
 {
+    $relativePath = str_replace('\\', '/', $relativePath);
+    if ($relativePath === '.env' || str_starts_with($relativePath, '.env.')) {
+        return true;
+    }
     foreach ($prefixes as $prefix) {
         if ($prefix === '') {
             continue;
@@ -291,15 +335,14 @@ function export_sqlite_database(PDO $pdo): string
     return $sql;
 }
 
-function build_manifest(string $root, string $databaseName, bool $includeVendor, bool $includeBackups): string
+function build_manifest(string $databaseName, bool $includeVendor): string
 {
     $manifest = "============================================================\n";
     $manifest .= "PERMIT SYSTEM BACKUP MANIFEST\n";
     $manifest .= "Generated: " . date('Y-m-d H:i:s') . "\n";
-    $manifest .= "Root Path: {$root}\n";
     $manifest .= "Database: " . ($databaseName !== '' ? $databaseName : 'N/A') . "\n";
     $manifest .= "Includes vendor/: " . ($includeVendor ? 'yes' : 'no') . "\n";
-    $manifest .= "Includes backups/: " . ($includeBackups ? 'yes' : 'no') . "\n";
+    $manifest .= "Secrets (.env) and earlier backup archives: excluded\n";
     $manifest .= "============================================================\n";
     return $manifest;
 }
@@ -317,7 +360,7 @@ function build_readme(string $databaseName): string
     } else {
         $readme .= "See database/database.sql for statements\n";
     }
-    $readme .= "\nUpdate .env/APP_URL and other environment variables for the new server.\n";
+    $readme .= "\nThe .env secrets file is deliberately excluded. Create a fresh .env and set APP_URL, database, mail and notification credentials for the new server.\n";
     return $readme;
 }
 
@@ -391,7 +434,7 @@ function format_bytes(int $bytes): string
     <div class="wrap">
         <a class="back" href="/admin.php">⬅ Back to Admin</a>
         <h1>Backup Utility</h1>
-        <p class="meta">Create a full backup (application files and database) for quick migration to another server.</p>
+        <p class="meta">Create a full backup (application files and database) for recovery or migration. Archives are stored outside the public website directory.</p>
 
         <?php foreach ($messages as $message): ?>
             <div class="alert alert-success"><?= $message ?></div>
@@ -402,7 +445,9 @@ function format_bytes(int $bytes): string
 
         <div class="card">
             <h2 style="margin-top:0;">Create Backup</h2>
+            <p class="meta">Backups contain permit records, account data and private links. Download them promptly, store them in encrypted off-site storage, then remove the server copy. The <code>.env</code> secrets file and earlier backups are always excluded.</p>
             <form method="post">
+                <?= Csrf::getFormField('admin-backup') ?>
                 <div class="options">
                     <div class="option">
                         <label>
@@ -410,13 +455,6 @@ function format_bytes(int $bytes): string
                             Include <code>vendor/</code> directory
                         </label>
                         <p class="meta">Keeps Composer dependencies packed. Uncheck if you prefer to run <code>composer install</code> after restore.</p>
-                    </div>
-                    <div class="option">
-                        <label>
-                            <input type="checkbox" name="include_backups" value="1">
-                            Include existing backups
-                        </label>
-                        <p class="meta">Leave unchecked to avoid nested archives.</p>
                     </div>
                 </div>
                 <button type="submit" name="create_backup" value="1" class="btn btn-primary" style="margin-top:18px;">
@@ -447,6 +485,10 @@ function format_bytes(int $bytes): string
                                 <td><?= format_bytes((int)$backup['size']) ?></td>
                                 <td>
                                     <a class="btn btn-secondary" href="?download=<?= urlencode($backup['name']) ?>">Download</a>
+                                    <form method="post" style="display:inline" onsubmit="return confirm('Delete this server backup?');">
+                                        <?= Csrf::getFormField('admin-backup') ?>
+                                        <button class="btn btn-secondary" type="submit" name="delete_backup" value="<?= htmlspecialchars($backup['name'], ENT_QUOTES, 'UTF-8') ?>">Delete</button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -461,7 +503,7 @@ function format_bytes(int $bytes): string
                 <li>Upload the ZIP to the new server and extract it in the document root.</li>
                 <li>Create a new database and import <code>database/database.sql</code>.</li>
                 <li>Update <code>.env</code> with new database/user credentials and APP_URL.</li>
-                <li>Set correct file permissions for <code>storage</code>/<code>backups</code> if needed.</li>
+                <li>Set private permissions for <code>data</code> and the external backup folder, plus writable permissions for <code>uploads</code>.</li>
                 <li>Remove downloaded backups from the server after verifying restore.</li>
             </ul>
         </div>

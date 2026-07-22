@@ -3,24 +3,13 @@
  * Permit Template Editor (Admin)
  */
 
+use Permits\Csrf;
+
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 function formatDateForDisplay(?string $value): string
 {
@@ -69,14 +58,23 @@ $schemaText = '';
 $structureText = '';
 $schemaArray = null;
 $schemaDecodeError = null;
+$templateEnabled = true;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-template-editor')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the template editor and try again.</p>';
+        exit;
+    }
 
     $activeTemplateId = trim($_POST['template_id'] ?? '');
     $formName = trim($_POST['name'] ?? '');
     $formVersion = trim($_POST['version'] ?? '');
     $schemaInput = trim($_POST['json_schema'] ?? '');
     $structureInput = trim($_POST['form_structure'] ?? '');
+    $templateEnabled = isset($_POST['active'])
+        && is_scalar($_POST['active'])
+        && hash_equals('1', (string)$_POST['active']);
 
     if ($activeTemplateId === '') {
         $errors[] = 'Template identifier missing.';
@@ -134,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $nameValue = $formName;
         $versionValue = (int)$formVersion;
+        $activeValue = $templateEnabled ? 1 : 0;
         $schemaValue = json_encode($decodedSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $structureValue = null;
 
@@ -144,11 +143,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($supportsFormStructure) {
-            $sql = "UPDATE form_templates SET name = ?, version = ?, json_schema = ?, form_structure = ?, updated_at = $timestampExpr WHERE id = ?";
-            $params = [$nameValue, $versionValue, $schemaValue, $structureValue, $activeTemplateId];
+            $sql = "UPDATE form_templates SET name = ?, version = ?, active = ?, json_schema = ?, form_structure = ?, updated_at = $timestampExpr WHERE id = ?";
+            $params = [$nameValue, $versionValue, $activeValue, $schemaValue, $structureValue, $activeTemplateId];
         } else {
-            $sql = "UPDATE form_templates SET name = ?, version = ?, json_schema = ?, updated_at = $timestampExpr WHERE id = ?";
-            $params = [$nameValue, $versionValue, $schemaValue, $activeTemplateId];
+            $sql = "UPDATE form_templates SET name = ?, version = ?, active = ?, json_schema = ?, updated_at = $timestampExpr WHERE id = ?";
+            $params = [$nameValue, $versionValue, $activeValue, $schemaValue, $activeTemplateId];
         }
 
         $update = $db->pdo->prepare($sql);
@@ -160,7 +159,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'admin',
                 'form_template',
                 $activeTemplateId,
-                sprintf('Template %s updated via admin UI by %s (%s).', $activeTemplateId, $currentUser['name'] ?? 'admin', $currentUser['email'] ?? '')
+                sprintf(
+                    'Template %s updated via admin UI by %s (%s); availability: %s.',
+                    $activeTemplateId,
+                    $currentUser['name'] ?? 'admin',
+                    $currentUser['email'] ?? '',
+                    $templateEnabled ? 'available' : 'hidden'
+                )
             );
         }
 
@@ -177,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$listStmt = $db->pdo->query('SELECT id, name, version, updated_at, published_at FROM form_templates ORDER BY name ASC');
+$listStmt = $db->pdo->query('SELECT id, name, version, active, updated_at, published_at FROM form_templates ORDER BY name ASC');
 $templates = $listStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $editingTemplate = null;
@@ -198,6 +203,9 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         }
         if ($formVersion === '' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
             $formVersion = (string)($editingTemplate['version'] ?? '');
+        }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $templateEnabled = (int)($editingTemplate['active'] ?? 0) === 1;
         }
         if ($schemaText === '' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
             $schemaText = prettyPrintJson($editingTemplate['json_schema'] ?? '');
@@ -259,6 +267,8 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
         .template-title { font-weight: 600; font-size: 15px; }
         .template-meta { display: flex; gap: 10px; align-items: center; font-size: 12px; color: #94a3b8; }
         .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(148, 163, 184, 0.18); color: #e2e8f0; font-size: 12px; }
+        .tag-live { background: rgba(34, 197, 94, 0.16); color: #bbf7d0; }
+        .tag-hidden { background: rgba(251, 191, 36, 0.16); color: #fde68a; }
         .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; background: #3b82f6; color: #fff; text-decoration: none; font-size: 14px; }
         .btn:hover { background: #2563eb; }
         .btn-secondary { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; }
@@ -351,6 +361,7 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                                     <span class="template-title"><?php echo htmlspecialchars($template['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
                                     <div class="template-meta">
                                         <span class="tag">v<?php echo htmlspecialchars((string)$template['version'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                                        <span class="tag <?php echo (int)($template['active'] ?? 0) === 1 ? 'tag-live' : 'tag-hidden'; ?>"><?php echo (int)($template['active'] ?? 0) === 1 ? 'Available' : 'Hidden'; ?></span>
                                         <span><?php echo htmlspecialchars($template['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
                                         <span>Updated <?php echo formatDateForDisplay($template['updated_at'] ?? null); ?></span>
                                     </div>
@@ -401,6 +412,7 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                     <?php if ($schemaArray === null && $schemaDecodeError !== null): ?>
                         <p class="inline-note" style="margin-bottom:16px;">We could not convert this template into the visual editor yet, so the raw JSON editor is shown below.</p>
                         <form method="post" novalidate>
+                            <?= Csrf::getFormField('admin-template-editor') ?>
                             <input type="hidden" name="template_id" value="<?php echo htmlspecialchars($editingTemplate['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
                             <div class="field-inline">
                                 <div class="field-group">
@@ -413,6 +425,14 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                                     <input type="number" id="version" name="version" min="1" value="<?php echo htmlspecialchars($formVersion, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" required>
                                     <p class="helper">Increase when publishing changes.</p>
                                 </div>
+                            </div>
+
+                            <div class="field-group">
+                                <label class="switch" for="active-raw">
+                                    <input type="checkbox" id="active-raw" name="active" value="1" <?php echo $templateEnabled ? 'checked' : ''; ?>>
+                                    <span>Available for new permits</span>
+                                </label>
+                                <p class="helper">Turn this off to hide the template from applicants. Existing permits remain available.</p>
                             </div>
 
                             <div class="json-editor-grid">
@@ -438,6 +458,7 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                         </form>
                     <?php else: ?>
                         <form id="template-editor-form" method="post" novalidate>
+                            <?= Csrf::getFormField('admin-template-editor') ?>
                             <input type="hidden" name="template_id" value="<?php echo htmlspecialchars($editingTemplate['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
                             <div id="ui-errors" class="alert alert-error alert-inline"></div>
 
@@ -481,6 +502,13 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                                             <input type="text" id="schema_summary" placeholder="Short description" value="<?php echo htmlspecialchars(is_array($schemaArray) ? ($schemaArray['summary'] ?? '') : '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
                                             <p class="helper">Appears in overviews where supported.</p>
                                         </div>
+                                    </div>
+                                    <div class="field-group">
+                                        <label class="switch" for="active-visual">
+                                            <input type="checkbox" id="active-visual" name="active" value="1" <?php echo $templateEnabled ? 'checked' : ''; ?>>
+                                            <span>Available for new permits</span>
+                                        </label>
+                                        <p class="helper">Turn this off to hide the template from applicants. Existing permits remain available.</p>
                                     </div>
                                 </section>
 
@@ -548,7 +576,7 @@ if ($activeTemplateId !== null && $activeTemplateId !== '') {
                             <div class="form-footer">
                                 <button type="submit" class="btn">Save Changes</button>
                                 <a class="btn btn-secondary" href="/admin-template-editor.php">Cancel</a>
-                                <span class="inline-note">Saved templates update instantly for new permits.</span>
+                                <span class="inline-note">Available templates update instantly for new permits.</span>
                             </div>
                         </form>
                     <?php endif; ?>

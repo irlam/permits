@@ -6,61 +6,86 @@
  * No API keys required; uses public web scraping and conversion for demonstration.
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+use Permits\SafeExternalResource;
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
+use Permits\Csrf;
 
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/Auth.php';
 
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $messages = [];
 $errors = [];
+$externalFetcher = new SafeExternalResource();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-external-template-import')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the external template importer and try again.</p>';
+        exit;
+    }
+
     $source = $_POST['source'] ?? '';
-    $templateUrl = $_POST['template_url'] ?? '';
-    if ($source && $templateUrl) {
-        // Basic fetch and conversion logic (demo: fetches SafetyCulture public template page and creates a stub JSON)
-        $raw = @file_get_contents($templateUrl);
-        if ($raw && strpos($raw, '<html') !== false) {
+    $templateUrl = trim((string)($_POST['template_url'] ?? ''));
+    if (in_array($source, ['safetyculture', 'osha', 'hse', 'other'], true) && $templateUrl !== '') {
+        try {
+            $download = $externalFetcher->fetch(
+                $templateUrl,
+                ['html', 'htm'],
+                ['text/html', 'application/xhtml+xml'],
+                2 * 1024 * 1024
+            );
+            $raw = $download['body'];
+            $templateUrl = $download['final_url'];
+
             // Extract a title for demonstration
-            if (preg_match('/<title>(.*?)<\\/title>/', $raw, $m)) {
-                $title = trim(strip_tags($m[1]));
+            if (preg_match('/<title>(.*?)<\\/title>/si', $raw, $m)) {
+                $title = html_entity_decode(strip_tags($m[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $title = trim((string)preg_replace('/\s+/u', ' ', $title));
             } else {
                 $title = 'Imported Template';
             }
-            $id = strtolower(preg_replace('/[^a-z0-9]+/', '-', $title)) . '-ext';
+            if ($title === '') {
+                $title = 'Imported Template';
+            }
+            $title = mb_substr($title, 0, 120, 'UTF-8');
+            $slug = trim(strtolower((string)preg_replace('/[^a-z0-9]+/', '-', $title)), '-');
+            $slug = substr($slug, 0, 80);
+            $id = ($slug !== '' ? $slug : 'imported-template') . '-ext';
             $json = [
                 'id' => $id,
                 'title' => $title,
                 'name' => $title,
-                'description' => 'Imported from ' . htmlspecialchars($templateUrl),
-                'fields' => [
-                    [ 'label' => 'Imported Field Example', 'type' => 'text', 'required' => false ]
-                ]
+                'version' => 1,
+                'description' => 'Imported from ' . $templateUrl,
+                'meta' => [
+                    'title' => 'Permit Details',
+                    'fields' => [
+                        [
+                            'key' => 'imported_field_example',
+                            'label' => 'Imported Field Example',
+                            'type' => 'text',
+                            'required' => false,
+                        ],
+                    ],
+                ],
+                'sections' => [],
+                'signatures' => [],
             ];
-            $jsonPath = $root . '/templates/forms/' . $id . '.json';
-            file_put_contents($jsonPath, json_encode($json, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
-            $messages[] = 'Imported template: ' . $title . ' → ' . basename($jsonPath);
-        } else {
-            $errors[] = 'Failed to fetch or parse the template URL.';
+            $jsonPath = $root . '/templates/form-presets/' . $id . '.json';
+            $encoded = json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encoded === false || file_put_contents($jsonPath, $encoded, LOCK_EX) === false) {
+                $errors[] = 'The template was read, but the preset file could not be saved. Check folder permissions.';
+            } else {
+                $messages[] = 'Imported template: ' . $title . ' → ' . basename($jsonPath);
+            }
+        } catch (RuntimeException $e) {
+            $errors[] = $e->getMessage();
         }
     } else {
-        $errors[] = 'Source and template URL are required.';
+        $errors[] = 'Choose a source and enter a valid public HTTPS template address.';
     }
 }
 ?>
@@ -133,6 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="card">
             <h2>Import External Template</h2>
             <form method="post" style="margin-bottom:18px;">
+                <?= Csrf::getFormField('admin-external-template-import') ?>
                 <label><strong>Source:</strong><br>
                     <select name="source" required style="margin-top:4px;">
                         <option value="">Select Source</option>
@@ -153,9 +179,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <strong>Instructions:</strong>
                 <ol style="margin:8px 0 8px 20px;padding:0;">
                   <li>Choose a source and paste a public template/checklist URL.</li>
-                  <li>Click <b>Import Template</b>. The system will fetch the page and create a new template file.</li>
+                  <li>Click <b>Import Template</b>. The system will fetch the page and create a new preset.</li>
                   <li>Edit the imported template in <b>Edit Permit Templates</b> to match your needs.</li>
-                  <li>Re-run the <b>Permit Template Importer</b> to sync it into your system.</li>
+                  <li>Run the <b>Permit Template Importer</b> to publish the preset to your permit list.</li>
                 </ol>
                 <span style="color:#38bdf8">Note:</span> This tool currently creates a basic template from the page title. Full field mapping and batch import are coming soon.<br>
                 <span style="color:#fbbf24">Feedback and suggestions welcome!</span>

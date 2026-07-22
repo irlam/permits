@@ -1,6 +1,12 @@
 # --- Core: enable rewriting ---
 RewriteEngine On
 
+# Private application directories must never be served directly.
+RewriteRule ^(?:backups|bin|config|data|database|src|storage|templates|tests|vendor)(?:/|$) - [R=404,L,NC]
+
+# Uploaded content is data only; block executable extensions before the
+# existing-file short circuit below.
+RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$ - [F,NC,L]
 
 # 1) Serve existing files/directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -17,10 +23,7 @@ RewriteRule ^ index.php [QSA,L]
 # --- Protect sensitive files & folders ---
 
 # Return 404 for private directories if requested directly
-RedirectMatch 404 ^/(bin|data|src|templates|vendor|backups)/
-
-# Uploaded content is data only; never execute scripts from this directory.
-RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$ - [F,NC,L]
+RedirectMatch 404 ^/(backups|bin|config|data|database|src|storage|templates|tests|vendor)/
 
 # Deny access to .env and other dotfiles
 <FilesMatch "^\.env">
@@ -107,6 +110,17 @@ AddType text/javascript .mjs
 
   # Basic referrer privacy
   Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # HTTPS-only transport after the first secure visit.
+  Header always set Strict-Transport-Security "max-age=31536000"
+
+  Header always set X-Permitted-Cross-Domain-Policies "none"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+
+  # Inline styles/scripts remain for the current PHP views; other resource types
+  # and all form submissions are restricted to the application origin.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 
   # Minimal Permissions-Policy (allow what PWAs usually need; tweak as required)
   Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), display-capture=(), fullscreen=(self)"

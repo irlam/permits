@@ -9,15 +9,24 @@ permissions:
 
 jobs:
   test:
+    name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: curl, fileinfo, mbstring, pdo_sqlite
+          php-version: ${{ matrix.php }}
+          extensions: curl, fileinfo, gd, mbstring, pdo_sqlite, zip
           coverage: none
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist
       - run: composer check
-      - run: composer audit
+      - run: node --check assets/app.js
+      - run: node --check sw.js
+      - run: node --check customer-guide/assets/help.js
+      - if: matrix.php == '8.3'
+        run: composer audit

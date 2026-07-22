@@ -6,65 +6,89 @@ use Permits\Db;
 /**
  * Persist a row in the activity log table.
  */
-function log_activity(Db $db, string $user_id, string $type, string $description): bool
+function log_activity(
+    Db $db,
+    string $user_id,
+    string $type,
+    string $description,
+    string $category = 'general',
+    ?string $resourceType = null,
+    ?string $resourceId = null
+): bool
 {
     try {
+        /** @var \WeakMap<\PDO,array<int,string>>|null $columnCache */
         static $columnCache = null;
+        if (!$columnCache instanceof \WeakMap) {
+            $columnCache = new \WeakMap();
+        }
 
-        if ($columnCache === null) {
+        if (!isset($columnCache[$db->pdo])) {
             $driver = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
             if ($driver === 'mysql') {
                 $rows = $db->pdo->query('SHOW COLUMNS FROM activity_log')->fetchAll(\PDO::FETCH_ASSOC);
-                $columnCache = array_map(static fn($row) => strtolower((string)$row['Field']), $rows);
+                $columnCache[$db->pdo] = array_map(static fn($row) => strtolower((string)$row['Field']), $rows);
             } else {
                 $rows = $db->pdo->query('PRAGMA table_info(activity_log)')->fetchAll(\PDO::FETCH_ASSOC);
-                $columnCache = array_map(static fn($row) => strtolower((string)$row['name']), $rows);
+                $columnCache[$db->pdo] = array_map(static fn($row) => strtolower((string)$row['name']), $rows);
             }
         }
 
-        $columns = $columnCache ?? [];
+        $columns = $columnCache[$db->pdo] ?? [];
+        if ($columns === []) {
+            return false;
+        }
+
         $insertColumns = [];
         $placeholders = [];
         $params = [];
 
-        $insertColumns[] = 'user_id';
-        $placeholders[] = '?';
-        $params[] = $user_id;
+        $append = static function (string $column, $value) use (&$insertColumns, &$placeholders, &$params, $columns): void {
+            if (!in_array($column, $columns, true)) {
+                return;
+            }
+
+            $insertColumns[] = $column;
+            $placeholders[] = '?';
+            $params[] = $value;
+        };
+
+        $append('user_id', $user_id !== '' ? $user_id : null);
+        $append('user_email', $_SESSION['user_email'] ?? null);
 
         $recordDescription = $description;
 
+        // Populate both names when they exist. Some older installations use
+        // `type`, while the original production schema requires `action`.
         if (in_array('type', $columns, true)) {
-            $insertColumns[] = 'type';
-            $placeholders[] = '?';
-            $params[] = $type;
-        } elseif (in_array('action', $columns, true)) {
-            $insertColumns[] = 'action';
-            $placeholders[] = '?';
-            $params[] = $type;
-        } else {
+            $append('type', $type);
+        }
+        if (in_array('action', $columns, true)) {
+            $append('action', $type);
+        }
+        if (!in_array('type', $columns, true) && !in_array('action', $columns, true)) {
             $recordDescription = trim($type . ' ' . $recordDescription);
         }
 
+        $append('category', $category !== '' ? $category : 'general');
+        $append('resource_type', $resourceType);
+        $append('resource_id', $resourceId);
+
+        // Populate both description variants where present so legacy exports
+        // and newer admin screens show the same audit message.
         if (in_array('description', $columns, true)) {
-            $insertColumns[] = 'description';
-            $placeholders[] = '?';
-            $params[] = $recordDescription;
-        } elseif (in_array('details', $columns, true)) {
-            $insertColumns[] = 'details';
-            $placeholders[] = '?';
-            $params[] = $recordDescription;
+            $append('description', $recordDescription);
+        }
+        if (in_array('details', $columns, true)) {
+            $append('details', $recordDescription);
         }
 
-        if (in_array('ip_address', $columns, true)) {
-            $insertColumns[] = 'ip_address';
-            $placeholders[] = '?';
-            $params[] = $_SERVER['REMOTE_ADDR'] ?? null;
-        }
+        $append('ip_address', $_SERVER['REMOTE_ADDR'] ?? null);
+        $append('user_agent', $_SERVER['HTTP_USER_AGENT'] ?? null);
+        $append('status', 'success');
 
-        if (in_array('user_agent', $columns, true)) {
-            $insertColumns[] = 'user_agent';
-            $placeholders[] = '?';
-            $params[] = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        if ($insertColumns === []) {
+            return false;
         }
 
         $sql = 'INSERT INTO activity_log (' . implode(', ', $insertColumns) . ') VALUES (' . implode(', ', $placeholders) . ')';
@@ -139,6 +163,14 @@ if (!function_exists('logActivity')) {
             $message = ucfirst($type);
         }
 
-        return log_activity($db, $userId, $type, $message);
+        return log_activity(
+            $db,
+            $userId,
+            $type,
+            $message,
+            $category !== '' ? $category : 'general',
+            $entityType !== '' ? $entityType : null,
+            ($entityId !== null && $entityId !== '') ? (string)$entityId : null
+        );
     }
 }

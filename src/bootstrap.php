@@ -49,29 +49,38 @@ if ($debug) {
 }
 
 /** 4) Timezone + mbstring */
-\date_default_timezone_set((string)($_ENV['APP_TIMEZONE'] ?? 'Europe/London'));
+$configuredTimezone = (string)($_ENV['APP_TIMEZONE'] ?? ($_ENV['TIMEZONE'] ?? 'Europe/London'));
+if (!in_array($configuredTimezone, \DateTimeZone::listIdentifiers(), true)) {
+    error_log('Invalid APP_TIMEZONE configured; falling back to Europe/London.');
+    $configuredTimezone = 'Europe/London';
+}
+\date_default_timezone_set($configuredTimezone);
+$_ENV['APP_TIMEZONE'] = $configuredTimezone;
 if (\function_exists('mb_internal_encoding')) {
     \mb_internal_encoding('UTF-8');
 }
 
 /** 5) Normalise important paths/URLs */
 $APP_URL = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
-if ($APP_URL === '') {
-    // Fallback to current host if APP_URL is not set (should be set in prod!)
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
-    $APP_URL = $scheme . '://' . $host;
-} else {
+if ($APP_URL !== '') {
     $parsedAppUrl = @parse_url($APP_URL);
-    $currentHost = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? null);
-    if (!empty($currentHost) && is_array($parsedAppUrl)) {
-        $appHost = strtolower((string)($parsedAppUrl['host'] ?? ''));
-        $isLoopback = in_array($appHost, ['127.0.0.1', 'localhost'], true) || str_starts_with($appHost, '127.');
-        if ($isLoopback && strtolower($currentHost) !== $appHost) {
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $APP_URL = $scheme . '://' . $currentHost;
-        }
+    $validAppUrl = is_array($parsedAppUrl)
+        && in_array(strtolower((string) ($parsedAppUrl['scheme'] ?? '')), ['http', 'https'], true)
+        && filter_var((string) ($parsedAppUrl['host'] ?? ''), FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false
+        && !isset($parsedAppUrl['user'], $parsedAppUrl['pass'], $parsedAppUrl['query'], $parsedAppUrl['fragment']);
+    if (!$validAppUrl) {
+        error_log('Invalid APP_URL configured; using a safe local fallback until configuration is corrected.');
+        $APP_URL = '';
     }
+}
+if ($APP_URL === '') {
+    // HTTP_HOST is request-controlled and must never influence emailed links or QR codes.
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = strtolower(trim((string) ($_SERVER['SERVER_NAME'] ?? 'localhost')));
+    if (filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
+        $host = 'localhost';
+    }
+    $APP_URL = $scheme . '://' . $host;
 }
 $_ENV['APP_URL'] = $APP_URL;
 
@@ -86,6 +95,21 @@ $cookieSecure   = filter_var($_ENV['SESSION_COOKIE_SECURE']   ?? true, FILTER_VA
 $cookieHttpOnly = filter_var($_ENV['SESSION_COOKIE_HTTPONLY'] ?? true, FILTER_VALIDATE_BOOLEAN);
 $sameSite       = (string)($_ENV['SESSION_COOKIE_SAMESITE'] ?? 'Lax');
 $sessionName    = (string)($_ENV['SESSION_NAME'] ?? 'permits_session');
+$idleTimeout    = filter_var($_ENV['SESSION_IDLE_TIMEOUT'] ?? 7200, FILTER_VALIDATE_INT, [
+    'options' => ['min_range' => 300, 'max_range' => 86400],
+]);
+if ($idleTimeout === false) {
+    $idleTimeout = 7200;
+}
+$_ENV['SESSION_IDLE_TIMEOUT'] = (string)$idleTimeout;
+
+// Apply the protections before any entry point starts a session. Strict mode
+// rejects attacker-supplied IDs; cookies-only prevents IDs leaking into URLs.
+@\ini_set('session.use_strict_mode', '1');
+@\ini_set('session.use_only_cookies', '1');
+@\ini_set('session.use_trans_sid', '0');
+@\ini_set('session.cookie_httponly', $cookieHttpOnly ? '1' : '0');
+@\ini_set('session.gc_maxlifetime', (string)$idleTimeout);
 
 if (\PHP_VERSION_ID >= 70300) {
     @\session_name($sessionName);
@@ -155,7 +179,7 @@ $appConfig = [
     'APP_DEBUG'     => $debug,
     'APP_URL'       => $_ENV['APP_URL'],
     'APP_BASE_PATH' => $_ENV['APP_BASE_PATH'],
-    'APP_TIMEZONE'  => $_ENV['APP_TIMEZONE']  ?? 'Europe/London',
+    'APP_TIMEZONE'  => $configuredTimezone,
 
     // db
     'DB_DRIVER'     => $_ENV['DB_DRIVER']     ?? 'mysql',
@@ -189,6 +213,27 @@ $app = new App($appConfig);
 // Db class should be the hardened version we sent earlier
 require_once __DIR__ . '/Db.php';
 $db = new Db();
+
+// Non-secret regional settings may be managed from the admin panel. Environment
+// values remain the fallback when the settings table is unavailable.
+try {
+    $runtimeSettings = SystemSettings::load($db, ['app_timezone'], [
+        'app_timezone' => $configuredTimezone,
+    ]);
+    $runtimeTimezone = (string)($runtimeSettings['app_timezone'] ?? $configuredTimezone);
+    if (in_array($runtimeTimezone, timezone_identifiers_list(), true)) {
+        date_default_timezone_set($runtimeTimezone);
+        $_ENV['APP_TIMEZONE'] = $runtimeTimezone;
+        if ($db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
+            $runtimeOffset = date('P');
+            if (preg_match('/^[+-](?:0\d|1[0-4]):[0-5]\d$/', $runtimeOffset) === 1) {
+                $db->pdo->exec('SET SESSION time_zone = ' . $db->pdo->quote($runtimeOffset));
+            }
+        }
+    }
+} catch (Throwable $e) {
+    error_log('Unable to load runtime regional settings: ' . $e->getMessage());
+}
 
 // Make logging helpers available consistently across entry points.
 require_once __DIR__ . '/ActivityLogger.php';

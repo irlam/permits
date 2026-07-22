@@ -1,140 +1,49 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Database Health Check Script
- * 
- * Verifies database connection and table structure
- * Run this to ensure the database is properly configured
- * 
- * Usage: php bin/health-check.php
- */
+use Permits\ProductionHealthCheck;
 
-echo "=== Permits System Health Check ===\n\n";
-
-// Check database connection
-echo "1. Testing database connection...\n";
-try {
-    [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
-    echo "   ✓ Database connection successful\n";
-} catch (\Throwable $e) {
-    echo "   ✗ Database connection failed: " . $e->getMessage() . "\n";
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
     exit(1);
 }
 
-// Check required tables
-echo "\n2. Checking required tables...\n";
-$requiredTables = [
-    'form_templates',
-    'forms',
-    'form_events',
-    'attachments',
-    'users',
-    'email_queue',
-    'activity_log',
-];
+echo "=== Permits Production Health Check ===\n\n";
 
-$missingTables = [];
-foreach ($requiredTables as $table) {
-    try {
-        $stmt = $db->pdo->query("SELECT 1 FROM {$table} LIMIT 1");
-        echo "   ✓ Table '{$table}' exists\n";
-    } catch (\PDOException $e) {
-        echo "   ✗ Table '{$table}' missing or inaccessible\n";
-        $missingTables[] = $table;
-    }
+try {
+    [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+} catch (Throwable $e) {
+    error_log('Production health check bootstrap failure [' . get_class($e) . '].');
+    fwrite(STDERR, "[FAIL] Application bootstrap or database connection failed. Check the private server error log.\n");
+    exit(1);
 }
 
-if (!empty($missingTables)) {
-    echo "\n⚠ Missing tables found. Run migrations:\n";
-    echo "   php bin/migrate-features.php\n";
+$sessionCookieParameters = session_get_cookie_params();
+$checker = new ProductionHealthCheck(
+    $db->pdo,
+    $root,
+    [
+        'app_env' => $app->config('APP_ENV', 'production'),
+        'app_url' => $app->config('APP_URL', ''),
+        'app_debug' => $app->config('APP_DEBUG', false),
+        'session_cookie_secure' => $sessionCookieParameters['secure'] ?? false,
+        'session_cookie_httponly' => $sessionCookieParameters['httponly'] ?? false,
+        'db_driver' => $app->config('DB_DRIVER', ''),
+        'backup_path' => (string)($_ENV['BACKUP_PATH'] ?? ''),
+    ]
+);
+$report = $checker->run();
+
+foreach ($report['checks'] as $check) {
+    echo ($check['ok'] ? '[PASS] ' : '[FAIL] ') . $check['message'] . "\n";
 }
 
-// Check database driver
-echo "\n3. Database configuration...\n";
-$driver = $_ENV['DB_DRIVER'] ?? 'unknown';
-echo "   Driver: {$driver}\n";
-
-if ($driver === 'mysql') {
-    echo "   Host: " . ($_ENV['DB_HOST'] ?? 'not set') . "\n";
-    echo "   Database: " . ($_ENV['DB_DATABASE'] ?? 'not set') . "\n";
-} elseif ($driver === 'sqlite') {
-    echo "   Path: " . ($_ENV['DB_SQLITE_PATH'] ?? 'default') . "\n";
-}
-
-// Check write permissions
-echo "\n4. Checking write permissions...\n";
-$writableDirs = [
-    'backups',
-    'data',
-];
-
-foreach ($writableDirs as $dir) {
-    $path = $root . '/' . $dir;
-    if (is_dir($path)) {
-        if (is_writable($path)) {
-            echo "   ✓ Directory '{$dir}' is writable\n";
-        } else {
-            echo "   ✗ Directory '{$dir}' is not writable\n";
-        }
-    } else {
-        echo "   ⚠ Directory '{$dir}' does not exist\n";
-    }
-}
-
-// Check environment variables
-echo "\n5. Checking environment configuration...\n";
-$requiredEnv = ['APP_URL', 'DB_DRIVER'];
-$missingEnv = [];
-
-foreach ($requiredEnv as $key) {
-    if (!empty($_ENV[$key])) {
-        echo "   ✓ {$key} is set\n";
-    } else {
-        echo "   ✗ {$key} is not set\n";
-        $missingEnv[] = $key;
-    }
-}
-
-// Check PHP extensions
-echo "\n6. Checking PHP extensions...\n";
-
-// Determine required extensions based on database driver (from app config)
-$driver = $app->config('DB_DRIVER', 'mysql');
-$requiredExtensions = [
-    'pdo',
-    'mbstring',
-    'json',
-    'gd',
-];
-
-// Add database-specific PDO driver
-if ($driver === 'mysql') {
-    $requiredExtensions[] = 'pdo_mysql';
-} elseif ($driver === 'sqlite') {
-    $requiredExtensions[] = 'pdo_sqlite';
-}
-
-foreach ($requiredExtensions as $ext) {
-    if (extension_loaded($ext)) {
-        echo "   ✓ Extension '{$ext}' loaded\n";
-    } else {
-        echo "   ⚠ Extension '{$ext}' not loaded\n";
-    }
-}
-
-// Summary
-echo "\n=== Health Check Summary ===\n";
-if (empty($missingTables) && empty($missingEnv)) {
-    echo "✓ All checks passed! System is healthy.\n";
+$failureCount = count($report['failures']);
+echo "\n=== Summary ===\n";
+if ($failureCount === 0) {
+    echo "All production health checks passed.\n";
 } else {
-    echo "⚠ Some issues found. Please review the output above.\n";
-    if (!empty($missingTables)) {
-        echo "\n  Action required: Run database migrations\n";
-    }
-    if (!empty($missingEnv)) {
-        echo "\n  Action required: Configure missing environment variables in .env\n";
-    }
+    echo "{$failureCount} production health check(s) failed. Correct the failures above before release.\n";
 }
 
-echo "\n";
+exit(ProductionHealthCheck::exitCode($report));

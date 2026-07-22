@@ -13,24 +13,30 @@ final class EmailQueueProcessorTest extends TestCase
         $email = new class extends Email {
             public array $pending = [];
             public array $sent = [];
-            public array $failed = [];
+            public array $released = [];
 
             public function __construct() {}
 
-            public function getPendingEmails(int $limit = 50): array
+            public function claimPendingEmails(int $limit, string $claimToken, int $maxAttempts = 5, int $staleMinutes = 15): array
             {
-                return array_slice($this->pending, 0, $limit);
+                if ($this->pending === []) {
+                    return [];
+                }
+
+                $row = array_shift($this->pending);
+                $row['attempt_count'] = ((int)($row['attempt_count'] ?? 0)) + 1;
+                return [$row];
             }
 
-            public function markAsSent(string $id): bool
+            public function markAsSent(string $id, ?string $claimToken = null): bool
             {
                 $this->sent[] = $id;
                 return true;
             }
 
-            public function markAsFailed(string $id): bool
+            public function releaseAfterFailure(string $id, string $claimToken, string $error, int $maxAttempts = 5, int $delaySeconds = 60): bool
             {
-                $this->failed[] = $id;
+                $this->released[] = $id;
                 return true;
             }
         };
@@ -42,6 +48,11 @@ final class EmailQueueProcessorTest extends TestCase
             public function __construct(array $responses)
             {
                 $this->responses = $responses;
+            }
+
+            public function isEnabled(): bool
+            {
+                return true;
             }
 
             public function send(string $to, string $subject, string $htmlBody, ?string $textBody = null): bool
@@ -62,10 +73,36 @@ final class EmailQueueProcessorTest extends TestCase
         $this->assertSame(2, $report['processed']);
         $this->assertSame(1, $report['sent']);
         $this->assertSame(1, $report['failed']);
+        $this->assertSame(1, $report['retrying']);
+        $this->assertFalse($report['disabled']);
         $this->assertCount(1, $report['errors']);
 
         $this->assertSame(['1'], $email->sent);
-        $this->assertSame(['2'], $email->failed);
+        $this->assertSame(['2'], $email->released);
         $this->assertCount(2, $mailer->calls);
+    }
+
+    public function testDisabledDeliveryDoesNotClaimAnything(): void
+    {
+        $email = new class extends Email {
+            public int $claims = 0;
+            public function __construct() {}
+            public function claimPendingEmails(int $limit, string $claimToken, int $maxAttempts = 5, int $staleMinutes = 15): array
+            {
+                $this->claims++;
+                return [];
+            }
+        };
+        $mailer = new Mailer([
+            'enabled' => false,
+            'driver' => 'log',
+            'from' => 'qa@example.com',
+        ]);
+
+        $report = (new EmailQueueProcessor($email, $mailer))->process();
+
+        self::assertTrue($report['disabled']);
+        self::assertSame(0, $report['processed']);
+        self::assertSame(0, $email->claims);
     }
 }

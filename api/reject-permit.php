@@ -19,37 +19,41 @@ header('Content-Type: application/json');
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 require_once __DIR__ . '/../src/approval-notifications.php';
+require_once __DIR__ . '/../src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
-
-// Check authentication
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
 
-// Get current user
-$user_stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$user_stmt->execute([$_SESSION['user_id']]);
-$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+$auth = new Auth($db);
+$user = $auth->requireJson(['manager', 'admin']);
 
-// Check role
-if (!$user || !in_array($user['role'], ['manager', 'admin'])) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Insufficient permissions']);
+if (!\Permits\Csrf::validateRequest('permit-reject')) {
+    http_response_code(419);
+    echo json_encode(['success' => false, 'message' => 'Your session token expired. Refresh the page and try again.']);
     exit;
 }
 
 // Get request data
 $input = json_decode(file_get_contents('php://input'), true);
-$permit_id = $input['permit_id'] ?? null;
-$reason = $input['reason'] ?? '';
+$permit_id = is_array($input) && is_scalar($input['permit_id'] ?? null)
+    ? trim((string) $input['permit_id'])
+    : '';
+$reason = is_array($input) && is_scalar($input['reason'] ?? null)
+    ? trim((string) $input['reason'])
+    : '';
 
 if (!$permit_id) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Missing permit_id']);
+    exit;
+}
+if ($reason === '') {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'message' => 'Enter a reason so the applicant knows what to correct.']);
     exit;
 }
 
@@ -74,12 +78,14 @@ try {
         echo json_encode(['success' => false, 'message' => 'Reason is too long']);
         exit;
     }
+    $now = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
     $db->pdo->beginTransaction();
     
     // Update permit status
     $updateStmt = $db->pdo->prepare("
         UPDATE forms 
-        SET status = 'rejected', approval_status = 'rejected', approval_notes = ?, approved_by = ?
+        SET status = 'rejected', approval_status = 'rejected', approval_notes = ?,
+            approved_by = ?, approved_at = $now, updated_at = $now
         WHERE id = ? AND status = 'pending_approval'
     ");
     $updateStmt->execute([$reason, $user['id'], $permit_id]);
@@ -94,33 +100,36 @@ try {
     
     // Log activity
     if (function_exists('logActivity')) {
-        $reasonText = !empty($reason) ? "Reason: $reason" : "No reason provided";
-        logActivity(
-            'permit_rejected',
-            'approval',
-            'form',
-            $permit_id,
-            "Permit {$permit['ref_number']} rejected by {$user['name']}. $reasonText"
-        );
+        try {
+            logActivity(
+                'permit_rejected',
+                'approval',
+                'form',
+                $permit_id,
+                "Permit {$permit['ref_number']} rejected by {$user['name']}. Reason: {$reason}"
+            );
+        } catch (Throwable $logError) {
+            error_log('Unable to log permit rejection: ' . $logError->getMessage());
+        }
     }
     
-    // Send email notification (if email system exists)
-    if (!empty($permit['holder_email']) && function_exists('sendEmail')) {
-        $email_subject = "❌ Permit #{$permit['ref_number']} Update";
-        $email_body = "
-            <h2>Permit Update</h2>
-            <p>Your permit application has been reviewed.</p>
-            <p><strong>Reference:</strong> #{$permit['ref_number']}</p>
-            <p><strong>Status:</strong> Not approved at this time</p>
-        ";
-        
-        if (!empty($reason)) {
-            $email_body .= "<p><strong>Note:</strong> " . htmlspecialchars($reason) . "</p>";
+    // Queue the holder notification after the permit transaction has committed.
+    if (!empty($permit['holder_email'])) {
+        try {
+            $ref = $permit['ref_number'] ?? $permit['ref'] ?? $permit_id;
+            $notificationPermit = array_merge($permit, [
+                'ref' => (string) $ref,
+                'ref_number' => (string) $ref,
+            ]);
+            $mailer = new \Permits\Email($db, $root);
+            $mailer->sendRejectionNotification(
+                $notificationPermit,
+                (string) $permit['holder_email'],
+                $reason
+            );
+        } catch (Throwable $emailError) {
+            error_log('Unable to queue permit rejection email: ' . $emailError->getMessage());
         }
-        
-        $email_body .= "<p>If you have questions, please contact the safety manager.</p>";
-        
-        sendEmail($permit['holder_email'], $email_subject, $email_body);
     }
     
     echo json_encode([
@@ -128,7 +137,7 @@ try {
         'message' => 'Permit rejected'
     ]);
     
-} catch (Exception $e) {
+} catch (Throwable $e) {
     if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
     http_response_code(500);
     error_log("Error rejecting permit: " . $e->getMessage());

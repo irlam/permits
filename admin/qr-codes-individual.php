@@ -22,41 +22,33 @@ require __DIR__ . '/../vendor/autoload.php';
 use Permits\SystemSettings;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+require_once __DIR__ . '/../src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    die('<h1>Access Denied</h1><p>Admin access required.</p>');
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 // Get company info
-$companyName = SystemSettings::companyName($db) ?? 'Permits System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db);
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 
 // Get selected permit ID from query
-$selectedPermitId = $_GET['permit_id'] ?? null;
+$selectedPermitId = isset($_GET['permit_id']) && is_string($_GET['permit_id'])
+    ? trim($_GET['permit_id'])
+    : null;
 
 // Get all permits with details
 try {
     $stmt = $db->pdo->prepare("
-        SELECT f.*, ft.name as template_name, u.name as holder_name, u.email as holder_email
+        SELECT f.*, ft.name as template_name,
+               COALESCE(NULLIF(u.name, ''), f.holder_name) as display_holder_name,
+               COALESCE(NULLIF(u.email, ''), f.holder_email) as display_holder_email
         FROM forms f
         JOIN form_templates ft ON f.template_id = ft.id
         LEFT JOIN users u ON f.holder_id = u.id
+        WHERE f.status IN ('active', 'issued', 'approved', 'open', 'closed', 'expired')
         ORDER BY f.created_at DESC
         LIMIT 100
     ");
@@ -100,24 +92,28 @@ if ($selectedPermitId && !empty($permits)) {
 }
 
 // Get search/filter query
-$searchQuery = $_GET['q'] ?? '';
+$searchQuery = isset($_GET['q']) && is_string($_GET['q'])
+    ? trim($_GET['q'])
+    : '';
+$searchQuery = mb_substr($searchQuery, 0, 100, 'UTF-8');
 $filteredPermits = $permits;
 if (!empty($searchQuery)) {
     $searchLower = strtolower($searchQuery);
     $filteredPermits = array_filter($permits, function($p) use ($searchLower) {
         return strpos(strtolower($p['ref_number'] ?? ''), $searchLower) !== false ||
                strpos(strtolower($p['template_name'] ?? ''), $searchLower) !== false ||
-               strpos(strtolower($p['holder_name'] ?? ''), $searchLower) !== false ||
-               strpos(strtolower($p['holder_email'] ?? ''), $searchLower) !== false;
+               strpos(strtolower($p['display_holder_name'] ?? ''), $searchLower) !== false ||
+               strpos(strtolower($p['display_holder_email'] ?? ''), $searchLower) !== false;
     });
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Manager - Individual Permits</title>
+    <title>QR Code Manager - <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
+    <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
     <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
     <style>
         body {
@@ -159,6 +155,9 @@ if (!empty($searchQuery)) {
 
         .search-box {
             margin-bottom: 16px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
         }
 
         .search-box input {
@@ -168,7 +167,7 @@ if (!empty($searchQuery)) {
             border: 2px solid #334155;
             border-radius: 8px;
             color: #e2e8f0;
-            font-size: 13px;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
 
@@ -176,6 +175,28 @@ if (!empty($searchQuery)) {
             outline: none;
             border-color: #06b6d4;
             box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+
+        .search-box button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            background: var(--brand-primary);
+            color: var(--brand-on-primary);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .search-clear {
+            grid-column: 1 / -1;
+            color: #93c5fd;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .search-clear:hover,
+        .search-clear:focus-visible {
+            text-decoration: underline;
         }
 
         .permits-list {
@@ -311,7 +332,7 @@ if (!empty($searchQuery)) {
         }
 
         .btn-action {
-            background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
+            background: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
             color: white;
             padding: 12px 24px;
             border: none;
@@ -377,8 +398,8 @@ if (!empty($searchQuery)) {
         }
 
         .company-info-banner {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.05) 100%);
-            border: 1px solid rgba(6, 182, 212, 0.3);
+            background: linear-gradient(135deg, rgba(var(--brand-primary-light-rgb), 0.1) 0%, rgba(var(--brand-primary-rgb), 0.05) 100%);
+            border: 1px solid rgba(var(--brand-primary-light-rgb), 0.3);
             border-radius: 12px;
             padding: 16px;
             margin-bottom: 20px;
@@ -414,9 +435,12 @@ if (!empty($searchQuery)) {
 <body class="theme-dark">
     <header class="site-header">
         <div class="brand-mark">
+            <?php if ($companyLogoUrl): ?>
+                <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> logo" class="brand-mark__logo">
+            <?php endif; ?>
             <div>
-                <div class="brand-mark__name">QR Code Manager</div>
-                <div class="brand-mark__sub">📋 Individual Permits</div>
+                <div class="brand-mark__name"><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
+                <div class="brand-mark__sub">QR Code Manager · Individual Permits</div>
             </div>
         </div>
         <div class="site-header__actions">
@@ -431,14 +455,24 @@ if (!empty($searchQuery)) {
             <div class="sidebar">
                 <div class="sidebar-title">🔲 Select Permit</div>
 
-                <div class="search-box">
+                <form class="search-box" method="get" action="<?= htmlspecialchars($app->url('admin/qr-codes-individual.php'), ENT_QUOTES, 'UTF-8') ?>">
+                    <?php if ($selectedPermitId !== null && $selectedPermitId !== ''): ?>
+                        <input type="hidden" name="permit_id" value="<?= htmlspecialchars($selectedPermitId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+                    <?php endif; ?>
+                    <label class="sr-only" for="searchInput">Search permits</label>
                     <input 
-                        type="text" 
+                        type="search"
                         id="searchInput"
+                        name="q"
                         placeholder="Search by ref, type, holder..."
-                        value="<?= htmlspecialchars($searchQuery); ?>"
+                        value="<?= htmlspecialchars($searchQuery, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
+                        maxlength="100"
                     >
-                </div>
+                    <button type="submit">Search</button>
+                    <?php if ($searchQuery !== ''): ?>
+                        <a class="search-clear" href="<?= htmlspecialchars($app->url('admin/qr-codes-individual.php' . ($selectedPermitId ? '?permit_id=' . urlencode($selectedPermitId) : '')), ENT_QUOTES, 'UTF-8') ?>">Clear search</a>
+                    <?php endif; ?>
+                </form>
 
                 <div class="permits-list" id="permitsList">
                     <?php if (empty($filteredPermits)): ?>
@@ -468,10 +502,10 @@ if (!empty($searchQuery)) {
                     <div class="company-info-banner">
                         <?php if ($companyLogoUrl): ?>
                             <div class="company-logo-small">
-                                <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($companyName) ?>">
+                                <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
                             </div>
                         <?php endif; ?>
-                        <div class="company-name-display"><?= htmlspecialchars($companyName); ?></div>
+                        <div class="company-name-display"><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
                     </div>
 
                     <div class="qr-viewer-header">
@@ -490,7 +524,7 @@ if (!empty($searchQuery)) {
                         </div>
                         <div class="detail-row">
                             <div class="detail-label">Holder:</div>
-                            <div class="detail-value"><?= htmlspecialchars($selectedPermit['holder_name'] ?? $selectedPermit['holder_email'] ?? 'N/A'); ?></div>
+                            <div class="detail-value"><?= htmlspecialchars($selectedPermit['display_holder_name'] ?? $selectedPermit['display_holder_email'] ?? 'N/A'); ?></div>
                         </div>
                         <div class="detail-row">
                             <div class="detail-label">Created:</div>
@@ -542,14 +576,6 @@ if (!empty($searchQuery)) {
     </main>
 
     <script>
-        // Real-time search
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            const query = this.value;
-            const params = new URLSearchParams();
-            if (query) params.append('q', query);
-            window.location.href = '?' + params.toString();
-        });
-
         function downloadQR() {
             const img = document.querySelector('.qr-display img');
             if (img) {
