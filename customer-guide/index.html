@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Plain-language help for setting up and using the Permits System.">
+  <title>Permits Help Centre</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the guide</a>
+  <header class="topbar">
+    <a class="brand" href="#welcome" aria-label="Permits Help Centre home">
+      <span class="brand-mark" aria-hidden="true">P</span>
+      <span><strong>Permits</strong><small>Help Centre</small></span>
+    </a>
+    <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-navigation">Menu</button>
+    <nav id="site-navigation" class="topnav" aria-label="Main navigation">
+      <a href="#first-steps">First steps</a>
+      <a href="#using-permits">Using permits</a>
+      <a href="#administration">Administration</a>
+      <a href="#installation">Installation</a>
+      <a href="#help">Get help</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section id="welcome" class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Welcome to your new Permit System</p>
+        <h1>Clear help, one step at a time.</h1>
+        <p class="hero-intro">Choose what you want to do. You do not need to be an IT expert, and you can return to this page whenever you need help.</p>
+        <form class="search" role="search" onsubmit="return false">
+          <label for="guide-search">What do you need help with?</label>
+          <div class="search-row">
+            <input id="guide-search" type="search" placeholder="Try “create a permit” or “email setup”" autocomplete="off">
+            <button type="button" id="clear-search">Clear</button>
+          </div>
+          <p id="search-status" class="search-status" aria-live="polite"></p>
+        </form>
+      </div>
+      <aside class="welcome-card" aria-label="Recommended first task">
+        <span class="step-number">Start here</span>
+        <h2>New owner checklist</h2>
+        <ol class="mini-checklist">
+          <li>Sign in as administrator</li>
+          <li>Change your password</li>
+          <li>Add your company details</li>
+          <li>Create a test permit</li>
+        </ol>
+        <a class="button" href="#first-steps">Begin setup</a>
+      </aside>
+    </section>
+
+    <div class="page-layout">
+      <aside class="side-panel" aria-label="Guide contents">
+        <p class="side-title">In this guide</p>
+        <nav>
+          <a href="#first-steps">1. First steps</a>
+          <a href="#using-permits">2. Using permits</a>
+          <a href="#administration">3. Administration</a>
+          <a href="#installation">4. Code installation</a>
+          <a href="#daily-care">5. Looking after the system</a>
+          <a href="#help">6. Troubleshooting</a>
+        </nav>
+        <button class="print-button" type="button" onclick="window.print()">Print this guide</button>
+      </aside>
+
+      <div class="guide-content">
+        <section id="first-steps" class="guide-section" data-search="new owner first steps setup login password company branding test permit hosted website">
+          <div class="section-heading">
+            <span class="section-number">01</span>
+            <div><p class="eyebrow">For every new owner</p><h2>Set up your Permit System</h2><p>Complete these tasks before inviting your team.</p></div>
+          </div>
+          <div class="choice-grid">
+            <article class="choice-card">
+              <span class="tag">Most customers</span>
+              <h3>I purchased a ready-to-use website</h3>
+              <p>Your system is already installed. Begin with the administrator setup below.</p>
+              <a href="#owner-setup">Go to owner setup</a>
+            </article>
+            <article class="choice-card">
+              <span class="tag tag-neutral">Technical setup</span>
+              <h3>I purchased the source code</h3>
+              <p>Your hosting provider or developer must install the code before owner setup.</p>
+              <a href="#installation">Go to installation</a>
+            </article>
+          </div>
+
+          <article id="owner-setup" class="task-card" data-search="administrator setup login company logo users template test permit">
+            <div class="task-title"><span>1</span><div><h3>Sign in and secure the administrator account</h3><p>Use the administrator details supplied with your purchase.</p></div></div>
+            <ol class="steps">
+              <li><strong>Open your website.</strong><span>Select <em>Sign in</em> and enter the supplied administrator email and password.</span></li>
+              <li><strong>Change the password.</strong><span>Use a long password that is not used for any other website.</span></li>
+              <li><strong>Keep access private.</strong><span>Do not share the administrator account. Create a separate account for each person.</span></li>
+            </ol>
+            <div class="notice"><strong>Important:</strong> Store the administrator login in a trusted password manager.</div>
+          </article>
+
+          <article class="task-card" data-search="branding company name logo settings email notification users roles">
+            <div class="task-title"><span>2</span><div><h3>Add your organisation details</h3><p>This information appears throughout the system.</p></div></div>
+            <ol class="steps">
+              <li>Open <strong>Settings</strong> from the administrator menu.</li>
+              <li>Enter your organisation name and upload a PNG, JPG or WebP logo.</li>
+              <li>Review the email address used for system messages.</li>
+              <li>Save, then return to the dashboard to check the result.</li>
+            </ol>
+          </article>
+
+          <article class="task-card" data-search="test permit create approve qr email launch checklist">
+            <div class="task-title"><span>3</span><div><h3>Run a complete test</h3><p>Test the whole journey before using the system for real work.</p></div></div>
+            <ol class="steps">
+              <li>Create a clearly labelled <strong>TEST</strong> permit.</li>
+              <li>Submit it for approval and sign in as a manager.</li>
+              <li>Approve the permit and open its public link or QR code.</li>
+              <li>Record that work started, then close the permit.</li>
+              <li>Confirm that emails, history and status changes are correct.</li>
+            </ol>
+          </article>
+        </section>
+
+        <section id="using-permits" class="guide-section" data-search="user create submit approve reject close permit attachment photo qr code status print">
+          <div class="section-heading"><span class="section-number">02</span><div><p class="eyebrow">For permit users</p><h2>Everyday permit tasks</h2><p>Short guides for the actions people use most often.</p></div></div>
+          <div class="topic-grid">
+            <details class="topic-card" data-search="create new permit template holder dates questions photo attachment submit">
+              <summary><span class="topic-icon" aria-hidden="true">＋</span><span><strong>Create a permit</strong><small>Choose a template, complete it and submit</small></span></summary>
+              <div class="topic-body"><ol><li>Select <strong>Create permit</strong>.</li><li>Choose the permit type that matches the work.</li><li>Enter the holder, location and valid dates.</li><li>Answer every required safety question.</li><li>Add supporting photos or documents if needed.</li><li>Review the summary, then select <strong>Submit for approval</strong>.</li></ol><p class="tip"><strong>Tip:</strong> Save accurate details. A permit is a safety record, not just a form.</p></div>
+            </details>
+            <details class="topic-card" data-search="approve reject manager pending approval comment reason">
+              <summary><span class="topic-icon" aria-hidden="true">✓</span><span><strong>Review a permit</strong><small>Approve or reject safely</small></span></summary>
+              <div class="topic-body"><ol><li>Open <strong>Manager approvals</strong>.</li><li>Read the work details, dates and safety answers.</li><li>Check any photographs and attachments.</li><li>Select <strong>Approve</strong> only when the work can proceed safely.</li><li>If rejecting, give a clear reason so the applicant knows what to correct.</li></ol></div>
+            </details>
+            <details class="topic-card" data-search="qr code public link scan view permit print worker">
+              <summary><span class="topic-icon" aria-hidden="true">▦</span><span><strong>Use a QR code</strong><small>Open the public permit view</small></span></summary>
+              <div class="topic-body"><ol><li>Open the permit and locate its QR code.</li><li>Print or display it at the work location.</li><li>Workers scan it with their phone camera.</li><li>Check the permit reference and status before starting work.</li></ol><p class="notice"><strong>Safety check:</strong> Never begin work from an expired, rejected or closed permit.</p></div>
+            </details>
+            <details class="topic-card" data-search="start work close permit finish closure reason active">
+              <summary><span class="topic-icon" aria-hidden="true">■</span><span><strong>Start and close work</strong><small>Keep the live status accurate</small></span></summary>
+              <div class="topic-body"><ol><li>Open the active permit using its link or QR code.</li><li>Select <strong>Start work</strong> when work actually begins.</li><li>When complete, sign in and select <strong>Close permit</strong>.</li><li>Add a closure note if there is anything the safety team should know.</li></ol></div>
+            </details>
+            <details class="topic-card" data-search="attachment photo pdf upload size file type">
+              <summary><span class="topic-icon" aria-hidden="true">↑</span><span><strong>Add evidence</strong><small>Upload photos and documents</small></span></summary>
+              <div class="topic-body"><p>The internal permit screen accepts JPG, PNG, GIF, WebP and PDF files up to 10 MB. Public media questions may also accept supported video files up to 25 MB.</p><p>Use clear, relevant images and avoid uploading personal information that is not needed for the permit.</p></div>
+            </details>
+            <details class="topic-card" data-search="status draft pending approval active rejected expired closed meaning">
+              <summary><span class="topic-icon" aria-hidden="true">?</span><span><strong>Understand statuses</strong><small>Know what each label means</small></span></summary>
+              <div class="topic-body"><dl class="status-list"><div><dt>Draft</dt><dd>Still being prepared.</dd></div><div><dt>Pending approval</dt><dd>Waiting for a manager.</dd></div><div><dt>Active</dt><dd>Approved and within its valid period.</dd></div><div><dt>Rejected</dt><dd>Not approved; read the reason.</dd></div><div><dt>Expired</dt><dd>The valid period has ended.</dd></div><div><dt>Closed</dt><dd>Work is complete and the record is finished.</dd></div></dl></div>
+            </details>
+          </div>
+        </section>
+
+        <section id="administration" class="guide-section" data-search="admin manager users roles settings email templates backup activity log permit duration">
+          <div class="section-heading"><span class="section-number">03</span><div><p class="eyebrow">For administrators and managers</p><h2>Manage the system</h2><p>Keep access, templates and notifications under control.</p></div></div>
+          <div class="info-table" role="region" aria-label="User role comparison" tabindex="0">
+            <table><caption>User roles</caption><thead><tr><th>Role</th><th>Best for</th><th>Access</th></tr></thead><tbody><tr><td><strong>Administrator</strong></td><td>System owner</td><td>Users, settings, templates and all permits</td></tr><tr><td><strong>Manager</strong></td><td>Safety or site manager</td><td>Create, review, approve and manage permits</td></tr><tr><td><strong>Viewer</strong></td><td>People who need visibility</td><td>View permitted information without administration</td></tr></tbody></table>
+          </div>
+          <div class="admin-grid">
+            <article class="compact-card" data-search="add create user account role inactive delete"><h3>Add a team member</h3><ol><li>Open <strong>Admin → Users</strong>.</li><li>Select <strong>Create user</strong>.</li><li>Enter their name and work email.</li><li>Choose the least-powerful role they need.</li><li>Ask them to change their initial password.</li></ol></article>
+            <article class="compact-card" data-search="template forms permit types import edit publish"><h3>Review permit templates</h3><p>Keep only the templates your organisation actually uses. Test changes with a draft permit before making them part of a live process.</p></article>
+            <article class="compact-card" data-search="email smtp notifications queue test"><h3>Configure email</h3><p>Add the SMTP details supplied by your email provider, save them, then complete a test approval. Never paste email passwords into support messages or screenshots.</p></article>
+            <article class="compact-card" data-search="activity log audit history"><h3>Review activity</h3><p>Use the activity log to understand important account and permit events. Review unusual actions promptly and retain records according to your policy.</p></article>
+            <article class="compact-card" data-search="backup restore download database files"><h3>Back up safely</h3><p>Create regular encrypted backups and store a copy away from the website. Test restoration periodically; an untested backup is not a recovery plan.</p></article>
+            <article class="compact-card" data-search="expiry duration scheduled jobs cron"><h3>Check expiry automation</h3><p>Confirm the scheduled expiry and notification tasks are running. A hosting provider or developer can check this if you do not manage the server.</p></article>
+          </div>
+        </section>
+
+        <section id="installation" class="guide-section technical-section" data-search="source code installation hosting php mysql composer env database migration cron apache nginx technical">
+          <div class="section-heading"><span class="section-number">04</span><div><p class="eyebrow">For source-code customers</p><h2>Install the website</h2><p>Ask your hosting provider or developer to complete this section if you are not comfortable managing a web server.</p></div></div>
+          <div class="handoff"><div><strong>Not an IT specialist?</strong><p>Send this section to your hosting provider. Do not guess database settings or share passwords by ordinary email.</p></div><button type="button" onclick="window.print()">Print for my provider</button></div>
+          <ol class="installation-steps">
+            <li><span>1</span><div><h3>Check the hosting</h3><p>Use PHP 8.1 or later, MySQL 5.7+/MariaDB 10.2+, HTTPS, and the PHP extensions listed in <code>composer.json</code>.</p></div></li>
+            <li><span>2</span><div><h3>Upload the code</h3><p>Place the application in the website document root. Private folders such as <code>src</code>, <code>vendor</code>, <code>data</code> and <code>backups</code> must not be publicly accessible.</p></div></li>
+            <li><span>3</span><div><h3>Install dependencies</h3><pre><code>composer install --no-dev --classmap-authoritative</code></pre><p>This creates <code>vendor/autoload.php</code>. The website cannot start without it.</p></div></li>
+            <li><span>4</span><div><h3>Create the database</h3><p>For a new installation, import <code>database/database.sql</code>. For an existing installation, import each newer file from <code>database/imports</code> in date order.</p></div></li>
+            <li><span>5</span><div><h3>Configure the environment</h3><p>Copy <code>.env.example</code> to <code>.env</code>, then add the real website URL, database account, mail settings and newly generated notification keys. Keep this file private.</p></div></li>
+            <li><span>6</span><div><h3>Run verification</h3><pre><code>php bin/migrate.php
+composer check</code></pre><p>Confirm the login, uploads, email, QR links, approvals and scheduled tasks in a test environment before launch.</p></div></li>
+          </ol>
+          <div class="danger"><strong>Never publish secrets.</strong><span>Do not commit <code>.env</code>, database exports, backups or API keys to GitHub.</span></div>
+        </section>
+
+        <section id="daily-care" class="guide-section" data-search="maintenance operations daily weekly monthly updates backups logs storage dependency security">
+          <div class="section-heading"><span class="section-number">05</span><div><p class="eyebrow">Simple maintenance</p><h2>Look after the live system</h2><p>A short routine prevents most avoidable problems.</p></div></div>
+          <div class="care-grid"><article><span>Every day</span><ul><li>Check failed emails or scheduled tasks</li><li>Review urgent pending approvals</li><li>Investigate unexpected errors</li></ul></article><article><span>Every week</span><ul><li>Confirm backups completed</li><li>Review inactive or unnecessary accounts</li><li>Check available storage</li></ul></article><article><span>Every month</span><ul><li>Test a backup restoration</li><li>Apply tested security updates</li><li>Review administrator access</li></ul></article></div>
+        </section>
+
+        <section id="help" class="guide-section" data-search="troubleshooting error vendor autoload database email qr upload login cache support help">
+          <div class="section-heading"><span class="section-number">06</span><div><p class="eyebrow">When something goes wrong</p><h2>Quick troubleshooting</h2><p>Start with the message or symptom you can see.</p></div></div>
+          <div class="troubleshooting">
+            <details data-search="vendor autoload missing fatal error composer"><summary>The page mentions “vendor/autoload.php”</summary><div><p>The application dependencies have not been installed. From the website folder, the hosting provider should run:</p><pre><code>composer install --no-dev --classmap-authoritative</code></pre></div></details>
+            <details data-search="database connection access denied env password"><summary>The website cannot connect to the database</summary><div><p>Check the database name, host, username and password in the private <code>.env</code> file. Confirm the database user has access from the web server.</p></div></details>
+            <details data-search="email not sending smtp queue cron"><summary>Email messages are not arriving</summary><div><p>Check the SMTP settings, sender address and mail password. Confirm the email queue scheduled task is running, then inspect the server log without exposing credentials.</p></div></details>
+            <details data-search="qr wrong link url 404 app url"><summary>A QR code opens the wrong address</summary><div><p>Check that <code>APP_URL</code> contains the full HTTPS website address and no old test domain. Generate the QR code again after correcting it.</p></div></details>
+            <details data-search="upload failed file too large unsupported"><summary>A photo or document will not upload</summary><div><p>Use a supported file type and stay within the displayed size limit. If all uploads fail, ask the host to check folder permissions and PHP upload limits.</p></div></details>
+            <details data-search="login session password cookie"><summary>I cannot stay signed in</summary><div><p>Confirm the website uses HTTPS, cookies are allowed, and <code>SESSION_COOKIE_SECURE=true</code> on the live website. An administrator can also check that the account remains active.</p></div></details>
+          </div>
+          <aside class="support-card"><div><p class="eyebrow">Need more help?</p><h3>Prepare useful information</h3><p>Tell your support provider what you were doing, the time it happened, and the exact error message. Include a screenshot if it contains no passwords, personal data or secret keys.</p></div><ul><li>Website address</li><li>Your role (user, manager or administrator)</li><li>Steps immediately before the problem</li><li>Whether the problem affects everyone</li></ul></aside>
+        </section>
+
+        <div id="no-results" class="no-results" hidden><h2>No matching topic found</h2><p>Try a shorter phrase such as “login”, “QR”, “email”, “upload” or “database”.</p></div>
+      </div>
+    </div>
+  </main>
+
+  <footer><p>Permits Help Centre</p><p>Keep this guide with your website and update it when your working process changes.</p><a href="#welcome">Back to top</a></footer>
+  <script src="assets/help.js"></script>
+</body>
+</html>
