@@ -87,9 +87,13 @@ final class Db
             $pdo->exec("SET SESSION sql_mode = " . $pdo->quote($sqlMode));
         }
 
-        // Optional: keep time zone aligned with app timezone if provided
-        // $tz = (string)($_ENV['APP_TIMEZONE'] ?? 'Europe/London');
-        // $pdo->exec("SET time_zone = " . $pdo->quote($tz));
+        // MySQL DATETIME/CURRENT_TIMESTAMP values should use the same wall-clock
+        // time as PHP. An offset works even when the server has no timezone
+        // tables installed (common on shared hosting).
+        $offset = date('P');
+        if (preg_match('/^[+-](?:0\d|1[0-4]):[0-5]\d$/', $offset) === 1) {
+            $pdo->exec('SET SESSION time_zone = ' . $pdo->quote($offset));
+        }
 
         return $pdo;
     }

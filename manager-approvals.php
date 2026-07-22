@@ -19,32 +19,11 @@ use Permits\SystemSettings;
 // Load bootstrap (includes auth automatically)
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 
-require_once __DIR__ . '/src/check-expiry.php';
+require_once __DIR__ . '/src/permit-durations.php';
+require_once __DIR__ . '/src/Auth.php';
 
-if (function_exists('check_and_expire_permits')) {
-    check_and_expire_permits($db);
-}
-
-// Start session only if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ' . $app->url('login.php'));
-    exit;
-}
-
-// Get current user
-$user_stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$user_stmt->execute([$_SESSION['user_id']]);
-$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
-
-// Check if user has manager or admin role
-if (!$user || !in_array($user['role'], ['manager', 'admin'])) {
-    die("Access denied. Manager or Admin role required.");
-}
+$auth = new Auth($db);
+$user = $auth->requireRoles(['manager', 'admin']);
 
 // Get pending approvals
 try {
@@ -58,6 +37,7 @@ try {
             f.holder_phone,
             f.created_at,
             f.unique_link,
+            f.expiry_duration,
             ft.name as template_name
         FROM forms f
         JOIN form_templates ft ON f.template_id = ft.id
@@ -70,22 +50,29 @@ try {
     error_log("Error fetching pending permits: " . $e->getMessage());
 }
 
+$durationPresets = getPermitDurationPresets($db);
+$approveCsrfToken = \Permits\Csrf::generateToken('permit-approve');
+$rejectCsrfToken = \Permits\Csrf::generateToken('permit-reject');
+
 // Helper function
 function formatDateUK($date) {
     if (!$date) return 'N/A';
     return date('d/m/Y H:i', strtotime($date));
 }
 
-$companyName = SystemSettings::companyName($db) ?? 'Permits System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db);
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pending Approvals - Manager Dashboard</title>
+    <title>Pending Approvals - <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
+    <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
     <link rel="stylesheet" href="<?= asset('/assets/app.css') ?>">
     <style>
         body.theme-dark {
@@ -146,7 +133,7 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
 
         .approval-ref {
             font-size: 14px;
-            color: #38bdf8;
+            color: var(--brand-primary-light);
             font-weight: 600;
         }
 
@@ -186,7 +173,7 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
         }
 
         .info-value a:hover {
-            color: #38bdf8;
+            color: var(--brand-primary-light);
             text-decoration: underline;
         }
 
@@ -249,7 +236,6 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
         </div>
         <div class="site-header__actions">
             <span class="user-info">👤 <?php echo htmlspecialchars($user['name'] ?? ($user['email'] ?? '')); ?></span>
-            <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('presentation-dashboard.php')); ?>">🎬 Presentation</a>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">📊 Dashboard</a>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/')); ?>">🏠 Home</a>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('logout.php')); ?>">🚪 Logout</a>
@@ -283,7 +269,15 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
             <?php else: ?>
                 <div class="approval-grid">
                     <?php foreach ($pending_permits as $permit): ?>
-                        <?php $statusLabel = ucwords(str_replace('_', ' ', (string)($permit['status'] ?? 'pending_approval'))); ?>
+                        <?php
+                            $statusLabel = ucwords(str_replace('_', ' ', (string)($permit['status'] ?? 'pending_approval')));
+                            $selectedDurationPreset = selectPermitDurationPreset(
+                                $durationPresets,
+                                null,
+                                (string) ($permit['expiry_duration'] ?? '')
+                            );
+                            $selectedDurationMinutes = $selectedDurationPreset['minutes'] ?? null;
+                        ?>
                         <article class="approval-card" data-permit-id="<?php echo htmlspecialchars($permit['id']); ?>">
                             <div class="approval-header">
                                 <div>
@@ -314,8 +308,19 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                                 </div>
                             </div>
 
+                            <div class="info-item" style="margin-top:14px;">
+                                <label class="info-label" for="duration-<?php echo htmlspecialchars($permit['id']); ?>">Permit validity</label>
+                                <select id="duration-<?php echo htmlspecialchars($permit['id']); ?>" class="duration-select" style="width:100%;margin-top:6px;padding:10px 12px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;">
+                                    <?php foreach ($durationPresets as $durationPreset): ?>
+                                        <option value="<?php echo (int) $durationPreset['minutes']; ?>" <?php echo (int) $durationPreset['minutes'] === $selectedDurationMinutes ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars((string) $durationPreset['label']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
                             <div class="approval-actions">
-                                <a class="btn btn-ghost btn-small" href="/view-permit-public.php?link=<?php echo urlencode($permit['unique_link']); ?>" target="_blank" rel="noopener">
+                                <a class="btn btn-ghost btn-small" href="<?php echo htmlspecialchars($app->url('view-permit-public.php?link=' . urlencode((string) $permit['unique_link']))); ?>" target="_blank" rel="noopener">
                                     👁️ View Details
                                 </a>
                                 <button class="btn btn-success btn-small" type="button" onclick="approvePermit('<?php echo htmlspecialchars($permit['id']); ?>')">
@@ -335,6 +340,11 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
     <div id="toast" class="toast"></div>
 
     <script>
+        const APPROVE_PERMIT_URL = <?php echo json_encode($app->url('api/approve-permit.php')); ?>;
+        const REJECT_PERMIT_URL = <?php echo json_encode($app->url('api/reject-permit.php')); ?>;
+        const APPROVE_CSRF_TOKEN = <?php echo json_encode($approveCsrfToken); ?>;
+        const REJECT_CSRF_TOKEN = <?php echo json_encode($rejectCsrfToken); ?>;
+
         // Show toast notification
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
@@ -352,24 +362,34 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                 return;
             }
 
+            const durationSelect = document.getElementById('duration-' + permitId);
+            const durationMinutes = durationSelect ? Number(durationSelect.value) : null;
+            const card = document.querySelector(`[data-permit-id="${permitId}"]`);
+            const approveButton = card ? card.querySelector('.btn-success') : null;
+            if (approveButton) {
+                approveButton.disabled = true;
+                approveButton.textContent = 'Approving...';
+            }
+
             try {
-                const response = await fetch('/api/approve-permit.php', {
+                const response = await fetch(APPROVE_PERMIT_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRF-Token': APPROVE_CSRF_TOKEN,
                     },
                     body: JSON.stringify({
-                        permit_id: permitId
+                        permit_id: permitId,
+                        duration_minutes: durationMinutes
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showToast('✅ Permit approved successfully!', 'success');
+                    showToast('✅ Permit approved for ' + (data.duration_label || 'the selected duration') + '.', 'success');
                     
                     // Remove card from view
-                    const card = document.querySelector(`[data-permit-id="${permitId}"]`);
                     if (card) {
                         card.style.transition = 'opacity 0.3s, transform 0.3s';
                         card.style.opacity = '0';
@@ -385,25 +405,38 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                     }
                 } else {
                     showToast('❌ Error: ' + (data.message || 'Failed to approve'), 'error');
+                    if (approveButton) {
+                        approveButton.disabled = false;
+                        approveButton.textContent = '✅ Approve';
+                    }
                 }
             } catch (error) {
                 showToast('❌ Error approving permit', 'error');
                 console.error('Error:', error);
+                if (approveButton) {
+                    approveButton.disabled = false;
+                    approveButton.textContent = '✅ Approve';
+                }
             }
         }
 
         // Reject permit
         async function rejectPermit(permitId) {
-            const reason = prompt('Reason for rejection (optional):');
+            const reason = prompt('Reason for rejection:');
             if (reason === null) {
                 return; // User cancelled
             }
+            if (reason.trim() === '') {
+                showToast('Enter a reason so the applicant knows what to correct.', 'error');
+                return;
+            }
 
             try {
-                const response = await fetch('/api/reject-permit.php', {
+                const response = await fetch(REJECT_PERMIT_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRF-Token': REJECT_CSRF_TOKEN,
                     },
                     body: JSON.stringify({
                         permit_id: permitId,

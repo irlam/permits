@@ -19,46 +19,9 @@
 
 use Permits\SystemSettings;
 
-require_once __DIR__ . '/src/check-expiry.php';
-
-if (function_exists('maybe_check_and_expire_permits')) {
-    maybe_check_and_expire_permits($db, 900);
-} elseif (function_exists('check_and_expire_permits')) {
-    check_and_expire_permits($db);
-}
-
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// DEBUG: Output session and cookie info if requested, even if already logged in
-if (isset($_GET['debug'])) {
-    echo '<pre style="background:#222;color:#fff;padding:12px;">';
-    echo 'Session Name: ' . session_name() . "\n";
-    echo 'Session ID: ' . session_id() . "\n";
-    echo 'Session Data: ' . print_r($_SESSION, true) . "\n";
-    echo 'Cookies: ' . print_r($_COOKIE, true) . "\n";
-    echo '</pre>';
-    exit;
-}
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-// Get current user
-$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Check if user is admin
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    $backUrl = htmlspecialchars($app->url('dashboard.php'));
-    die('<h1>Access Denied</h1><p>Admin access required. <a href="' . $backUrl . '">Back to Dashboard</a></p>');
-}
+require_once __DIR__ . '/src/Auth.php';
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 // Get statistics
 $stats = [];
@@ -76,16 +39,19 @@ try {
     ];
 }
 
-$companyName = SystemSettings::companyName($db) ?? 'Permits System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db);
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Admin Panel - Permits System</title>
+            <title>Admin Panel - <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
+            <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
             <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
 </head>
 <body class="theme-dark">
@@ -102,6 +68,7 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
         <div class="site-header__actions">
             <span class="user-info">👤 <?php echo htmlspecialchars($currentUser['name']); ?></span>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('dashboard.php')); ?>">📊 Dashboard</a>
+            <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('account.php')); ?>">🔑 My Account</a>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/')); ?>">🏠 Home</a>
             <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('logout.php')); ?>">🚪 Logout</a>
         </div>
@@ -137,39 +104,12 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
         </section>
 
         <section class="admin-grid" aria-label="Admin tools">
-            <!-- Advanced External Template Importer (moved inline) -->
-            <div class="admin-card">
-                <div class="icon">🚀</div>
-                <h3>Advanced External Template Importer</h3>
-                <p>Batch import and parse construction templates from multiple sources (SafetyCulture, OSHA, HSE, and more). Paste multiple URLs and let the system extract fields automatically.</p>
-                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
-                    <li>Batch import from multiple URLs</li>
-                    <li>Automatic field extraction from checklists</li>
-                    <li>Future: AI field mapping, visual editor, scheduled sync</li>
-                </ul>
-                <a href="/admin/admin-advanced-external-import.php" class="btn">Open Advanced Importer</a>
-            </div>
             <div class="admin-card">
                 <div class="icon">⏱️</div>
                 <h3>Permit Duration Presets</h3>
                 <p>Define the quick-select expiry options used when issuing permits. Manage the preset list from a dedicated admin page.</p>
                 <a href="/admin-permit-durations.php" class="btn">Manage Durations</a>
             </div>
-
-                        <!-- OpenAI API Key Settings -->
-                        <div class="admin-card">
-                                <div class="icon">🤖</div>
-                                <h3>OpenAI API Key</h3>
-                                <p>Set or update the OpenAI API key for AI-powered field extraction and advanced features. Only visible to admins.<br><br>
-                                <strong>Required for:</strong>
-                                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
-                                    <li>AI field mapping</li>
-                                    <li>Template auto-extraction</li>
-                                    <li>Future: AI-powered automations</li>
-                                </ul>
-                                </p>
-                                <a href="/admin/admin-openai-settings.php" class="btn">OpenAI Settings</a>
-                        </div>
 
             <!-- User Management -->
             <div class="admin-card">
@@ -199,8 +139,8 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
             <!-- External Template Importer -->
             <div class="admin-card">
                 <div class="icon">🌐</div>
-                <h3>External Template Importer</h3>
-                <p>Automatically fetch and convert public construction templates from trusted sources like SafetyCulture, OSHA, and HSE. Paste a public template URL and generate a ready-to-edit permit template in seconds.<br><br>
+                <h3>External Template Starter</h3>
+                <p>Create a basic, editable starting template from the title of a public SafetyCulture, OSHA, HSE or other HTTPS page. Always review and complete the safety fields before publishing.<br><br>
                 <strong>Supported sources:</strong>
                 <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
                   <li><a href="https://safetyculture.com/library" target="_blank" rel="noopener">SafetyCulture Library</a></li>
@@ -210,7 +150,7 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                   <li><a href="https://www.safeworkaustralia.gov.au/doc/templates-and-forms" target="_blank" rel="noopener">Safe Work Australia</a></li>
                 </ul>
                 </p>
-                <a href="/admin/admin-external-template-import.php" class="btn">Import External Template</a>
+                <a href="/admin/admin-external-template-import.php" class="btn">Create Template Starter</a>
             </div>
 
             <div class="admin-card">
@@ -218,27 +158,6 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                 <h3>Edit Permit Templates</h3>
                 <p>Review, tweak, and republish existing permit templates so each scenario has the right questions before issuing.</p>
                 <a href="/admin-template-editor.php" class="btn">Edit Templates</a>
-            </div>
-
-            <div class="admin-card">
-                <div class="icon">🎬</div>
-                <h3>Presentation Metrics</h3>
-                <p>Launch a cinematic dashboard with narration-ready stats for stakeholder demos and leadership briefings.</p>
-                <a href="/presentation-dashboard.php" class="btn">Open Showcase</a>
-            </div>
-
-            <div class="admin-card">
-                <div class="icon">✨</div>
-                <h3>Premium Permit Intelligence Showcase</h3>
-                <p>Professional presentation with 4 subsections, interactive flowcharts, and comprehensive voice-over narration. Perfect for executive briefings, strategic planning, and stakeholder presentations.</p>
-                <ul style="margin:8px 0 0 18px;padding:0;font-size:14px;">
-                    <li>Executive Overview with key metrics</li>
-                    <li>Operational Workflow with user journey flowchart</li>
-                    <li>Performance analytics with 12-month trends</li>
-                    <li>Strategic Insights & recommendations</li>
-                    <li>Automated voice narration with highlighting</li>
-                </ul>
-                <a href="/presentation-dashboard-enhanced.php" class="btn">Launch Premium Showcase</a>
             </div>
 
             <div class="admin-card">
@@ -262,6 +181,14 @@ $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) :
                 <h3>System Settings</h3>
                 <p>Configure general system settings, site information, and application preferences.</p>
                 <a href="/admin/settings.php" class="btn">System Settings</a>
+            </div>
+
+            <!-- Customer Help Centre -->
+            <div class="admin-card">
+                <div class="icon">?</div>
+                <h3>Help Centre</h3>
+                <p>Clear setup, daily-use and troubleshooting guidance for administrators and permit users.</p>
+                <a href="/customer-guide/" class="btn">Open Help Centre</a>
             </div>
             
             <!-- Activity Log -->

@@ -27,7 +27,7 @@
       "name": "Create Permit",
       "short_name": "Create",
       "description": "Create a new permit",
-      "url": "/#templates",
+      "url": "/#permit-templates",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -39,7 +39,7 @@
       "name": "Check Status",
       "short_name": "Status",
       "description": "Check your permit status",
-      "url": "/?check_status=1",
+      "url": "/#status-checker",
       "icons": [
         {
           "src": "/icon-192.png",

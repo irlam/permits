@@ -39,7 +39,10 @@ if (!function_exists('normalizePermitDurationPresets')) {
             $label = trim((string)($preset['label'] ?? ''));
             $minutes = (int)($preset['minutes'] ?? 0);
 
-            if ($label === '' || $minutes <= 0) {
+            // One year is a generous upper bound and prevents accidental
+            // multi-decade permits caused by a mistyped minute value.
+            // forms.expiry_duration is VARCHAR(20) on supported installations.
+            if ($label === '' || mb_strlen($label, 'UTF-8') > 20 || $minutes <= 0 || $minutes > 525600) {
                 continue;
             }
 
@@ -118,6 +121,51 @@ if (!function_exists('buildPermitDurationPresetsFromInput')) {
         }
 
         return $presets;
+    }
+}
+
+if (!function_exists('selectPermitDurationPreset')) {
+    /**
+     * Resolve an allowed duration. Explicit minutes must match a configured
+     * preset; otherwise the permit's saved label, one day, then the first
+     * configured option are used in that order.
+     *
+     * @param array<int,array<string,mixed>> $presets
+     * @return array{label:string,minutes:int}|null
+     */
+    function selectPermitDurationPreset(array $presets, ?int $requestedMinutes = null, string $preferredLabel = ''): ?array
+    {
+        $normalized = normalizePermitDurationPresets($presets);
+        if ($normalized === []) {
+            return null;
+        }
+
+        if ($requestedMinutes !== null) {
+            foreach ($normalized as $preset) {
+                if ($preset['minutes'] === $requestedMinutes) {
+                    return $preset;
+                }
+            }
+
+            return null;
+        }
+
+        $preferredLabel = strtolower(trim($preferredLabel));
+        if ($preferredLabel !== '') {
+            foreach ($normalized as $preset) {
+                if (strtolower($preset['label']) === $preferredLabel) {
+                    return $preset;
+                }
+            }
+        }
+
+        foreach ($normalized as $preset) {
+            if ($preset['minutes'] === 1440) {
+                return $preset;
+            }
+        }
+
+        return $normalized[0];
     }
 }
 

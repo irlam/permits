@@ -91,7 +91,7 @@
             <div class="task-title"><span>1</span><div><h3>Sign in and secure the administrator account</h3><p>Use the administrator details supplied with your purchase.</p></div></div>
             <ol class="steps">
               <li><strong>Open your website.</strong><span>Select <em>Sign in</em> and enter the supplied administrator email and password.</span></li>
-              <li><strong>Change the password.</strong><span>Use a long password that is not used for any other website.</span></li>
+              <li><strong>Open My Account and change the password.</strong><span>Use at least 12 characters and do not reuse a password from another website.</span></li>
               <li><strong>Keep access private.</strong><span>Do not share the administrator account. Create a separate account for each person.</span></li>
             </ol>
             <div class="notice"><strong>Important:</strong> Store the administrator login in a trusted password manager.</div>
@@ -136,7 +136,7 @@
             </details>
             <details class="topic-card" data-search="start work close permit finish closure reason active">
               <summary><span class="topic-icon" aria-hidden="true">■</span><span><strong>Start and close work</strong><small>Keep the live status accurate</small></span></summary>
-              <div class="topic-body"><ol><li>Open the active permit using its link or QR code.</li><li>Select <strong>Start work</strong> when work actually begins.</li><li>When complete, sign in and select <strong>Close permit</strong>.</li><li>Add a closure note if there is anything the safety team should know.</li></ol></div>
+              <div class="topic-body"><ol><li>Open the active permit using its link or QR code.</li><li>Select <strong>Team sign in</strong> and use the permit holder or manager account. You will return to the same permit.</li><li>Select <strong>Start work</strong> when work actually begins.</li><li>When the work is complete, select <strong>Close permit</strong> and add a closure note if the safety team needs one.</li></ol></div>
             </details>
             <details class="topic-card" data-search="attachment photo pdf upload size file type">
               <summary><span class="topic-icon" aria-hidden="true">↑</span><span><strong>Add evidence</strong><small>Upload photos and documents</small></span></summary>
@@ -146,20 +146,25 @@
               <summary><span class="topic-icon" aria-hidden="true">?</span><span><strong>Understand statuses</strong><small>Know what each label means</small></span></summary>
               <div class="topic-body"><dl class="status-list"><div><dt>Draft</dt><dd>Still being prepared.</dd></div><div><dt>Pending approval</dt><dd>Waiting for a manager.</dd></div><div><dt>Active</dt><dd>Approved and within its valid period.</dd></div><div><dt>Rejected</dt><dd>Not approved; read the reason.</dd></div><div><dt>Expired</dt><dd>The valid period has ended.</dd></div><div><dt>Closed</dt><dd>Work is complete and the record is finished.</dd></div></dl></div>
             </details>
+            <details class="topic-card" data-search="check permit application status email reference privacy">
+              <summary><span class="topic-icon" aria-hidden="true">⌕</span><span><strong>Check an application</strong><small>Look up one permit without signing in</small></span></summary>
+              <div class="topic-body"><ol><li>Open the website home page.</li><li>Enter the email address used on the application.</li><li>Enter the permit reference exactly as shown after submission.</li><li>Select <strong>Look up permit</strong>.</li></ol><p class="tip"><strong>Privacy:</strong> Both the email address and reference are required. Treat a permit's private link and QR code like a key; share them only with people who need access.</p></div>
+            </details>
           </div>
         </section>
 
         <section id="administration" class="guide-section" data-search="admin manager users roles settings email templates backup activity log permit duration">
           <div class="section-heading"><span class="section-number">03</span><div><p class="eyebrow">For administrators and managers</p><h2>Manage the system</h2><p>Keep access, templates and notifications under control.</p></div></div>
           <div class="info-table" role="region" aria-label="User role comparison" tabindex="0">
-            <table><caption>User roles</caption><thead><tr><th>Role</th><th>Best for</th><th>Access</th></tr></thead><tbody><tr><td><strong>Administrator</strong></td><td>System owner</td><td>Users, settings, templates and all permits</td></tr><tr><td><strong>Manager</strong></td><td>Safety or site manager</td><td>Create, review, approve and manage permits</td></tr><tr><td><strong>Viewer</strong></td><td>People who need visibility</td><td>View permitted information without administration</td></tr></tbody></table>
+            <table><caption>User roles</caption><thead><tr><th>Role</th><th>Best for</th><th>Access</th></tr></thead><tbody><tr><td><strong>Administrator</strong></td><td>System owner</td><td>Users, settings, templates and all permits</td></tr><tr><td><strong>Manager</strong></td><td>Safety or site manager</td><td>Create, review, approve and manage permits</td></tr><tr><td><strong>User</strong></td><td>Permit applicants</td><td>Create permits and view the records available to their account</td></tr></tbody></table>
           </div>
           <div class="admin-grid">
             <article class="compact-card" data-search="add create user account role inactive delete"><h3>Add a team member</h3><ol><li>Open <strong>Admin → Users</strong>.</li><li>Select <strong>Create user</strong>.</li><li>Enter their name and work email.</li><li>Choose the least-powerful role they need.</li><li>Ask them to change their initial password.</li></ol></article>
             <article class="compact-card" data-search="template forms permit types import edit publish"><h3>Review permit templates</h3><p>Keep only the templates your organisation actually uses. Test changes with a draft permit before making them part of a live process.</p></article>
-            <article class="compact-card" data-search="email smtp notifications queue test"><h3>Configure email</h3><p>Add the SMTP details supplied by your email provider, save them, then complete a test approval. Never paste email passwords into support messages or screenshots.</p></article>
+            <article class="compact-card" data-search="email smtp notifications queue test"><h3>Configure email</h3><p>Email is off until an administrator enables it. Add the SMTP details supplied by your email provider, enable delivery, save, then complete a test approval. Turning delivery off keeps notices queued for later. The file-log option contains full test messages and private permit links, so use it only for controlled testing. Never paste email passwords into support messages or screenshots.</p></article>
             <article class="compact-card" data-search="activity log audit history"><h3>Review activity</h3><p>Use the activity log to understand important account and permit events. Review unusual actions promptly and retain records according to your policy.</p></article>
-            <article class="compact-card" data-search="backup restore download database files"><h3>Back up safely</h3><p>Create regular encrypted backups and store a copy away from the website. Test restoration periodically; an untested backup is not a recovery plan.</p></article>
+            <article class="compact-card" data-search="backup restore download database files"><h3>Back up safely</h3><p>Use <strong>Admin → Backups</strong>, download the archive into encrypted off-site storage, then remove the server copy after checking it. Test restoration periodically; an untested backup is not a recovery plan.</p></article>
+            <article class="compact-card" data-search="mobile offline pwa privacy cache"><h3>Use mobile devices safely</h3><p>The installed app keeps only its visual shell offline. Permit, QR and administrator pages always require a live connection and are not deliberately cached on the device.</p></article>
             <article class="compact-card" data-search="expiry duration scheduled jobs cron"><h3>Check expiry automation</h3><p>Confirm the scheduled expiry and notification tasks are running. A hosting provider or developer can check this if you do not manage the server.</p></article>
           </div>
         </section>
@@ -169,12 +174,15 @@
           <div class="handoff"><div><strong>Not an IT specialist?</strong><p>Send this section to your hosting provider. Do not guess database settings or share passwords by ordinary email.</p></div><button type="button" onclick="window.print()">Print for my provider</button></div>
           <ol class="installation-steps">
             <li><span>1</span><div><h3>Check the hosting</h3><p>Use PHP 8.1 or later, MySQL 5.7+/MariaDB 10.2+, HTTPS, and the PHP extensions listed in <code>composer.json</code>.</p></div></li>
-            <li><span>2</span><div><h3>Upload the code</h3><p>Place the application in the website document root. Private folders such as <code>src</code>, <code>vendor</code>, <code>data</code> and <code>backups</code> must not be publicly accessible.</p></div></li>
+            <li><span>2</span><div><h3>Upload the code</h3><p>Place the application in the website document root. Private folders such as <code>bin</code>, <code>config</code>, <code>data</code>, <code>database</code>, <code>src</code>, <code>storage</code>, <code>templates</code>, <code>tests</code> and <code>vendor</code> must not be publicly accessible. Apache uses the supplied <code>.htaccess</code>; other web servers need equivalent rules.</p></div></li>
             <li><span>3</span><div><h3>Install dependencies</h3><pre><code>composer install --no-dev --classmap-authoritative</code></pre><p>This creates <code>vendor/autoload.php</code>. The website cannot start without it.</p></div></li>
-            <li><span>4</span><div><h3>Create the database</h3><p>For a new installation, import <code>database/database.sql</code>. For an existing installation, import each newer file from <code>database/imports</code> in date order.</p></div></li>
-            <li><span>5</span><div><h3>Configure the environment</h3><p>Copy <code>.env.example</code> to <code>.env</code>, then add the real website URL, database account, mail settings and newly generated notification keys. Keep this file private.</p></div></li>
-            <li><span>6</span><div><h3>Run verification</h3><pre><code>php bin/migrate.php
-composer check</code></pre><p>Confirm the login, uploads, email, QR links, approvals and scheduled tasks in a test environment before launch.</p></div></li>
+            <li><span>4</span><div><h3>Create the database</h3><p>For a new installation, import <code>database/database.sql</code>. For an existing installation, import each newer file from <code>database/imports</code> in filename order. The exact list for this release is in <code>README.md</code>.</p></div></li>
+            <li><span>5</span><div><h3>Configure the environment</h3><p>Copy <code>.env.example</code> to <code>.env</code>, then add the real website URL, database account, mail settings and newly generated notification keys. Set <code>BACKUP_PATH</code> to an absolute writable folder outside the website directory, or allow the system to create its default private sibling folder. Keep this file private.</p></div></li>
+            <li><span>6</span><div><h3>Prepare templates and the first administrator</h3><pre><code>php bin/migrate.php
+php bin/import-form-presets.php
+php bin/create-admin.php --email=owner@example.com --name="Site Administrator"</code></pre><p>Copy the one-time password, sign in over HTTPS and change it immediately from <strong>My Account</strong>. Open <strong>Admin → Backups</strong> once so the application can create and verify its private backup folder. The source code does not contain a default administrator password. Public visits never run database migrations or import templates automatically.</p></div></li>
+            <li><span>7</span><div><h3>Run verification and automation</h3><pre><code>composer check
+php bin/health-check.php</code></pre><p>Ask the hosting provider to schedule the email queue, notification and reminder commands listed in <code>README.md</code>, plus the automatic-status command every minute. Confirm the login, uploads, email, QR links, approvals, start-work and close-work steps in a test environment before launch.</p></div></li>
           </ol>
           <div class="danger"><strong>Never publish secrets.</strong><span>Do not commit <code>.env</code>, database exports, backups or API keys to GitHub.</span></div>
         </section>

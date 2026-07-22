@@ -3,116 +3,91 @@
  * Public Landing Page entry point.
  */
 
-use Permits\DatabaseMaintenance;
-use Permits\FormTemplateSeeder;
+use Permits\Csrf;
+use Permits\PublicRateLimiter;
 use Permits\SystemSettings;
+use Permits\TemplateCatalog;
 
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-require_once __DIR__ . '/src/check-expiry.php';
-if (function_exists('check_and_expire_permits')) {
-	check_and_expire_permits($db);
-}
-
-if (session_status() !== PHP_SESSION_ACTIVE) {
-	session_start();
-}
-
-$isLoggedIn = isset($_SESSION['user_id']);
-$currentUser = null;
-if ($isLoggedIn) {
-	try {
-		$stmt = $db->pdo->prepare('SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1');
-		$stmt->execute([$_SESSION['user_id']]);
-		$currentUser = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-	} catch (Throwable $e) {
-		error_log('Error fetching current user: ' . $e->getMessage());
-	}
-}
+$auth = new Auth($db);
+$isLoggedIn = $auth->isLoggedIn();
+$currentUser = $isLoggedIn ? $auth->getCurrentUser() : null;
 
 $templates = [];
+$templateRows = [];
 try {
-	$templatesStmt = $db->pdo->query('SELECT id, name, version, created_at FROM form_templates ORDER BY name ASC');
-	$templates = $templatesStmt->fetchAll(PDO::FETCH_ASSOC);
+	$templatesStmt = $db->pdo->query('SELECT id, name, version, created_at, active FROM form_templates ORDER BY name ASC, version DESC, created_at DESC');
+	$templateRows = $templatesStmt->fetchAll(PDO::FETCH_ASSOC);
+	$activeTemplateRows = array_values(array_filter(
+		$templateRows,
+		static fn (array $template): bool => (int)($template['active'] ?? 1) === 1
+	));
+	$templates = TemplateCatalog::latestByName($activeTemplateRows);
 } catch (Throwable $e) {
 	error_log('Error fetching templates: ' . $e->getMessage());
 }
 
-if (empty($templates)) {
-	try {
-		$columns = DatabaseMaintenance::ensureFormTemplateColumns($db);
-		foreach ($columns['errors'] ?? [] as $error) {
-			error_log('Template column error: ' . $error);
-		}
-
-		$seedResult = FormTemplateSeeder::importFromDirectory($db, $root . '/templates/form-presets');
-		foreach ($seedResult['errors'] ?? [] as $error) {
-			error_log('Template seed error: ' . $error);
-		}
-
-		if (!empty($seedResult['imported'])) {
-			$templatesStmt = $db->pdo->query('SELECT id, name, version, created_at FROM form_templates ORDER BY name ASC');
-			$templates = $templatesStmt->fetchAll(PDO::FETCH_ASSOC);
-		}
-	} catch (Throwable $e) {
-		error_log('Template auto-import failed: ' . $e->getMessage());
-	}
-}
-
-$systemStats = [
-	'total' => 0,
-	'active' => 0,
-	'awaiting' => 0,
-	'templates' => count($templates),
-];
-
-try {
-	$statsStmt = $db->pdo->query('SELECT status, COUNT(*) AS total FROM forms GROUP BY status');
-	$rows = $statsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-	$activeStatuses = ['active', 'issued', 'approved', 'open'];
-	$awaitingStatuses = ['pending', 'pending_approval', 'awaiting', 'awaiting_approval', 'submitted'];
-
-	foreach ($rows as $row) {
-		$status = strtolower((string)($row['status'] ?? ''));
-		$count = (int)($row['total'] ?? 0);
-
-		$systemStats['total'] += $count;
-		if (in_array($status, $activeStatuses, true)) {
-			$systemStats['active'] += $count;
-		}
-		if (in_array($status, $awaitingStatuses, true)) {
-			$systemStats['awaiting'] += $count;
-		}
-	}
-} catch (Throwable $e) {
-	error_log('Error fetching permit stats: ' . $e->getMessage());
-}
-
-$recentPermits = [];
-try {
-	$sql = "SELECT f.id, f.ref_number, f.holder_name, f.unique_link, f.valid_to, f.approved_at, f.created_at, f.status, ft.name AS template_name\n            FROM forms f\n            INNER JOIN form_templates ft ON f.template_id = ft.id\n            WHERE f.status IN ('active', 'issued', 'approved')\n            ORDER BY COALESCE(f.approved_at, f.updated_at, f.created_at) DESC\n            LIMIT 4";
-	$recentStmt = $db->pdo->query($sql);
-	$recentPermits = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Throwable $e) {
-	error_log('Error fetching recent permits: ' . $e->getMessage());
-}
-
-$statusEmail = trim((string)($_GET['check_email'] ?? ''));
+$isStatusLookup = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
+	&& is_scalar($_POST['action'] ?? null)
+	&& hash_equals('status_lookup', (string)$_POST['action']);
+$statusEmailInput = $isStatusLookup ? ($_POST['check_email'] ?? '') : '';
+$statusReferenceInput = $isStatusLookup ? ($_POST['check_reference'] ?? '') : '';
+$statusEmail = is_scalar($statusEmailInput) ? strtolower(trim((string)$statusEmailInput)) : '';
+$statusReference = is_scalar($statusReferenceInput)
+	? strtoupper(ltrim(trim((string)$statusReferenceInput), '#'))
+	: '';
 $userPermits = [];
-if ($statusEmail !== '' && filter_var($statusEmail, FILTER_VALIDATE_EMAIL)) {
+$statusLookupError = null;
+if ($isStatusLookup && !Csrf::validateRequest('public-status-lookup', true)) {
+	http_response_code(419);
+	$statusLookupError = 'Your form session expired. Refresh the page and try again.';
+} elseif ($isStatusLookup) {
+	header('Cache-Control: private, no-store, max-age=0');
+	header('Pragma: no-cache');
+}
+if ($isStatusLookup && $statusLookupError === null) {
+	if (filter_var($statusEmail, FILTER_VALIDATE_EMAIL) === false || $statusReference === '') {
+		$statusLookupError = 'Enter the permit email address and reference number.';
+	} elseif (preg_match('/^[A-Z0-9-]{3,50}$/', $statusReference) !== 1) {
+		$statusLookupError = 'Enter a valid permit reference number.';
+	}
+}
+if ($isStatusLookup && $statusLookupError === null && $statusEmail !== '' && $statusReference !== '') {
 	try {
-		$lookup = $db->pdo->prepare('SELECT f.id, f.ref_number, f.status, f.valid_to, f.created_at, f.unique_link, ft.name AS template_name\n                                      FROM forms f\n                                      INNER JOIN form_templates ft ON f.template_id = ft.id\n                                      WHERE f.holder_email = ?\n                                      ORDER BY f.created_at DESC\n                                      LIMIT 10');
-		$lookup->execute([$statusEmail]);
-		$userPermits = $lookup->fetchAll(PDO::FETCH_ASSOC);
+		$rateLimit = (new PublicRateLimiter($db->pdo))->consumeStatusLookup(
+			(string)($_SERVER['REMOTE_ADDR'] ?? ''),
+			$statusEmail
+		);
+		if ($rateLimit['limited']) {
+			http_response_code(429);
+			header('Retry-After: ' . $rateLimit['retry_after']);
+			$statusLookupError = 'Too many status checks. Please wait a few minutes and try again.';
+		} else {
+			$lookup = $db->pdo->prepare("
+			SELECT f.id, f.ref_number, f.status, f.valid_to, f.created_at,
+			       COALESCE(ft.name, 'Permit') AS template_name
+			FROM forms f
+			LEFT JOIN form_templates ft ON f.template_id = ft.id
+			WHERE LOWER(TRIM(f.holder_email)) = ? AND UPPER(TRIM(f.ref_number)) = ?
+			ORDER BY f.created_at DESC
+			LIMIT 20
+		");
+			$lookup->execute([$statusEmail, $statusReference]);
+			$userPermits = $lookup->fetchAll(PDO::FETCH_ASSOC);
+		}
 	} catch (Throwable $e) {
 		error_log('Error fetching user permits: ' . $e->getMessage());
+		$statusLookupError = 'Permit status is temporarily unavailable. Please try again shortly.';
 	}
 }
 
-$companyName = SystemSettings::companyName($db) ?? 'Permit System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db, 'Permit System');
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 
 $templateIcons = [
 	'hot-works-permit' => '&#128293;',
@@ -152,6 +127,7 @@ function status_badge(string $status): string
 		'active' => ['label' => 'Active', 'class' => 'status-badge--success'],
 		'issued' => ['label' => 'Issued', 'class' => 'status-badge--success'],
 		'approved' => ['label' => 'Approved', 'class' => 'status-badge--success'],
+		'open' => ['label' => 'Active', 'class' => 'status-badge--success'],
 		'pending' => ['label' => 'Pending Review', 'class' => 'status-badge--warning'],
 		'pending_approval' => ['label' => 'Awaiting Approval', 'class' => 'status-badge--warning'],
 		'awaiting' => ['label' => 'Awaiting Action', 'class' => 'status-badge--warning'],
@@ -184,20 +160,23 @@ function format_date_local(?string $date): string
 	return $dt->format('d/m/Y H:i');
 }
 
-function reopen_link($app, $permitId): string
+function reopen_link($app, $uniqueLink): string
 {
-	return $app->url('/create-permit-public.php?reopen=' . urlencode((string)$permitId));
+	return $app->url('/create-permit-public.php?reopen=' . urlencode((string)$uniqueLink));
 }
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Permit System · Safe Work Starts Here</title>
+	<title><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> · Safe Work Starts Here</title>
 	<meta name="description" content="Create permits, track approvals, and stay compliant from any device.">
-	<meta name="theme-color" content="#0ea5e9">
+	<meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
+	<?php if ($isLoggedIn): ?>
+	<meta name="csrf-token" content="<?= htmlspecialchars(Csrf::generateToken('push-subscription'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+	<?php endif; ?>
 	<?php if (function_exists('cache_meta_tags')) { cache_meta_tags(); } ?>
 	<link rel="manifest" href="<?php echo htmlspecialchars(asset('manifest.webmanifest'), ENT_QUOTES, 'UTF-8'); ?>">
 	<link rel="apple-touch-icon" href="<?php echo htmlspecialchars(asset('icon-192.png'), ENT_QUOTES, 'UTF-8'); ?>">
@@ -217,7 +196,7 @@ function reopen_link($app, $permitId): string
 			gap: clamp(32px, 6vw, 64px);
 		}
 		.hero {
-			background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.3), rgba(14, 165, 233, 0.1) 42%),
+			background: radial-gradient(circle at top left, rgba(var(--brand-primary-light-rgb), 0.3), rgba(var(--brand-primary-rgb), 0.1) 42%),
 						linear-gradient(135deg, rgba(30, 58, 138, 0.85), rgba(15, 23, 42, 0.92));
 			border-radius: 28px;
 			padding: clamp(32px, 6vw, 56px);
@@ -292,9 +271,9 @@ function reopen_link($app, $permitId): string
 			outline-offset: 3px;
 		}
 		.btn-accent {
-			background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-			color: #0f172a;
-			box-shadow: 0 10px 30px rgba(14, 165, 233, 0.35);
+			background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-light));
+			color: var(--brand-on-primary);
+			box-shadow: 0 10px 30px rgba(var(--brand-primary-rgb), 0.35);
 		}
 		.btn-accent:hover {
 			transform: translateY(-2px);
@@ -385,7 +364,7 @@ function reopen_link($app, $permitId): string
 			gap: 12px;
 			max-width: 520px;
 		}
-		.status-form input[type=email] {
+		.status-form input {
 			min-height: 48px;
 			border-radius: 12px;
 			border: 1px solid rgba(148, 163, 184, 0.28);
@@ -394,8 +373,8 @@ function reopen_link($app, $permitId): string
 			color: #e5e7eb;
 			font-size: 16px;
 		}
-		.status-form input[type=email]:focus {
-			outline: 2px solid rgba(14, 165, 233, 0.65);
+		.status-form input:focus {
+			outline: 2px solid rgba(var(--brand-primary-rgb), 0.65);
 			outline-offset: 2px;
 		}
 		.permit-list {
@@ -468,7 +447,7 @@ function reopen_link($app, $permitId): string
 		.template-tile:hover,
 		.template-tile:focus-visible {
 			transform: translateY(-4px);
-			border-color: rgba(56, 189, 248, 0.45);
+			border-color: rgba(var(--brand-primary-light-rgb), 0.45);
 			background: rgba(15, 23, 42, 0.94);
 			outline: none;
 		}
@@ -683,8 +662,8 @@ function reopen_link($app, $permitId): string
 						<a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/dashboard.php'), ENT_QUOTES, 'UTF-8'); ?>">Dashboard</a>
 						<a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/logout.php'), ENT_QUOTES, 'UTF-8'); ?>">Logout</a>
 					<?php else: ?>
-						<button class="btn btn-secondary" type="button" id="installButton">Install App</button>
-						<a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/login.php'), ENT_QUOTES, 'UTF-8'); ?>">Manager Login</a>
+						<button class="btn btn-secondary" type="button" id="installButton" hidden>Install App</button>
+						<a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/login.php'), ENT_QUOTES, 'UTF-8'); ?>">Team sign in</a>
 					<?php endif; ?>
 				</p>
 				<h1 class="hero__headline">Permit System</h1>
@@ -696,24 +675,24 @@ function reopen_link($app, $permitId): string
 			</div>
 			<div class="stats-grid">
 				<article class="stat-card">
-					<span class="stat-card__label">Active permits</span>
-					<span class="stat-card__value"><?php echo number_format($systemStats['active']); ?></span>
-					<span class="stat-card__meta">Live jobs in circulation</span>
+					<span class="stat-card__label">Designed for</span>
+					<span class="stat-card__value">Mobile</span>
+					<span class="stat-card__meta">Clear, step-by-step permit applications on site</span>
 				</article>
 				<article class="stat-card">
-					<span class="stat-card__label">Awaiting approval</span>
-					<span class="stat-card__value"><?php echo number_format($systemStats['awaiting']); ?></span>
-					<span class="stat-card__meta">Managers notified</span>
+					<span class="stat-card__label">Review process</span>
+					<span class="stat-card__value">Controlled</span>
+					<span class="stat-card__meta">Manager decisions and an auditable history</span>
 				</article>
 				<article class="stat-card">
-					<span class="stat-card__label">Total permits</span>
-					<span class="stat-card__value"><?php echo number_format($systemStats['total']); ?></span>
-					<span class="stat-card__meta">Tracked in the system</span>
+					<span class="stat-card__label">On-site checks</span>
+					<span class="stat-card__value">QR ready</span>
+					<span class="stat-card__meta">Verify the live permit from its secure public link</span>
 				</article>
 				<article class="stat-card">
-					<span class="stat-card__label">Templates ready</span>
-					<span class="stat-card__value"><?php echo number_format($systemStats['templates']); ?></span>
-					<span class="stat-card__meta">Tailored for your workflows</span>
+					<span class="stat-card__label">Status lookup</span>
+					<span class="stat-card__value">Private</span>
+					<span class="stat-card__meta">Requires both the permit email and reference</span>
 				</article>
 			</div>
 		</header>
@@ -722,21 +701,31 @@ function reopen_link($app, $permitId): string
 			<section class="section" id="status-checker">
 				<header class="section__header">
 					<h2 class="section__title">Check a permit status</h2>
-					<p class="section__lead">Enter the email used on your permit application to see the latest updates, download paperwork, or reopen an active permit.</p>
+					<p class="section__lead">Enter the email used on your application and the permit reference shown after submission.</p>
 				</header>
 
-				<form class="status-form" action="<?php echo htmlspecialchars($app->url('/'), ENT_QUOTES, 'UTF-8'); ?>" method="get" novalidate>
+				<form class="status-form" action="<?php echo htmlspecialchars($app->url('/'), ENT_QUOTES, 'UTF-8'); ?>#status-checker" method="post" novalidate>
+					<input type="hidden" name="action" value="status_lookup">
+					<?php echo Csrf::getFormField('public-status-lookup'); ?>
 					<label class="sr-only" for="check_email">Permit email address</label>
 					<input type="email" id="check_email" name="check_email" placeholder="you@company.com" value="<?php echo htmlspecialchars($statusEmail, ENT_QUOTES, 'UTF-8'); ?>" required>
+					<label class="sr-only" for="check_reference">Permit reference number</label>
+					<input type="text" id="check_reference" name="check_reference" placeholder="PTW-2026-0123456789" value="<?php echo htmlspecialchars($statusReference, ENT_QUOTES, 'UTF-8'); ?>" maxlength="50" required>
 					<button class="btn btn-accent" type="submit">Look up permit</button>
 				</form>
 
-				<?php if ($statusEmail !== ''): ?>
-					<?php if (empty($userPermits)): ?>
+				<?php if ($isStatusLookup): ?>
+					<?php if ($statusLookupError !== null): ?>
+						<div class="empty-state" role="alert">
+							<span class="empty-state__icon">&#9888;</span>
+							<h3>Unable to check permits</h3>
+							<p><?php echo htmlspecialchars($statusLookupError, ENT_QUOTES, 'UTF-8'); ?></p>
+						</div>
+					<?php elseif (empty($userPermits)): ?>
 						<div class="empty-state">
 							<span class="empty-state__icon">&#128233;</span>
 							<h3>No permits yet</h3>
-							<p>We could not find any permits associated with <strong><?php echo htmlspecialchars($statusEmail, ENT_QUOTES, 'UTF-8'); ?></strong>. Start a new permit below.</p>
+							<p>We could not find a permit matching those details. Check the email and reference, or start a new permit below.</p>
 							<button class="btn btn-secondary" type="button" data-template-modal="open">Create a permit</button>
 						</div>
 					<?php else: ?>
@@ -759,59 +748,11 @@ function reopen_link($app, $permitId): string
 									<?php if (strtolower((string)($permit['status'] ?? '')) === 'pending_approval'): ?>
 										<p class="permit-card__meta">Managers have been notified. You will receive an email when a decision is made.</p>
 									<?php endif; ?>
-									<div class="permit-card__actions">
-										<a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)($permit['unique_link'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>">View</a>
-										<?php $statusLower = strtolower((string)($permit['status'] ?? '')); ?>
-										<?php if (in_array($statusLower, ['active', 'issued', 'approved'], true)): ?>
-											<a class="btn btn-ghost" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)($permit['unique_link'] ?? '')) . '&print=1'), ENT_QUOTES, 'UTF-8'); ?>">Print</a>
-											<a class="btn btn-ghost" href="<?php echo htmlspecialchars(reopen_link($app, $permit['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">Reopen</a>
-										<?php endif; ?>
-									</div>
+									<p class="permit-card__meta">For security, use the private link in your permit email or scan its authorised QR code to view full details.</p>
 								</article>
 							<?php endforeach; ?>
 						</div>
 					<?php endif; ?>
-				<?php endif; ?>
-			</section>
-
-			<section class="section" id="recent-activity">
-				<header class="section__header">
-					<h2 class="section__title">Recently approved permits</h2>
-					<p class="section__lead">The latest permits signed off by managers. Reopen a job or download paperwork instantly.</p>
-				</header>
-
-				<?php if (empty($recentPermits)): ?>
-					<div class="empty-state">
-						<span class="empty-state__icon">&#10024;</span>
-						<h3>All quiet for now</h3>
-						<p>Approved permits will appear here as soon as managers sign them off.</p>
-					</div>
-				<?php else: ?>
-					<div class="recent-grid" role="list">
-						<?php foreach ($recentPermits as $permit): ?>
-							<article class="recent-card" role="listitem">
-								<header class="recent-card__header">
-									<div>
-										<h3 class="recent-card__title"><?php echo htmlspecialchars($permit['template_name'] ?? 'Permit', ENT_QUOTES, 'UTF-8'); ?></h3>
-										<span class="recent-card__meta">Ref #<?php echo htmlspecialchars($permit['ref_number'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
-									</div>
-									<?php echo status_badge($permit['status'] ?? ''); ?>
-								</header>
-								<?php if (!empty($permit['holder_name'])): ?>
-									<p class="recent-card__line"><strong>Permit holder:</strong> <?php echo htmlspecialchars($permit['holder_name'], ENT_QUOTES, 'UTF-8'); ?></p>
-								<?php endif; ?>
-								<p class="recent-card__line"><strong>Approved:</strong> <?php echo format_date_local($permit['approved_at'] ?? $permit['created_at'] ?? null); ?></p>
-								<?php if (!empty($permit['valid_to'])): ?>
-									<p class="recent-card__line"><strong>Valid until:</strong> <?php echo format_date_local($permit['valid_to']); ?></p>
-								<?php endif; ?>
-								<div class="permit-card__actions">
-									<a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)($permit['unique_link'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>">View</a>
-									<a class="btn btn-ghost" href="<?php echo htmlspecialchars($app->url('/view-permit-public.php?link=' . urlencode((string)($permit['unique_link'] ?? '')) . '&print=1'), ENT_QUOTES, 'UTF-8'); ?>">Print</a>
-									<a class="btn btn-ghost" href="<?php echo htmlspecialchars(reopen_link($app, $permit['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">Reopen</a>
-								</div>
-							</article>
-						<?php endforeach; ?>
-					</div>
 				<?php endif; ?>
 			</section>
 
@@ -843,7 +784,7 @@ function reopen_link($app, $permitId): string
 		</main>
 
 		<footer class="site-footer">
-			© <?php echo date('Y'); ?> Permit System · Empowering safe, compliant work every day.
+			© <?php echo date('Y'); ?> <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> · Empowering safe, compliant work every day.
 		</footer>
 	</div>
 
@@ -925,6 +866,15 @@ function reopen_link($app, $permitId): string
 
 			openers.forEach(function (button) {
 				button.addEventListener('click', openModal);
+			});
+
+			if (window.location.hash === '#permit-templates') {
+				openModal();
+			}
+			window.addEventListener('hashchange', function () {
+				if (window.location.hash === '#permit-templates') {
+					openModal();
+				}
 			});
 
 			closers.forEach(function (button) {

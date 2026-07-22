@@ -18,19 +18,33 @@
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 require_once __DIR__ . '/src/Auth.php';
+require_once __DIR__ . '/src/permit-durations.php';
+
+$branding = \Permits\SystemSettings::branding($db, 'Permit System');
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = \Permits\SystemSettings::brandingCssVariables($branding);
 
 $auth = new Auth($db);
-$currentUser = $auth->getCurrentUser();
-$canApprove = $auth->isLoggedIn() && $auth->hasAnyRole(['manager', 'admin']);
+$currentUser = $auth->isLoggedIn() ? $auth->getCurrentUser() : null;
+$currentUserIsActive = is_array($currentUser)
+    && strtolower((string) ($currentUser['status'] ?? '')) === 'active';
+if (!$currentUserIsActive) {
+    $currentUser = null;
+}
+$currentRole = strtolower((string) ($currentUser['role'] ?? ''));
+$canApprove = $currentUserIsActive && in_array($currentRole, ['manager', 'admin'], true);
+$canViewContactDetails = $canApprove;
 
 // Get unique link from query string
-$unique_link = $_GET['link'] ?? null;
+$unique_link = isset($_GET['link']) && is_string($_GET['link']) ? trim($_GET['link']) : '';
 $print_mode = isset($_GET['print']);
 $canClose = false;
 
-if (!$unique_link) {
-    header('Location: ' . $app->url('/'));
-    exit;
+if (strlen($unique_link) < 32 || strlen($unique_link) > 100) {
+    http_response_code(404);
+    exit('Permit not found or link is invalid.');
 }
 
 // Get permit by unique link
@@ -38,37 +52,42 @@ try {
     $stmt = $db->pdo->prepare("
         SELECT 
             f.*,
-            ft.name as template_name,
-            ft.form_structure
+            COALESCE(ft.name, 'Permit') as template_name,
+            ft.form_structure,
+            ft.json_schema
         FROM forms f
-        JOIN form_templates ft ON f.template_id = ft.id
+        LEFT JOIN form_templates ft ON f.template_id = ft.id
         WHERE f.unique_link = ?
     ");
     $stmt->execute([$unique_link]);
     $permit = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$permit) {
-        die("Permit not found or link is invalid.");
+        http_response_code(404);
+        exit('Permit not found or link is invalid.');
     }
     
     // Decode form data
-    $form_data = json_decode($permit['form_data'], true) ?? [];
-    $form_structure = json_decode($permit['form_structure'], true) ?? [];
-
-    // Determine if current user can close or approve
-    $canClose = false;
-    if ($currentUser) {
-        $role = strtolower($currentUser['role'] ?? '');
-        if (in_array($role, ['admin', 'manager'], true)) {
-            $canClose = true;
-        } elseif (!empty($permit['holder_id']) && $permit['holder_id'] === $currentUser['id']) {
-            $canClose = true;
-        }
-    } else {
-        $canClose = false;
+    $form_data = json_decode((string) ($permit['form_data'] ?? ''), true);
+    if (!is_array($form_data)) {
+        $form_data = [];
     }
+    $form_structure = json_decode((string) ($permit['form_structure'] ?? ''), true);
+    if (!is_array($form_structure) || $form_structure === []) {
+        $schema = json_decode((string) ($permit['json_schema'] ?? ''), true);
+        $form_structure = is_array($schema)
+            ? \Permits\FormTemplateSeeder::buildPublicFormStructure($schema)
+            : [];
+    }
+
+    // Match the same ownership rules used by the authenticated dashboard.
+    $ownsPermit = $currentUser
+        ? \Permits\PermitAccess::canAccessPermit($currentUser, $permit)
+        : false;
+    $canClose = $canApprove || $ownsPermit;
+    $canViewContactDetails = $canApprove || $ownsPermit;
     
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log('Public permit view failed: ' . $e->getMessage());
     http_response_code(500);
     exit('Unable to load the permit.');
@@ -78,34 +97,41 @@ try {
 function getStatusBadge($status) {
     $badges = [
         'active' => '<span class="badge badge-success">✅ Active</span>',
+        'issued' => '<span class="badge badge-success">✅ Active</span>',
+        'approved' => '<span class="badge badge-success">✅ Active</span>',
+        'open' => '<span class="badge badge-success">✅ Active</span>',
         'pending_approval' => '<span class="badge badge-warning">⏳ Awaiting Approval</span>',
         'pending' => '<span class="badge badge-warning">⏳ Pending</span>',
         'expired' => '<span class="badge badge-danger">❌ Expired</span>',
+        'rejected' => '<span class="badge badge-danger">❌ Rejected</span>',
+        'closed' => '<span class="badge badge-gray">Closed</span>',
         'draft' => '<span class="badge badge-gray">📝 Draft</span>'
     ];
-    return $badges[$status] ?? '<span class="badge badge-gray">' . htmlspecialchars($status) . '</span>';
+    $normalised = strtolower((string) $status);
+    return $badges[$normalised] ?? '<span class="badge badge-gray">' . htmlspecialchars((string) $status) . '</span>';
 }
 
 function formatDateUK($date) {
     if (!$date || $date === '0000-00-00 00:00:00') return 'N/A';
     $timestamp = strtotime($date);
+    if ($timestamp === false) return 'N/A';
     return date('d/m/Y H:i', $timestamp);
 }
 // Compute checklist scores: Yes/(Yes+No) per section and overall
 $scoring = [
-    'overall' => ['yes' => 0, 'no' => 0],
+    'overall' => ['yes' => 0, 'no' => 0, 'items' => 0],
     'sections' => []
 ];
 if (is_array($form_structure)) {
     foreach ($form_structure as $sIdx => $section) {
-        $secKey = 'section' . ($sIdx + 1);
         $secYes = 0; $secNo = 0;
         $fields = $section['fields'] ?? [];
         if (is_array($fields)) {
             foreach ($fields as $field) {
                 if (!is_array($field)) { continue; }
                 $name = (string)($field['name'] ?? '');
-                if ($name === '' || strpos($name, $secKey . '_item_') !== 0) { continue; }
+                if ($name === '' || empty($field['scoreItem'])) { continue; }
+                $scoring['overall']['items']++;
                 $value = strtolower(trim((string)($form_data[$name] ?? '')));
                 if ($value === 'yes') { $secYes++; }
                 elseif ($value === 'no') { $secNo++; }
@@ -124,13 +150,41 @@ if (is_array($form_structure)) {
 }
 $overallDen = $scoring['overall']['yes'] + $scoring['overall']['no'];
 $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overallDen) * 100) : null;
+$overallScoreItems = (int) $scoring['overall']['items'];
+$scoreAllowsWork = $overallScoreItems === 0 || ($overallPercent !== null && $overallPercent >= 80);
+$permitStatus = strtolower((string) ($permit['status'] ?? ''));
+$activeStatuses = ['active', 'issued', 'approved', 'open'];
+$isActive = in_array($permitStatus, $activeStatuses, true);
+$validToTimestamp = !empty($permit['valid_to']) ? strtotime((string)$permit['valid_to']) : false;
+if ($isActive && $validToTimestamp !== false && $validToTimestamp <= time()) {
+    // The CLI expiry sweep remains authoritative for persistence, but a delayed
+    // cron run must never present out-of-date work as safe to continue.
+    $permitStatus = 'expired';
+    $isActive = false;
+}
+$hasWorkStarted = !empty($permit['work_started_at']) && $permit['work_started_at'] !== '0000-00-00 00:00:00';
+$canStartWork = $isActive && ($canApprove || $ownsPermit);
+$approvalDurationPresets = $canApprove && $permitStatus === 'pending_approval'
+    ? getPermitDurationPresets($db)
+    : [];
+$approvalDurationPreset = selectPermitDurationPreset(
+    $approvalDurationPresets,
+    null,
+    (string) ($permit['expiry_duration'] ?? '')
+);
+$approvalDurationMinutes = $approvalDurationPreset['minutes'] ?? null;
+$approveCsrfToken = $canApprove ? \Permits\Csrf::generateToken('permit-approve') : '';
+$startWorkCsrfToken = $canStartWork ? \Permits\Csrf::generateToken('permit-start-work') : '';
+$closeCsrfToken = $canClose ? \Permits\Csrf::generateToken('permit-close') : '';
+$permitReturnPath = '/view-permit-public.php?link=' . rawurlencode($unique_link);
+$teamLoginUrl = $app->url('/login.php?redirect=' . urlencode($permitReturnPath));
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permit #<?php echo htmlspecialchars($permit['ref_number']); ?> - <?php echo htmlspecialchars($permit['template_name']); ?></title>
+    <title>Permit #<?php echo htmlspecialchars($permit['ref_number']); ?> - <?php echo htmlspecialchars($permit['template_name']); ?> - <?php echo htmlspecialchars($companyName); ?></title>
     <link rel="manifest" href="<?=htmlspecialchars($app->url('manifest.webmanifest'))?>">
     <link rel="apple-touch-icon" sizes="192x192" href="<?=htmlspecialchars($app->url('assets/pwa/icon-192.png'))?>">
     <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
@@ -143,7 +197,7 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
 
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background: <?php echo $print_mode ? 'white' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; ?>;
+            background: <?php echo $print_mode ? 'white' : 'linear-gradient(135deg, var(--brand-primary-dark) 0%, #0f172a 100%)'; ?>;
             min-height: 100vh;
             padding: <?php echo $print_mode ? '0' : '20px'; ?>;
         }
@@ -153,15 +207,87 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
             margin: 0 auto;
         }
 
+        .customer-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: fit-content;
+            max-width: 100%;
+            margin: 0 0 16px;
+            padding: 9px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.96);
+            color: #111827;
+            text-decoration: none;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+        }
+
+        .customer-brand:hover {
+            box-shadow: 0 10px 30px rgba(var(--brand-primary-rgb), 0.3);
+        }
+
+        .customer-brand:focus-visible {
+            outline: 3px solid rgba(var(--brand-primary-light-rgb), 0.7);
+            outline-offset: 2px;
+        }
+
+        .customer-brand__logo,
+        .customer-brand__symbol {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            border-radius: 9px;
+        }
+
+        .customer-brand__logo {
+            object-fit: contain;
+            background: #ffffff;
+            padding: 3px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .customer-brand__symbol {
+            display: grid;
+            place-items: center;
+            background: var(--brand-primary);
+            color: var(--brand-on-primary);
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .customer-brand__copy {
+            min-width: 0;
+        }
+
+        .customer-brand__name,
+        .customer-brand__sub {
+            display: block;
+        }
+
+        .customer-brand__name {
+            max-width: min(65vw, 520px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 750;
+        }
+
+        .customer-brand__sub {
+            margin-top: 2px;
+            color: #64748b;
+            font-size: 12px;
+        }
+
         .permit-card {
             background: white;
+            color: #111827;
             border-radius: <?php echo $print_mode ? '0' : '16px'; ?>;
             padding: 40px;
             box-shadow: <?php echo $print_mode ? 'none' : '0 8px 32px rgba(0, 0, 0, 0.1)'; ?>;
         }
 
         .permit-header {
-            border-bottom: 3px solid #667eea;
+            border-bottom: 3px solid var(--brand-primary);
             padding-bottom: 24px;
             margin-bottom: 32px;
         }
@@ -185,7 +311,8 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
         .permit-ref {
             font-size: 20px;
             font-weight: 700;
-            color: #667eea;
+            color: var(--brand-primary-dark);
+            overflow-wrap: anywhere;
         }
 
         .permit-info-grid {
@@ -245,7 +372,7 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
             padding: 12px;
             background: #f9fafb;
             border-radius: 6px;
-            border-left: 3px solid #667eea;
+            border-left: 3px solid var(--brand-primary);
         }
 
         /* Badges */
@@ -285,6 +412,24 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
             flex-wrap: wrap;
         }
 
+        .team-action-hint {
+            flex: 1 0 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
+        .team-action-hint p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
         .btn {
             padding: 12px 24px;
             border: none;
@@ -300,24 +445,25 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary));
+            border-color: var(--brand-primary);
+            color: var(--brand-on-primary);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 24px rgba(var(--brand-primary-rgb), 0.4);
         }
 
         .btn-secondary {
             background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
+            color: var(--brand-primary-dark);
+            border: 2px solid var(--brand-primary);
         }
 
         .btn-secondary:hover {
-            background: #667eea;
-            color: white;
+            background: var(--brand-primary);
+            color: var(--brand-on-primary);
         }
 
         .btn-success {
@@ -366,6 +512,13 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                 box-shadow: none;
                 border-radius: 0;
             }
+
+            .customer-brand {
+                margin-bottom: 12px;
+                padding: 0 0 10px;
+                box-shadow: none;
+                border-radius: 0;
+            }
         }
 
         /* Status Message */
@@ -389,8 +542,13 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
             .permit-card {
-                padding: 24px;
+                padding: 20px 16px;
+                border-radius: 12px;
             }
 
             .permit-title h1 {
@@ -401,15 +559,45 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                 flex-direction: column;
             }
 
+            .team-action-hint {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
             .btn {
                 width: 100%;
                 justify-content: center;
+            }
+
+            .permit-header {
+                margin-bottom: 24px;
+                padding-bottom: 20px;
+            }
+
+            .permit-info-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .qr-section {
+                padding: 18px 12px;
             }
         }
     </style>
 </head>
 <body class="theme-dark">
     <div class="container">
+        <a class="customer-brand" href="<?= htmlspecialchars($app->url('/'), ENT_QUOTES, 'UTF-8') ?>" aria-label="<?= htmlspecialchars('Return to ' . $companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+            <?php if ($companyLogoUrl): ?>
+                <img class="customer-brand__logo" src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="">
+            <?php else: ?>
+                <span class="customer-brand__symbol" aria-hidden="true"><?= htmlspecialchars(mb_strtoupper(mb_substr($companyName, 0, 1, 'UTF-8'), 'UTF-8'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+            <?php endif; ?>
+            <span class="customer-brand__copy">
+                <span class="customer-brand__name"><?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+                <span class="customer-brand__sub">Permit verification · Home</span>
+            </span>
+        </a>
         <div class="permit-card">
             <!-- Header -->
             <div class="permit-header">
@@ -433,38 +621,73 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                         <div class="info-value"><?php echo htmlspecialchars($permit['holder_name'] ?? 'N/A'); ?></div>
                     </div>
                     
+                    <?php if ($canViewContactDetails): ?>
                     <div class="info-item">
                         <div class="info-label">Email</div>
                         <div class="info-value"><?php echo htmlspecialchars($permit['holder_email'] ?? 'N/A'); ?></div>
                     </div>
-                    
+
                     <?php if (!empty($permit['holder_phone'])): ?>
                     <div class="info-item">
                         <div class="info-label">Phone</div>
                         <div class="info-value"><?php echo htmlspecialchars($permit['holder_phone']); ?></div>
                     </div>
                     <?php endif; ?>
+                    <?php endif; ?>
                     
                     <div class="info-item">
                         <div class="info-label">Submitted</div>
                         <div class="info-value"><?php echo formatDateUK($permit['created_at']); ?></div>
                     </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Applicant Declaration</div>
+                        <div class="info-value">
+                            <?php if (($form_data['_applicant_declaration'] ?? '') === 'confirmed'): ?>
+                                Confirmed<?php if (!empty($form_data['_applicant_declared_at'])): ?> · <?php echo htmlspecialchars(formatDateUK((string) $form_data['_applicant_declared_at'])); ?><?php endif; ?>
+                            <?php else: ?>
+                                Not recorded
+                            <?php endif; ?>
+                        </div>
+                    </div>
                     
-                    <?php if ($permit['status'] === 'active' && $permit['valid_to']): ?>
+                    <?php if ($isActive && $permit['valid_to']): ?>
                     <div class="info-item">
                         <div class="info-label">Valid Until</div>
                         <div class="info-value"><?php echo formatDateUK($permit['valid_to']); ?></div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($hasWorkStarted): ?>
+                    <div class="info-item">
+                        <div class="info-label">Work Started</div>
+                        <div class="info-value"><?php echo formatDateUK($permit['work_started_at']); ?></div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($permitStatus === 'closed' && !empty($permit['closed_at'])): ?>
+                    <div class="info-item">
+                        <div class="info-label">Closed</div>
+                        <div class="info-value"><?php echo formatDateUK($permit['closed_at']); ?></div>
                     </div>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Status Message -->
-            <?php if ($permit['status'] === 'pending_approval'): ?>
+            <?php if ($permitStatus === 'pending_approval'): ?>
                 <div class="status-message pending">
                     <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;">
                         <div>⏳ <strong>Pending Approval:</strong> Your permit is being reviewed by a manager. We'll notify you once it's approved!</div>
                         <?php if ($canApprove): ?>
+                            <label for="approve-duration" style="font-weight:600;">Permit validity</label>
+                            <select id="approve-duration" style="width:min(100%, 320px);padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;">
+                                <?php foreach ($approvalDurationPresets as $durationPreset): ?>
+                                    <option value="<?php echo (int) $durationPreset['minutes']; ?>" <?php echo (int) $durationPreset['minutes'] === $approvalDurationMinutes ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars((string) $durationPreset['label']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                             <button type="button" class="btn btn-success no-print" id="approve-permit-btn" data-permit-id="<?=htmlspecialchars($permit['id'])?>">
                                 ✅ Approve Permit
                             </button>
@@ -472,13 +695,36 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                         <?php endif; ?>
                     </div>
                 </div>
-            <?php elseif ($permit['status'] === 'active'): ?>
+            <?php elseif ($isActive): ?>
                 <div class="status-message active">
-                    ✅ <strong>Approved:</strong> Your permit is now active and valid for use.
+                    <?php if ($hasWorkStarted): ?>
+                        ✅ <strong>Work in progress:</strong> Work started on <?php echo htmlspecialchars(formatDateUK($permit['work_started_at'])); ?>.
+                    <?php else: ?>
+                        ✅ <strong>Approved:</strong> This permit is active. Record the work start before beginning the task.
+                    <?php endif; ?>
+                </div>
+            <?php elseif ($permitStatus === 'closed'): ?>
+                <div class="status-message pending">
+                    <strong>Permit closed:</strong> This permit is no longer valid for work.
+                    <?php if (!empty($permit['closure_reason'])): ?>
+                        <br><?php echo nl2br(htmlspecialchars((string) $permit['closure_reason'])); ?>
+                    <?php endif; ?>
+                </div>
+            <?php elseif ($permitStatus === 'expired'): ?>
+                <div class="status-message pending"><strong>Permit expired:</strong> Create a new permit before work continues.</div>
+            <?php elseif ($permitStatus === 'rejected'): ?>
+                <div class="status-message pending">
+                    <strong>Permit rejected:</strong> Review the details and submit a corrected permit.
+                    <?php if (!empty($permit['approval_notes'])): ?>
+                        <br><strong>Manager note:</strong> <?php echo nl2br(htmlspecialchars((string) $permit['approval_notes'])); ?>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
             <!-- Permit Details -->
+            <?php if ($form_structure === []): ?>
+                <div class="status-message pending">Permit details are unavailable. Please contact a permit administrator.</div>
+            <?php endif; ?>
             <?php foreach ($form_structure as $idx => $section): ?>
                 <div class="section">
                     <h2 class="section-title" style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
@@ -495,10 +741,11 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                         </ul>
                     <?php endif; ?>
                     
-                                        <?php foreach ($section['fields'] as $field): ?>
+                                        <?php foreach (($section['fields'] ?? []) as $field): ?>
+                        <?php if (!is_array($field) || empty($field['name'])) { continue; } ?>
                         <div class="field-group">
                             <div class="field-label">
-                                <?php echo htmlspecialchars($field['label']); ?>
+                                <?php echo htmlspecialchars((string) ($field['label'] ?? $field['name'])); ?>
                             </div>
                             <div class="field-value">
                                 <?php 
@@ -515,7 +762,7 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
                                                             $mediaVal = trim((string)($form_data[$mediaKey] ?? ''));
                                                         ?>
                                                         <?php if ($noteVal !== ''): ?>
-                                                            <div style="margin-top:6px; font-size:14px; color:#374151; background:#f8fafc; border-left:3px solid #6366f1; padding:10px; border-radius:6px;">
+                                                            <div style="margin-top:6px; font-size:14px; color:#374151; background:#f8fafc; border-left:3px solid var(--brand-primary); padding:10px; border-radius:6px;">
                                                                 <strong>Note:</strong> <?php echo nl2br(htmlspecialchars($noteVal)); ?>
                                                             </div>
                                                         <?php endif; ?>
@@ -544,13 +791,13 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
             <?php endforeach; ?>
 
             <!-- QR Code (if active) -->
-            <?php if ($permit['status'] === 'active'): ?>
+            <?php if ($isActive): ?>
                 <div class="qr-section no-print">
                     <h3>QR Code</h3>
                     <p style="color: #6b7280; margin-bottom: 16px;">Scan to verify this permit</p>
                     <div class="qr-code">
-                    <img src="<?=htmlspecialchars($app->url('qr-code.php'))?>?id=<?php echo urlencode($permit['id']); ?>" 
-                             alt="QR Code" 
+                    <img src="<?=htmlspecialchars($app->url('qr-code.php'))?>?link=<?php echo urlencode((string) $permit['unique_link']); ?>"
+                             alt="QR Code"
                              style="width: 100%; height: auto;">
                     </div>
                 </div>
@@ -558,28 +805,39 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
 
             <!-- Actions -->
             <div class="actions no-print">
+                <?php if ($isActive && !$currentUserIsActive): ?>
+                    <div class="team-action-hint">
+                        <p><strong>Starting or finishing the job?</strong><br>Sign in with the permit holder or manager account to record start work or close this permit.</p>
+                        <a href="<?php echo htmlspecialchars($teamLoginUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" class="btn btn-primary">Team sign in</a>
+                    </div>
+                <?php endif; ?>
                 <button onclick="window.print()" class="btn btn-primary">
                     🖨️ Print Permit
                 </button>
     			<!-- Close Permit Button (only for active permits) -->
-    <?php if ($permit['status'] === 'active' && $canClose): ?>
-            <button onclick="closePermit()" class="btn btn-danger no-print" style="background: #ef4444;">
+    <?php if ($isActive && $canClose): ?>
+            <button type="button" id="close-permit-btn" onclick="closePermit()" class="btn btn-danger no-print" style="background: #ef4444;">
                 🔒 Close Permit
             </button>
     <?php endif; ?>
                 <a href="<?=htmlspecialchars($app->url('/'))?>" class="btn btn-secondary">
                     ← Back to Homepage
                 </a>
-                <?php if ($permit['status'] === 'active'): ?>
-                    <a href="<?=htmlspecialchars($app->url('qr-code.php'))?>?id=<?php echo urlencode($permit['id']); ?>&download=1" 
-                       class="btn btn-secondary">
+                <?php if ($isActive): ?>
+                    <a href="<?=htmlspecialchars($app->url('qr-code.php'))?>?link=<?php echo urlencode((string) $permit['unique_link']); ?>&download=1"
+                       class="btn btn-secondary" download="permit-<?php echo htmlspecialchars((string) ($permit['ref_number'] ?? 'qr')); ?>.png">
                         📥 Download QR Code
                     </a>
                 <?php endif; ?>
-                <?php if ($permit['status'] === 'active' && $overallPercent !== null): ?>
-                    <button class="btn btn-success" onclick="startWork()" <?php echo ($overallPercent >= 80 ? '' : 'disabled'); ?>>
+                <?php if ($canStartWork && !$hasWorkStarted): ?>
+                    <button type="button" id="start-work-btn" class="btn btn-success" onclick="startWork()" <?php echo $scoreAllowsWork ? '' : 'disabled'; ?> title="<?php echo $scoreAllowsWork ? 'Record the work start' : 'Complete applicable safety checks and achieve at least 80%'; ?>">
                         ▶️ Start Work
                     </button>
+                <?php endif; ?>
+                <?php if (in_array($permitStatus, ['active', 'issued', 'approved', 'closed', 'expired', 'rejected'], true)): ?>
+                    <a class="btn btn-secondary" href="<?php echo htmlspecialchars($app->url('create-permit-public.php?reopen=' . urlencode((string) $permit['unique_link']))); ?>">
+                        Create Similar Permit
+                    </a>
                 <?php endif; ?>
             </div>
         </div>
@@ -593,7 +851,7 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
         }
         <?php endif; ?>
     </script>
-    <?php if ($permit['status'] === 'pending_approval' && $canApprove): ?>
+    <?php if ($permitStatus === 'pending_approval' && $canApprove): ?>
     <script>
     document.addEventListener('DOMContentLoaded', function(){
         var approveBtn = document.getElementById('approve-permit-btn');
@@ -601,22 +859,22 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
         var feedback = document.getElementById('approve-feedback');
         approveBtn.addEventListener('click', function(){
             var permitId = approveBtn.getAttribute('data-permit-id');
+            var durationSelect = document.getElementById('approve-duration');
+            var durationMinutes = durationSelect ? Number(durationSelect.value) : null;
             if(!permitId){return;}
             approveBtn.disabled = true;
             approveBtn.textContent = 'Approving...';
-            fetch('/api/approve-permit.php', {
+            fetch(<?php echo json_encode($app->url('api/approve-permit.php')); ?>, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': <?php echo json_encode($approveCsrfToken); ?>
                 },
-                body: JSON.stringify({ permit_id: permitId })
-            }).then(function(res){
-                if(!res.ok){throw new Error('Approve request failed');}
-                return res.json();
-            }).then(function(payload){
+                body: JSON.stringify({ permit_id: permitId, duration_minutes: durationMinutes })
+            }).then(readJsonResponse).then(function(payload){
                 if(payload && payload.success){
                     if(feedback){
-                        feedback.textContent = 'Permit approved successfully. Reloading...';
+                        feedback.textContent = 'Permit approved for ' + (payload.duration_label || 'the selected duration') + '. Reloading...';
                         feedback.style.display = 'block';
                         feedback.style.color = '#047857';
                     }
@@ -638,26 +896,46 @@ $overallPercent = $overallDen > 0 ? round(($scoring['overall']['yes'] / $overall
     </script>
     <?php endif; ?>
 	<script>
+function readJsonResponse(response) {
+    return response.json().catch(function() {
+        throw new Error('The server returned an invalid response. Please try again.');
+    }).then(function(payload) {
+        if (!response.ok || !payload || payload.success !== true) {
+            throw new Error(payload && payload.message ? payload.message : 'Request failed (' + response.status + ')');
+        }
+        return payload;
+    });
+}
+
 function startWork(){
-    var btns = document.getElementsByClassName('btn btn-success');
+    if (!confirm('Record that work is starting now?')) {
+        return;
+    }
+
+    var button = document.getElementById('start-work-btn');
     var score = <?php echo json_encode($overallPercent); ?>;
     var BASE_URL = <?php echo json_encode(rtrim($app->url(''), '/').'/'); ?>;
     var link = <?php echo json_encode($permit['unique_link']); ?>;
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Recording...';
+    }
     fetch(BASE_URL + 'api/start-work.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': <?php echo json_encode($startWorkCsrfToken); ?>
+        },
         body: JSON.stringify({ link: link })
-    }).then(function(res){
-        if (!res.ok) throw new Error('Request failed: ' + res.status);
-        return res.json();
-    }).then(function(payload){
-        if (payload && payload.success) {
-            alert('▶️ Work started' + (score !== null ? ('\nScore: ' + score + '%') : '') );
-        } else {
-            throw new Error(payload && payload.message ? payload.message : 'Unknown error');
-        }
+    }).then(readJsonResponse).then(function(payload){
+        alert('▶️ Work started' + (score !== null ? ('\nScore: ' + score + '%') : '') );
+        window.location.reload();
     }).catch(function(err){
         alert('Could not record start: ' + err.message);
+        if (button) {
+            button.disabled = false;
+            button.textContent = '▶️ Start Work';
+        }
     });
 }
 function closePermit() {
@@ -666,9 +944,19 @@ function closePermit() {
     }
     
     const reason = prompt('Optional: Enter reason for closing this permit');
+    if (reason === null) {
+        return;
+    }
+
+    const button = document.getElementById('close-permit-btn');
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Closing...';
+    }
     
     const formData = new FormData();
     formData.append('permit_id', '<?php echo $permit['id']; ?>');
+    formData.append('csrf_token', <?php echo json_encode($closeCsrfToken); ?>);
     if (reason) {
         formData.append('reason', reason);
     }
@@ -678,17 +966,17 @@ function closePermit() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(readJsonResponse)
     .then(data => {
-        if (data.success) {
-            alert('✅ ' + data.message);
-            location.reload();
-        } else {
-            alert('❌ Error: ' + data.message);
-        }
+        alert('✅ ' + data.message);
+        location.reload();
     })
     .catch(error => {
         alert('❌ Error closing permit: ' + error.message);
+        if (button) {
+            button.disabled = false;
+            button.textContent = '🔒 Close Permit';
+        }
     });
 }
 </script>

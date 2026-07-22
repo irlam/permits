@@ -10,6 +10,12 @@ SET @sql = IF(
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
+-- "viewer" was a legacy role that no current permission path recognises.
+-- Convert existing accounts and make regular "user" the safe schema default.
+UPDATE users SET role = 'user' WHERE role = 'viewer';
+ALTER TABLE users
+  MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'user';
+
 -- User identifiers are UUID strings throughout the application.
 ALTER TABLE forms
   MODIFY COLUMN approved_by VARCHAR(36) NULL;

@@ -1,11 +1,6 @@
--- phpMyAdmin SQL Dump
--- version 5.2.2
--- https://www.phpmyadmin.net/
---
--- Host: 10.35.233.124:3306
--- Generation Time: Oct 30, 2025 at 04:37 PM
--- Server version: 8.0.43
--- PHP Version: 8.4.8
+-- Permits System fresh-install schema
+-- Compatible with MySQL 5.7+ and MariaDB 10.2+.
+-- Import into a new, empty database, then run: php bin/migrate.php
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,9 +13,6 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `k87747_permits`
---
-
 -- --------------------------------------------------------
 
 --
@@ -33,8 +25,8 @@ CREATE TABLE `activity_log` (
   `user_id` varchar(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `type` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `user_email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `action` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `category` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `action` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'unknown',
+  `category` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'general',
   `resource_type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `resource_id` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
@@ -59,6 +51,27 @@ CREATE TABLE `attachments` (
   `url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL,
   `meta` mediumtext COLLATE utf8mb4_unicode_ci,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `email_queue`
+--
+
+CREATE TABLE `email_queue` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `to_email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `attempt_count` int unsigned NOT NULL DEFAULT '0',
+  `available_at` datetime DEFAULT NULL,
+  `claimed_at` datetime DEFAULT NULL,
+  `claim_token` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_error` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sent_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -98,8 +111,8 @@ CREATE TABLE `forms` (
   `closure_reason` text COLLATE utf8mb4_unicode_ci,
   `expiry_duration` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '1 day',
   `expires_at` datetime DEFAULT NULL,
-  `expired_at` datetime DEFAULT NULL
-  ,`work_started_at` datetime DEFAULT NULL
+  `expired_at` datetime DEFAULT NULL,
+  `work_started_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -174,7 +187,37 @@ CREATE TABLE `push_subscriptions` (
   `p256dh` varchar(255) NOT NULL,
   `auth` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+-- Persistent, privacy-preserving login rate limits.
+CREATE TABLE `login_attempts` (
+  `key_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `attempts` int unsigned NOT NULL DEFAULT '0',
+  `window_started_at` bigint unsigned NOT NULL,
+  `last_failed_at` bigint unsigned NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+-- Persistent, privacy-preserving public submission rate limits.
+CREATE TABLE `public_rate_limits` (
+  `key_hash` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `attempts` int unsigned NOT NULL DEFAULT '0',
+  `window_started_at` bigint unsigned NOT NULL,
+  `last_attempt_at` bigint unsigned NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+-- Short-lived leases prevent overlapping scheduled workers.
+CREATE TABLE `worker_locks` (
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `owner_token` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `acquired_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -205,7 +248,7 @@ CREATE TABLE `site_settings` (
   `timezone` varchar(64) NOT NULL DEFAULT 'Europe/London',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -218,14 +261,14 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `role` varchar(50) NOT NULL DEFAULT 'viewer',
+  `role` varchar(50) NOT NULL DEFAULT 'user',
   `status` varchar(50) NOT NULL DEFAULT 'active',
   `invited_by` varchar(36) DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `last_login` datetime DEFAULT NULL,
   `reset_token` varchar(255) DEFAULT NULL,
   `reset_token_expires` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Indexes for dumped tables
@@ -250,6 +293,16 @@ ALTER TABLE `attachments`
   ADD KEY `idx_att_form` (`form_id`);
 
 --
+-- Indexes for table `email_queue`
+--
+ALTER TABLE `email_queue`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_email_status` (`status`),
+  ADD KEY `idx_email_created` (`created_at`),
+  ADD KEY `idx_email_ready` (`status`,`available_at`,`created_at`),
+  ADD KEY `idx_email_claim` (`claim_token`);
+
+--
 -- Indexes for table `forms`
 --
 ALTER TABLE `forms`
@@ -257,9 +310,11 @@ ALTER TABLE `forms`
   ADD KEY `idx_forms_template_status` (`template_id`,`status`),
   ADD KEY `idx_forms_validto` (`valid_to`),
   ADD KEY `idx_forms_lookup` (`site_block`,`ref`),
+  ADD KEY `idx_forms_holder_status` (`holder_id`,`status`),
   ADD KEY `idx_approval_status` (`approval_status`),
   ADD KEY `idx_approved_by` (`approved_by`),
-  ADD KEY `idx_ref_number` (`ref_number`);
+  ADD UNIQUE KEY `uq_forms_ref_number` (`ref_number`),
+  ADD UNIQUE KEY `uq_forms_unique_link` (`unique_link`);
 
 --
 -- Indexes for table `form_events`
@@ -267,6 +322,27 @@ ALTER TABLE `forms`
 ALTER TABLE `form_events`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_events_form_type_at` (`form_id`,`type`,`at`);
+
+--
+-- Indexes for table `login_attempts`
+--
+ALTER TABLE `login_attempts`
+  ADD PRIMARY KEY (`key_hash`),
+  ADD KEY `idx_login_attempts_last_failed` (`last_failed_at`);
+
+--
+-- Indexes for table `public_rate_limits`
+--
+ALTER TABLE `public_rate_limits`
+  ADD PRIMARY KEY (`key_hash`),
+  ADD KEY `idx_public_limits_last_attempt` (`last_attempt_at`);
+
+--
+-- Indexes for table `worker_locks`
+--
+ALTER TABLE `worker_locks`
+  ADD PRIMARY KEY (`name`),
+  ADD KEY `idx_worker_locks_expires` (`expires_at`);
 
 --
 -- Indexes for table `form_templates`
@@ -359,21 +435,6 @@ ALTER TABLE `forms`
 ALTER TABLE `form_events`
   ADD CONSTRAINT `fk_events_form` FOREIGN KEY (`form_id`) REFERENCES `forms` (`id`);
 
--- --------------------------------------------------------
-
---
--- Seed data: default administrator account
---
-
-INSERT INTO `users` (`id`, `email`, `password_hash`, `name`, `role`, `status`, `created_at`)
-VALUES
-  ('11111111-1111-1111-1111-111111111111', 'admin@example.com', '$2y$12$4b8QG0yXl8k5ZfB5l1yJ2e9twDaV6nQGJbXlIqGn/0mZy6D4nMG1q', 'System Administrator', 'admin', 'active', NOW())
-ON DUPLICATE KEY UPDATE
-  `email` = VALUES(`email`),
-  `password_hash` = VALUES(`password_hash`),
-  `name` = VALUES(`name`),
-  `role` = VALUES(`role`),
-  `status` = VALUES(`status`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -18,6 +18,51 @@ function debounce(func, wait) {
   };
 }
 
+// Show an install action only when the current browser can complete it.
+let deferredInstallPrompt = null;
+
+function initializeInstallButton() {
+  const button = document.getElementById('installButton');
+  if (!button) return;
+
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
+
+  button.hidden = standalone || !isIos;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    button.hidden = false;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    button.hidden = true;
+  });
+
+  button.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      button.hidden = true;
+      return;
+    }
+
+    if (isIos) {
+      window.alert('To install: tap Share, then choose “Add to Home Screen”.');
+    }
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeInstallButton);
+} else {
+  initializeInstallButton();
+}
+
 // Register service worker if browser supports it
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -155,6 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Push Notification Functions
+function getCsrfToken() {
+  const tokenElement = document.querySelector('meta[name="csrf-token"]');
+  return tokenElement ? tokenElement.getAttribute('content') : '';
+}
+
 async function initializePushNotifications(registration) {
   try {
     // Check if notifications are supported
@@ -210,6 +260,7 @@ async function subscribeToPushNotifications(registration) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify(subscription.toJSON())
     });
@@ -247,6 +298,7 @@ async function unsubscribeFromPushNotifications() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify(subscription.toJSON())
     });

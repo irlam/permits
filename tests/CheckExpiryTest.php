@@ -174,7 +174,7 @@ final class CheckExpiryTest extends TestCase
         $this->assertSame('issued', $permit['status']);
     }
 
-    public function testOnlyExpiresIssuedAndActiveStatuses(): void
+    public function testOnlyExpiresLifecycleActiveStatuses(): void
     {
         $pastDate = date('Y-m-d H:i:s', strtotime('-1 day'));
         $statuses = ['draft', 'pending', 'rejected', 'closed', 'expired'];
@@ -189,7 +189,7 @@ final class CheckExpiryTest extends TestCase
 
         $expired = check_and_expire_permits($this->db);
 
-        $this->assertSame(0, $expired, 'Should not expire permits with statuses other than issued/active');
+        $this->assertSame(0, $expired, 'Should not expire permits outside the lifecycle active set');
 
         foreach ($statuses as $status) {
             $permit = $this->pdo->query("SELECT status FROM forms WHERE ref = 'TEST-{$status}'")->fetch();
@@ -306,6 +306,34 @@ final class CheckExpiryTest extends TestCase
     {
         $expired = check_and_expire_permits($this->db);
         $this->assertSame(0, $expired, 'Should return 0 when no permits exist');
+    }
+
+    public function testExpiresApprovedAndOpenLegacyStatuses(): void
+    {
+        $pastDate = date('Y-m-d H:i:s', strtotime('-1 day'));
+        foreach (['approved', 'open'] as $status) {
+            $permitId = Uuid::uuid4()->toString();
+            $stmt = $this->pdo->prepare('INSERT INTO forms (id, ref, status, valid_to) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$permitId, 'LEGACY-' . strtoupper($status), $status, $pastDate]);
+        }
+
+        self::assertSame(2, check_and_expire_permits($this->db));
+        self::assertSame(2, (int)$this->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'expired'")->fetchColumn());
+    }
+
+    public function testRepeatedSweepDoesNotDuplicateExpiryEvent(): void
+    {
+        $permitId = Uuid::uuid4()->toString();
+        $pastDate = date('Y-m-d H:i:s', strtotime('-1 hour'));
+        $stmt = $this->pdo->prepare('INSERT INTO forms (id, ref, status, valid_to) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$permitId, 'RACE-001', 'active', $pastDate]);
+
+        self::assertSame(1, check_and_expire_permits($this->db));
+        self::assertSame(0, check_and_expire_permits($this->db));
+
+        $events = $this->pdo->prepare('SELECT COUNT(*) FROM form_events WHERE form_id = ?');
+        $events->execute([$permitId]);
+        self::assertSame(1, (int) $events->fetchColumn());
     }
 
     public function testContinuesWhenEventStatementFails(): void

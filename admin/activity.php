@@ -20,40 +20,78 @@
  * - Responsive design
  */
 
+use Permits\Csrf;
+
 require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    die('<h1>Access Denied</h1><p>Admin access required.</p>');
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 // Constants
 const MAX_LOG_SIZE_MB = 100;
 const MAX_LOG_SIZE_BYTES = MAX_LOG_SIZE_MB * 1024 * 1024;
 const BATCH_DELETE_LIMIT = 1000;
 
+/** @return array<string,bool> */
+function activityLogColumns(PDO $pdo): array {
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    $rows = $driver === 'mysql'
+        ? $pdo->query('SHOW COLUMNS FROM activity_log')->fetchAll(PDO::FETCH_ASSOC)
+        : $pdo->query('PRAGMA table_info(activity_log)')->fetchAll(PDO::FETCH_ASSOC);
+
+    $columns = [];
+    foreach ($rows as $row) {
+        $name = $driver === 'mysql' ? ($row['Field'] ?? null) : ($row['name'] ?? null);
+        if (is_string($name) && $name !== '') {
+            $columns[strtolower($name)] = true;
+        }
+    }
+
+    return $columns;
+}
+
+function activityCoalesceExpression(array $columns, array $candidates, string $fallback = "''"): string {
+    $available = [];
+    foreach ($candidates as $candidate) {
+        if (isset($columns[$candidate])) {
+            $available[] = "NULLIF(`{$candidate}`, '')";
+        }
+    }
+
+    if ($available === []) {
+        return $fallback;
+    }
+
+    $available[] = $fallback;
+    return 'COALESCE(' . implode(', ', $available) . ')';
+}
+
+$activityColumns = activityLogColumns($db->pdo);
+$timeColumn = isset($activityColumns['timestamp'])
+    ? '`timestamp`'
+    : (isset($activityColumns['created_at']) ? '`created_at`' : null);
+$idExpression = isset($activityColumns['id']) ? '`id`' : '0';
+$userExpression = isset($activityColumns['user_id']) ? '`user_id`' : "'system'";
+$actionExpression = activityCoalesceExpression($activityColumns, ['type', 'action'], "'unknown'");
+$descriptionExpression = activityCoalesceExpression($activityColumns, ['description', 'details']);
+$ipExpression = isset($activityColumns['ip_address']) ? '`ip_address`' : 'NULL';
+$userAgentExpression = isset($activityColumns['user_agent']) ? '`user_agent`' : 'NULL';
+
 // Handle actions
 $action = $_GET['action'] ?? '';
 $message = '';
 $messageType = 'info';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !Csrf::validateRequest('admin-activity')) {
+    http_response_code(419);
+    echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the activity log and try again.</p>';
+    exit;
+}
+
 // Check and manage log size
-function checkAndManageLogSize($db) {
+function checkAndManageLogSize($db, ?string $timeColumn, bool $hasId) {
     try {
         // Get database name and table size
         $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
@@ -69,29 +107,16 @@ function checkAndManageLogSize($db) {
             $sizeBytes = $rowCount * 500; // Rough estimate: 500 bytes per row
         }
         
-        if ($sizeBytes > MAX_LOG_SIZE_BYTES) {
-            // Delete oldest records in batches
-            $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-            if ($driver === 'mysql') {
-                $deleteStmt = $db->pdo->prepare("
-                    DELETE FROM activity_log 
-                    WHERE id IN (
-                        SELECT id FROM activity_log 
-                        ORDER BY timestamp ASC 
-                        LIMIT ?
-                    )
-                ");
-            } else {
-                $deleteStmt = $db->pdo->prepare("
-                    DELETE FROM activity_log 
-                    WHERE id IN (
-                        SELECT id FROM activity_log 
-                        ORDER BY timestamp ASC 
-                        LIMIT ?
-                    )
-                ");
+        if ($sizeBytes > MAX_LOG_SIZE_BYTES && $timeColumn !== null && $hasId) {
+            // Select then delete, avoiding MySQL's target-table subquery restriction.
+            $oldest = $db->pdo->query(
+                'SELECT id FROM activity_log ORDER BY ' . $timeColumn . ' ASC LIMIT ' . BATCH_DELETE_LIMIT
+            )->fetchAll(PDO::FETCH_COLUMN);
+            if ($oldest !== []) {
+                $placeholders = implode(', ', array_fill(0, count($oldest), '?'));
+                $deleteStmt = $db->pdo->prepare('DELETE FROM activity_log WHERE id IN (' . $placeholders . ')');
+                $deleteStmt->execute($oldest);
             }
-            $deleteStmt->execute([BATCH_DELETE_LIMIT]);
             return true;
         }
     } catch (Exception $e) {
@@ -123,7 +148,8 @@ function getLogTableSize($db) {
 // Export functionality
 if ($action === 'export') {
     $format = $_GET['format'] ?? 'csv';
-    $stmt = $db->pdo->prepare("SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT 10000");
+    $orderBy = $timeColumn !== null ? $timeColumn : $idExpression;
+    $stmt = $db->pdo->prepare("SELECT * FROM activity_log ORDER BY {$orderBy} DESC LIMIT 10000");
     $stmt->execute();
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -149,22 +175,29 @@ if ($action === 'export') {
 
 // Clear old logs
 if ($action === 'clear-old' && isset($_POST['days'])) {
-    $days = (int)$_POST['days'];
-    $stmt = $db->pdo->prepare("DELETE FROM activity_log WHERE timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)");
-    $stmt->execute([$days]);
-    $deletedRows = $stmt->rowCount();
-    $message = "Deleted $deletedRows log entries older than $days days";
-    $messageType = 'success';
+    $days = max(1, min(3650, (int)$_POST['days']));
+    if ($timeColumn === null) {
+        $message = 'This legacy activity table has no date column, so old entries cannot be removed by age.';
+        $messageType = 'error';
+    } else {
+        $cutoff = date('Y-m-d H:i:s', strtotime("-{$days} days"));
+        $stmt = $db->pdo->prepare("DELETE FROM activity_log WHERE {$timeColumn} < ?");
+        $stmt->execute([$cutoff]);
+        $deletedRows = $stmt->rowCount();
+        $message = "Deleted $deletedRows log entries older than $days days";
+        $messageType = 'success';
+    }
 }
 
 // Truncate all logs
 if ($action === 'truncate-all' && isset($_POST['confirm']) && $_POST['confirm'] === 'yes') {
-    $db->pdo->exec("TRUNCATE TABLE activity_log");
+    $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    $db->pdo->exec($driver === 'mysql' ? 'TRUNCATE TABLE activity_log' : 'DELETE FROM activity_log');
     $message = "All activity logs have been cleared";
     $messageType = 'success';
 }
 
-checkAndManageLogSize($db);
+checkAndManageLogSize($db, $timeColumn, isset($activityColumns['id']));
 
 // Get filters
 $filterUser = $_GET['user'] ?? '';
@@ -181,31 +214,46 @@ $whereConditions = [];
 $params = [];
 
 if ($filterUser) {
-    $whereConditions[] = "user_id = ?";
-    $params[] = $filterUser;
+    if (isset($activityColumns['user_id'])) {
+        $whereConditions[] = "user_id = ?";
+        $params[] = $filterUser;
+    }
 }
 if ($filterAction) {
-    $whereConditions[] = "(action = ? OR type = ?)";
-    $params[] = $filterAction;
-    $params[] = $filterAction;
+    $actionConditions = [];
+    foreach (['action', 'type'] as $column) {
+        if (isset($activityColumns[$column])) {
+            $actionConditions[] = "`{$column}` = ?";
+            $params[] = $filterAction;
+        }
+    }
+    if ($actionConditions !== []) {
+        $whereConditions[] = '(' . implode(' OR ', $actionConditions) . ')';
+    }
 }
-if ($filterStartDate) {
-    $whereConditions[] = "DATE(timestamp) >= ?";
+if ($filterStartDate && $timeColumn !== null) {
+    $whereConditions[] = "DATE({$timeColumn}) >= ?";
     $params[] = $filterStartDate;
 }
-if ($filterEndDate) {
-    $whereConditions[] = "DATE(timestamp) <= ?";
+if ($filterEndDate && $timeColumn !== null) {
+    $whereConditions[] = "DATE({$timeColumn}) <= ?";
     $params[] = $filterEndDate;
 }
-if ($filterIp) {
+if ($filterIp && isset($activityColumns['ip_address'])) {
     $whereConditions[] = "ip_address LIKE ?";
     $params[] = "%$filterIp%";
 }
 if ($searchTerm) {
-    $whereConditions[] = "(description LIKE ? OR details LIKE ? OR user_agent LIKE ?)";
-    $params[] = "%$searchTerm%";
-    $params[] = "%$searchTerm%";
-    $params[] = "%$searchTerm%";
+    $searchConditions = [];
+    foreach (['description', 'details', 'user_agent'] as $column) {
+        if (isset($activityColumns[$column])) {
+            $searchConditions[] = "`{$column}` LIKE ?";
+            $params[] = "%$searchTerm%";
+        }
+    }
+    if ($searchConditions !== []) {
+        $whereConditions[] = '(' . implode(' OR ', $searchConditions) . ')';
+    }
 }
 
 $whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
@@ -219,59 +267,77 @@ $offset = ($page - 1) * $perPage;
 
 // Get logs
 $stmt = $db->pdo->prepare("
-    SELECT id, user_id, type, action, description, details, timestamp, ip_address, user_agent
+    SELECT {$idExpression} AS id,
+           {$userExpression} AS user_id,
+           {$actionExpression} AS type,
+           {$actionExpression} AS action,
+           {$descriptionExpression} AS description,
+           {$descriptionExpression} AS details,
+           " . ($timeColumn ?? 'NULL') . " AS timestamp,
+           {$ipExpression} AS ip_address,
+           {$userAgentExpression} AS user_agent
     FROM activity_log
     $whereClause
-    ORDER BY timestamp DESC
-    LIMIT ? OFFSET ?
+    ORDER BY " . ($timeColumn ?? $idExpression) . " DESC
+    LIMIT {$perPage} OFFSET {$offset}
 ");
-$stmt->execute(array_merge($params, [$perPage, $offset]));
+$stmt->execute($params);
 $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get user list for filter
-$usersStmt = $db->pdo->query("SELECT DISTINCT user_id FROM activity_log WHERE user_id IS NOT NULL ORDER BY user_id");
-$userList = $usersStmt->fetchAll(PDO::FETCH_COLUMN);
+$userList = [];
+if (isset($activityColumns['user_id'])) {
+    $usersStmt = $db->pdo->query("SELECT DISTINCT user_id FROM activity_log WHERE user_id IS NOT NULL ORDER BY user_id");
+    $userList = $usersStmt->fetchAll(PDO::FETCH_COLUMN);
+}
 
 // Get action types for filter
-$actionsStmt = $db->pdo->query("SELECT DISTINCT COALESCE(type, action) as action_type FROM activity_log WHERE type IS NOT NULL OR action IS NOT NULL ORDER BY action_type");
+$actionsStmt = $db->pdo->query("SELECT DISTINCT {$actionExpression} AS action_type FROM activity_log ORDER BY action_type");
 $actionTypes = $actionsStmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Get statistics
 $statsStmt = $db->pdo->query("
     SELECT 
         COUNT(*) as total_events,
-        COUNT(DISTINCT user_id) as unique_users,
-        COUNT(DISTINCT ip_address) as unique_ips,
-        MAX(timestamp) as last_activity
+        COUNT(DISTINCT {$userExpression}) as unique_users,
+        COUNT(DISTINCT {$ipExpression}) as unique_ips,
+        MAX(" . ($timeColumn ?? 'NULL') . ") as last_activity
     FROM activity_log
 ");
 $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
 // Get activity by type (last 24h)
+$lastDayWhere = $timeColumn !== null ? "WHERE {$timeColumn} > " . $db->pdo->quote(date('Y-m-d H:i:s', strtotime('-1 day'))) : '';
 $typesStmt = $db->pdo->query("
-    SELECT COALESCE(type, action) as action_type, COUNT(*) as count
+    SELECT {$actionExpression} as action_type, COUNT(*) as count
     FROM activity_log
-    WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 DAY)
-    GROUP BY COALESCE(type, action)
+    {$lastDayWhere}
+    GROUP BY {$actionExpression}
     ORDER BY count DESC
     LIMIT 10
 ");
 $topActivities = $typesStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get top users (last 24h)
-$usersStatsStmt = $db->pdo->query("
-    SELECT user_id, COUNT(*) as count
-    FROM activity_log
-    WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 DAY) AND user_id IS NOT NULL
-    GROUP BY user_id
-    ORDER BY count DESC
-    LIMIT 5
-");
-$topUsers = $usersStatsStmt->fetchAll(PDO::FETCH_ASSOC);
+$topUsers = [];
+if (isset($activityColumns['user_id'])) {
+    $userWhere = $timeColumn !== null
+        ? "{$timeColumn} > " . $db->pdo->quote(date('Y-m-d H:i:s', strtotime('-1 day'))) . ' AND user_id IS NOT NULL'
+        : 'user_id IS NOT NULL';
+    $usersStatsStmt = $db->pdo->query("
+        SELECT user_id, COUNT(*) as count
+        FROM activity_log
+        WHERE {$userWhere}
+        GROUP BY user_id
+        ORDER BY count DESC
+        LIMIT 5
+    ");
+    $topUsers = $usersStatsStmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $logSize = getLogTableSize($db);
 $logSizePercent = ($logSize / MAX_LOG_SIZE_MB) * 100;
-$logSizeStatus = $logSizePercent > 80 ? 'warning' : ($logSizePercent > 95 ? 'danger' : 'success');
+$logSizeStatus = $logSizePercent > 95 ? 'danger' : ($logSizePercent > 80 ? 'warning' : 'success');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -279,7 +345,7 @@ $logSizeStatus = $logSizePercent > 80 ? 'warning' : ($logSizePercent > 95 ? 'dan
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activity Log - Admin Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script src="<?= htmlspecialchars($app->url('/assets/vendor/chart.umd.min.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></script>
     <style>
         * {
             margin: 0;
@@ -841,6 +907,7 @@ $logSizeStatus = $logSizePercent > 80 ? 'warning' : ($logSizePercent > 95 ? 'dan
                     <h3 style="margin-bottom: 12px; color: #e2e8f0;">Clear Old Logs</h3>
                     <p style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">Delete logs older than specified days</p>
                     <form method="post" action="?action=clear-old" style="display: flex; gap: 8px;">
+                        <?= Csrf::getFormField('admin-activity') ?>
                         <input type="number" name="days" min="1" max="365" value="30" style="flex: 1; padding: 8px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 6px; color: #e2e8f0;">
                         <button type="submit" class="btn btn-secondary">Clear</button>
                     </form>
@@ -868,6 +935,7 @@ $logSizeStatus = $logSizePercent > 80 ? 'warning' : ($logSizePercent > 95 ? 'dan
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeTruncateModal()">Cancel</button>
                 <form method="post" action="?action=truncate-all" style="display: inline;">
+                    <?= Csrf::getFormField('admin-activity') ?>
                     <input type="hidden" name="confirm" value="yes">
                     <button type="submit" class="btn btn-danger">Yes, Delete All</button>
                 </form>

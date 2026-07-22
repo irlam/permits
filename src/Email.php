@@ -60,10 +60,13 @@ class Email {
      */
     public function queue(string $to, string $subject, string $body): string {
         $id = Uuid::uuid4()->toString();
+        $now = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? "datetime('now')"
+            : 'NOW()';
         
         $stmt = $this->pdo->prepare("
             INSERT INTO email_queue (id, to_email, subject, body, status, created_at)
-            VALUES (?, ?, ?, ?, 'pending', NOW())
+            VALUES (?, ?, ?, ?, 'pending', {$now})
         ");
         
         $stmt->execute([$id, $to, $subject, $body]);
@@ -79,10 +82,11 @@ class Email {
      * @return string Email queue ID
      */
     public function sendApprovalNotification(array $form, string $recipientEmail): string {
-        $subject = "Permit Approved: " . ($form['ref'] ?? 'Unknown');
+        $reference = $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? 'Unknown';
+        $subject = "Permit Approved: " . $reference;
         $body = $this->renderTemplate('permit-approved', [
             'form' => $form,
-            'permitNo' => $form['ref'] ?? 'Unknown',
+            'permitNo' => $reference,
             'siteBlock' => $form['site_block'] ?? 'Unknown',
             'validFrom' => $form['valid_from'] ?? 'N/A',
             'validTo' => $form['valid_to'] ?? 'N/A',
@@ -100,10 +104,11 @@ class Email {
      * @return string Email queue ID
      */
     public function sendRejectionNotification(array $form, string $recipientEmail, string $reason = ''): string {
-        $subject = "Permit Rejected: " . ($form['ref'] ?? 'Unknown');
+        $reference = $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? 'Unknown';
+        $subject = "Permit Rejected: " . $reference;
         $body = $this->renderTemplate('permit-rejected', [
             'form' => $form,
-            'permitNo' => $form['ref'] ?? 'Unknown',
+            'permitNo' => $reference,
             'reason' => $reason,
         ]);
         
@@ -119,10 +124,11 @@ class Email {
      * @return string Email queue ID
      */
     public function sendExpiryReminder(array $form, string $recipientEmail, int $daysUntilExpiry): string {
-        $subject = "Permit Expiring Soon: " . ($form['ref'] ?? 'Unknown');
+        $reference = $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? 'Unknown';
+        $subject = "Permit Expiring Soon: " . $reference;
         $body = $this->renderTemplate('permit-expiring', [
             'form' => $form,
-            'permitNo' => $form['ref'] ?? 'Unknown',
+            'permitNo' => $reference,
             'daysUntilExpiry' => $daysUntilExpiry,
             'expiryDate' => $form['valid_to'] ?? 'Unknown',
         ]);
@@ -138,10 +144,11 @@ class Email {
      * @return string Email queue ID
      */
     public function sendCreatedNotification(array $form, string $recipientEmail): string {
-        $subject = "New Permit Created: " . ($form['ref'] ?? 'Unknown');
+        $reference = $form['ref_number'] ?? $form['ref'] ?? $form['id'] ?? 'Unknown';
+        $subject = "New Permit Created: " . $reference;
         $body = $this->renderTemplate('permit-created', [
             'form' => $form,
-            'permitNo' => $form['ref'] ?? 'Unknown',
+            'permitNo' => $reference,
             'siteBlock' => $form['site_block'] ?? 'Unknown',
             'status' => $form['status'] ?? 'draft',
         ]);
@@ -255,15 +262,166 @@ class Email {
      * @return array Array of pending email records
      */
     public function getPendingEmails(int $limit = 50): array {
+        $now = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? "datetime('now')"
+            : 'NOW()';
         $stmt = $this->pdo->prepare("
             SELECT * FROM email_queue 
-            WHERE status = 'pending' 
+            WHERE status = 'pending'
+              AND (available_at IS NULL OR available_at <= {$now})
             ORDER BY created_at ASC 
             LIMIT ?
         ");
         
-        $stmt->execute([$limit]);
-        return $stmt->fetchAll();
+        $stmt->bindValue(1, max(1, min(500, $limit)), PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Atomically claim queued messages for one worker.
+     *
+     * MySQL uses a single ordered UPDATE so it remains safe on MySQL 5.7 and
+     * MariaDB without SKIP LOCKED. SQLite serialises the short claim section
+     * with BEGIN IMMEDIATE. Callers should claim one message at a time so work
+     * is never left idle long enough to be mistaken for a crashed worker.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function claimPendingEmails(
+        int $limit,
+        string $claimToken,
+        int $maxAttempts = 5,
+        int $staleMinutes = 15
+    ): array {
+        $limit = max(1, min(500, $limit));
+        $maxAttempts = max(1, min(20, $maxAttempts));
+        $staleMinutes = max(5, min(240, $staleMinutes));
+        if (preg_match('/^[A-Za-z0-9_-]{16,64}$/', $claimToken) !== 1) {
+            throw new \InvalidArgumentException('Invalid email queue claim token.');
+        }
+
+        $this->recoverStaleClaims($maxAttempts, $staleMinutes);
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        if ($driver === 'mysql') {
+            $sql = "
+                UPDATE email_queue
+                SET status = 'processing', claim_token = ?, claimed_at = NOW(),
+                    attempt_count = attempt_count + 1
+                WHERE status = 'pending'
+                  AND attempt_count < ?
+                  AND (available_at IS NULL OR available_at <= NOW())
+                ORDER BY created_at ASC
+                LIMIT {$limit}
+            ";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$claimToken, $maxAttempts]);
+        } elseif ($driver === 'sqlite') {
+            $this->pdo->exec('BEGIN IMMEDIATE');
+            try {
+                $select = $this->pdo->prepare("
+                    SELECT id FROM email_queue
+                    WHERE status = 'pending'
+                      AND attempt_count < ?
+                      AND (available_at IS NULL OR available_at <= datetime('now'))
+                    ORDER BY created_at ASC
+                    LIMIT ?
+                ");
+                $select->bindValue(1, $maxAttempts, PDO::PARAM_INT);
+                $select->bindValue(2, $limit, PDO::PARAM_INT);
+                $select->execute();
+                $ids = $select->fetchAll(PDO::FETCH_COLUMN);
+
+                $claim = $this->pdo->prepare("
+                    UPDATE email_queue
+                    SET status = 'processing', claim_token = ?, claimed_at = datetime('now'),
+                        attempt_count = attempt_count + 1
+                    WHERE id = ? AND status = 'pending'
+                ");
+                foreach ($ids as $id) {
+                    $claim->execute([$claimToken, $id]);
+                }
+                $this->pdo->exec('COMMIT');
+            } catch (\Throwable $e) {
+                try {
+                    $this->pdo->exec('ROLLBACK');
+                } catch (\Throwable $rollbackError) {
+                    // Preserve the original claim error.
+                }
+                throw $e;
+            }
+        } else {
+            throw new \RuntimeException('Unsupported email queue database driver.');
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM email_queue
+            WHERE status = 'processing' AND claim_token = ?
+            ORDER BY created_at ASC
+        ");
+        $stmt->execute([$claimToken]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function releaseAfterFailure(
+        string $id,
+        string $claimToken,
+        string $error,
+        int $maxAttempts = 5,
+        int $delaySeconds = 60
+    ): bool {
+        $maxAttempts = max(1, min(20, $maxAttempts));
+        $delaySeconds = max(30, min(86400, $delaySeconds));
+        $error = preg_replace('/[\x00-\x1F\x7F]+/', ' ', trim($error)) ?? 'Delivery failed.';
+        $error = mb_substr($error !== '' ? $error : 'Delivery failed.', 0, 1000, 'UTF-8');
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $availableAt = $driver === 'sqlite'
+            ? "datetime('now', '+{$delaySeconds} seconds')"
+            : "DATE_ADD(NOW(), INTERVAL {$delaySeconds} SECOND)";
+
+        $stmt = $this->pdo->prepare("
+            UPDATE email_queue
+            SET status = CASE WHEN attempt_count >= ? THEN 'failed' ELSE 'pending' END,
+                available_at = CASE WHEN attempt_count >= ? THEN NULL ELSE {$availableAt} END,
+                claimed_at = NULL,
+                claim_token = NULL,
+                last_error = ?
+            WHERE id = ? AND status = 'processing' AND claim_token = ?
+        ");
+        $stmt->execute([$maxAttempts, $maxAttempts, $error, $id, $claimToken]);
+        return $stmt->rowCount() === 1;
+    }
+
+    private function recoverStaleClaims(int $maxAttempts, int $staleMinutes): void
+    {
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $staleBefore = $driver === 'sqlite'
+            ? "datetime('now', '-{$staleMinutes} minutes')"
+            : "DATE_SUB(NOW(), INTERVAL {$staleMinutes} MINUTE)";
+        $now = $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
+
+        $stmt = $this->pdo->prepare("
+            UPDATE email_queue
+            SET status = CASE WHEN attempt_count >= ? THEN 'failed' ELSE 'pending' END,
+                available_at = CASE WHEN attempt_count >= ? THEN NULL ELSE {$now} END,
+                claimed_at = NULL,
+                claim_token = NULL,
+                last_error = CASE
+                    WHEN last_error IS NULL OR last_error = '' THEN 'Delivery worker did not complete the claim.'
+                    ELSE last_error
+                END
+            WHERE status = 'processing'
+              AND (claimed_at IS NULL OR claimed_at < {$staleBefore})
+        ");
+        $stmt->execute([$maxAttempts, $maxAttempts]);
+
+        $exhausted = $this->pdo->prepare("
+            UPDATE email_queue
+            SET status = 'failed', available_at = NULL
+            WHERE status = 'pending' AND attempt_count >= ?
+        ");
+        $exhausted->execute([$maxAttempts]);
     }
     
     /**
@@ -272,14 +430,20 @@ class Email {
      * @param string $id Email queue ID
      * @return bool Success status
      */
-    public function markAsSent(string $id): bool {
+    public function markAsSent(string $id, ?string $claimToken = null): bool {
+        $now = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? "datetime('now')"
+            : 'NOW()';
         $stmt = $this->pdo->prepare("
             UPDATE email_queue 
-            SET status = 'sent', sent_at = NOW() 
-            WHERE id = ?
+            SET status = 'sent', sent_at = {$now}, available_at = NULL,
+                claimed_at = NULL, claim_token = NULL, last_error = NULL
+            WHERE id = ?" . ($claimToken !== null ? " AND status = 'processing' AND claim_token = ?" : '') . "
         ");
         
-        return $stmt->execute([$id]);
+        $parameters = $claimToken !== null ? [$id, $claimToken] : [$id];
+        $stmt->execute($parameters);
+        return $stmt->rowCount() === 1;
     }
     
     /**
@@ -291,10 +455,11 @@ class Email {
     public function markAsFailed(string $id): bool {
         $stmt = $this->pdo->prepare("
             UPDATE email_queue 
-            SET status = 'failed' 
+            SET status = 'failed', available_at = NULL, claimed_at = NULL, claim_token = NULL
             WHERE id = ?
         ");
         
-        return $stmt->execute([$id]);
+        $stmt->execute([$id]);
+        return $stmt->rowCount() === 1;
     }
 }

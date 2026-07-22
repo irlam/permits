@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Import stock form presets into the form_templates table.
  *
@@ -10,6 +12,11 @@
 
 use Permits\DatabaseMaintenance;
 use Permits\FormTemplateSeeder;
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit(1);
+}
 
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 

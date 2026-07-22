@@ -9,26 +9,14 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use Permits\DatabaseMaintenance;
+use Permits\Csrf;
 use Permits\FormTemplateSeeder;
 
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $columnResult = null;
 $importResult = null;
@@ -36,6 +24,12 @@ $errors = [];
 $messages = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-template-import')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the template importer and try again.</p>';
+        exit;
+    }
+
     $force = !empty($_POST['force_rebuild']);
     if ($force) {
         FormTemplateSeeder::setForceRebuildFormStructure(true);
@@ -159,6 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>Import Presets</h2>
             <p>This process can be safely re-run at any time. Existing templates will be updated in place, and new ones will be created automatically.</p>
             <form method="post">
+                <?= Csrf::getFormField('admin-template-import') ?>
                 <input type="hidden" name="action" value="run-import">
                 <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
                     <input type="checkbox" name="force_rebuild" value="1">

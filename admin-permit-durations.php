@@ -6,25 +6,14 @@
  * exposed on the permit issuance screens.
  */
 
+use Permits\Csrf;
+
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 require_once __DIR__ . '/src/permit-durations.php';
+require_once __DIR__ . '/src/Auth.php';
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $successMessage = '';
 $errorMessage = '';
@@ -33,6 +22,12 @@ $durationPresets = getPermitDurationPresets($db);
 $durationFormRows = $durationPresets;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-permit-durations')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the duration settings and try again.</p>';
+        exit;
+    }
+
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_durations') {
@@ -122,17 +117,18 @@ $durationFormRows = $durationFormRows ?: [['label' => '', 'minutes' => 60]];
 
         <div class="card">
             <form method="post">
+                <?= Csrf::getFormField('admin-permit-durations') ?>
                 <input type="hidden" name="action" value="update_durations">
                 <div id="duration-rows" class="duration-grid">
                     <?php foreach ($durationFormRows as $preset): ?>
                         <div class="duration-row">
                             <div class="field-group">
                                 <label>Label</label>
-                                <input type="text" name="duration_label[]" value="<?= htmlspecialchars($preset['label'] ?? '') ?>" placeholder="e.g. 1 hour" required>
+                                <input type="text" name="duration_label[]" value="<?= htmlspecialchars($preset['label'] ?? '') ?>" maxlength="20" placeholder="e.g. 1 hour" required>
                             </div>
                             <div class="field-group">
                                 <label>Minutes</label>
-                                <input type="number" name="duration_minutes[]" value="<?= htmlspecialchars((string)($preset['minutes'] ?? '')) ?>" min="1" placeholder="60" required>
+                                <input type="number" name="duration_minutes[]" value="<?= htmlspecialchars((string)($preset['minutes'] ?? '')) ?>" min="1" max="525600" placeholder="60" required>
                             </div>
                             <button type="button" class="btn-secondary remove-duration">Remove</button>
                         </div>
@@ -150,11 +146,11 @@ $durationFormRows = $durationFormRows ?: [['label' => '', 'minutes' => 60]];
         <div class="duration-row">
             <div class="field-group">
                 <label>Label</label>
-                <input type="text" name="duration_label[]" placeholder="e.g. 1 day" required>
+                <input type="text" name="duration_label[]" maxlength="20" placeholder="e.g. 1 day" required>
             </div>
             <div class="field-group">
                 <label>Minutes</label>
-                <input type="number" name="duration_minutes[]" min="1" placeholder="1440" required>
+                <input type="number" name="duration_minutes[]" min="1" max="525600" placeholder="1440" required>
             </div>
             <button type="button" class="btn-secondary remove-duration">Remove</button>
         </div>

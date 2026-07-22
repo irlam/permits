@@ -19,93 +19,82 @@ require __DIR__ . '/../vendor/autoload.php';
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
 
 use Permits\SystemSettings;
+use Permits\Csrf;
+require_once __DIR__ . '/../src/Auth.php';
 
-// Start session
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-// Get current user
-$stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Check if user is admin
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    die('<h1>Access Denied</h1><p>Admin access required. <a href="/dashboard.php">Back to Dashboard</a></p>');
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $message = '';
 $messageType = '';
 
+/** Delete only a previously validated file from the dedicated branding folder. */
+function removeBrandingLogoFile(string $root, ?string $relativePath): void
+{
+    $safePath = SystemSettings::normaliseLogoPath($relativePath);
+    if ($safePath === null) {
+        return;
+    }
+
+    $file = $root . '/' . $safePath;
+    if (is_file($file) && !unlink($file)) {
+        error_log('Unable to remove old branding logo: ' . $file);
+    }
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-settings')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the settings page and try again.</p>';
+        exit;
+    }
+
     $action = $_POST['action'] ?? '';
     
     try {
         if ($action === 'save_settings') {
-            $companyName = trim($_POST['company_name'] ?? '');
-            $siteTitle = trim($_POST['site_title'] ?? '');
-            $timezone = $_POST['timezone'] ?? 'Europe/London';
-            $dateFormat = $_POST['date_format'] ?? 'd/m/Y';
-            $permitPrefix = trim($_POST['permit_prefix'] ?? 'PTW');
-            
-            // Read current .env
-            $envFile = __DIR__ . '/../.env';
-            if (!file_exists($envFile)) {
-                $envContent = '';
-            } else {
-                $envContent = file_get_contents($envFile);
+            $timezone = (string)($_POST['timezone'] ?? 'Europe/London');
+            $permitPrefix = strtoupper(trim((string)($_POST['permit_prefix'] ?? 'PTW')));
+
+            if (!in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
+                throw new RuntimeException('Choose a valid timezone.');
             }
-            
-            // Update or add settings
-            $settings = [
-                'COMPANY_NAME' => $companyName,
-                'SITE_TITLE' => $siteTitle,
-                'TIMEZONE' => $timezone,
-                'DATE_FORMAT' => $dateFormat,
-                'PERMIT_PREFIX' => $permitPrefix,
-            ];
-            
-            foreach ($settings as $key => $value) {
-                // Escape the value and add quotes if it contains spaces or special characters
-                if (preg_match('/[\s\'"#]/', $value)) {
-                    $escapedValue = '"' . str_replace('"', '\\"', $value) . '"';
-                } else {
-                    $escapedValue = $value;
-                }
-                
-                if (preg_match("/^{$key}=/m", $envContent)) {
-                    // Update existing
-                    $envContent = preg_replace("/^{$key}=.*$/m", "{$key}={$escapedValue}", $envContent);
-                } else {
-                    // Add new
-                    $envContent .= "\n{$key}={$escapedValue}";
-                }
+            if (preg_match('/^[A-Z0-9-]{2,10}$/', $permitPrefix) !== 1) {
+                throw new RuntimeException('Permit prefix must be 2 to 10 letters, numbers or hyphens.');
             }
-            
-            // Write back to .env
-            file_put_contents($envFile, $envContent);
+
+            SystemSettings::save($db, [
+                'app_timezone' => $timezone,
+                'permit_prefix' => $permitPrefix,
+            ]);
+            date_default_timezone_set($timezone);
             
             $message = 'System settings saved successfully!';
             $messageType = 'success';
             
-            // Reload environment
-            $_ENV = array_merge($_ENV, $settings);
         }
         
         if ($action === 'save_branding') {
-            $brandingUpdates = [];
+            $oldLogoPath = SystemSettings::companyLogoPath($db);
             $companyNameFromForm = trim((string)($_POST['company_name_branding'] ?? ''));
-            if ($companyNameFromForm !== '') {
-                $brandingUpdates['company_name'] = $companyNameFromForm;
+            if ($companyNameFromForm === '') {
+                throw new RuntimeException('Company name is required.');
             }
+            if (mb_strlen($companyNameFromForm, 'UTF-8') > 120) {
+                throw new RuntimeException('Company name must be 120 characters or fewer.');
+            }
+            $companyNameFromForm = SystemSettings::normaliseCompanyName($companyNameFromForm);
+
+            $primaryColourInput = trim((string)($_POST['brand_primary_colour'] ?? ''));
+            if (preg_match('/^#[0-9a-fA-F]{6}$/', $primaryColourInput) !== 1) {
+                throw new RuntimeException('Choose a valid six-digit brand colour.');
+            }
+
+            $brandingUpdates = [
+                'company_name' => $companyNameFromForm,
+                'brand_primary_colour' => SystemSettings::normalisePrimaryColour($primaryColourInput),
+            ];
 
             $upload = $_FILES['company_logo'] ?? null;
             if ($upload && ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -124,11 +113,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'image/png'  => 'png',
                     'image/jpeg' => 'jpg',
                     'image/webp' => 'webp',
-                    'image/svg+xml' => 'svg',
                 ];
 
                 if (!isset($allowed[$mime])) {
-                    throw new RuntimeException('Unsupported logo format. Please upload PNG, JPG, WEBP, or SVG files.');
+                    throw new RuntimeException('Unsupported logo format. Please upload a PNG, JPG, or WEBP file.');
+                }
+
+                $dimensions = @getimagesize($upload['tmp_name']);
+                if ($dimensions === false || ($dimensions[0] ?? 0) < 1 || ($dimensions[1] ?? 0) < 1) {
+                    throw new RuntimeException('The uploaded file is not a valid image.');
+                }
+                if ($dimensions[0] > 2400 || $dimensions[1] > 2400) {
+                    throw new RuntimeException('Logo dimensions must not exceed 2400 by 2400 pixels.');
                 }
 
                 $brandingDir = $root . '/uploads/branding';
@@ -138,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $filename = 'company-logo-' . date('Ymd_His') . '.' . $allowed[$mime];
+                $filename = 'company-logo-' . bin2hex(random_bytes(12)) . '.' . $allowed[$mime];
                 $destination = $brandingDir . '/' . $filename;
 
                 if (!move_uploaded_file($upload['tmp_name'], $destination)) {
@@ -148,46 +144,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $newRelativePath = 'uploads/branding/' . $filename;
 
-                // Load existing settings to cleanup old logo
-                $dbSettings = [];
-                $stmt = $db->pdo->query("SELECT `key`, value FROM settings");
-                while ($row = $stmt->fetch()) {
-                    $dbSettings[$row['key']] = $row['value'];
-                }
-
-                $existingPath = trim((string)($dbSettings['company_logo_path'] ?? ''));
-                if ($existingPath !== '') {
-                    $existingFile = $root . '/' . ltrim($existingPath, '/');
-                    if (is_file($existingFile)) {
-                        @unlink($existingFile);
-                    }
-                }
-
                 $brandingUpdates['company_logo_path'] = $newRelativePath;
             }
 
             if (!empty($brandingUpdates)) {
                 SystemSettings::save($db, $brandingUpdates);
-                $message = 'Branding updated successfully';
+                if (isset($brandingUpdates['company_logo_path']) && $oldLogoPath !== $brandingUpdates['company_logo_path']) {
+                    removeBrandingLogoFile($root, $oldLogoPath);
+                }
+                $message = 'Company branding saved successfully.';
                 $messageType = 'success';
             }
         }
 
         if ($action === 'remove_logo') {
-            // Load existing settings to cleanup logo
-            $dbSettings = [];
-            $stmt = $db->pdo->query("SELECT `key`, value FROM settings");
-            while ($row = $stmt->fetch()) {
-                $dbSettings[$row['key']] = $row['value'];
-            }
-
-            $existingPath = trim((string)($dbSettings['company_logo_path'] ?? ''));
-            if ($existingPath !== '') {
-                $existingFile = $root . '/' . ltrim($existingPath, '/');
-                if (is_file($existingFile)) {
-                    @unlink($existingFile);
-                }
-            }
+            removeBrandingLogoFile($root, SystemSettings::companyLogoPath($db));
 
             SystemSettings::save($db, ['company_logo_path' => '']);
             $message = 'Company logo removed.';
@@ -199,38 +170,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Load current settings
-$companyName = $_ENV['COMPANY_NAME'] ?? '';
-$siteTitle = $_ENV['SITE_TITLE'] ?? 'Permits System';
-$timezone = $_ENV['TIMEZONE'] ?? 'Europe/London';
-$dateFormat = $_ENV['DATE_FORMAT'] ?? 'd/m/Y';
-$permitPrefix = $_ENV['PERMIT_PREFIX'] ?? 'PTW';
+// Load current settings. Environment values remain safe deployment defaults.
+$companyName = trim((string)($_ENV['COMPANY_NAME'] ?? ''), '"');
+$generalSettings = SystemSettings::load($db, ['app_timezone', 'permit_prefix'], [
+    'app_timezone' => (string)($_ENV['APP_TIMEZONE'] ?? ($_ENV['TIMEZONE'] ?? 'Europe/London')),
+    'permit_prefix' => (string)($_ENV['PERMIT_PREFIX'] ?? 'PTW'),
+]);
+$timezone = $generalSettings['app_timezone'];
+$permitPrefix = $generalSettings['permit_prefix'];
 
-// Remove quotes if they exist
-$companyName = trim($companyName, '"');
-$siteTitle = trim($siteTitle, '"');
-
-// Load branding settings from database
-$dbSettings = [];
-try {
-    $stmt = $db->pdo->query("SELECT `key`, value FROM settings");
-    while ($row = $stmt->fetch()) {
-        $dbSettings[$row['key']] = $row['value'];
-    }
-} catch (\Exception $e) {
-    // Settings table might not exist yet
-}
-
-$dbCompanyName = trim((string)($dbSettings['company_name'] ?? '')) ?: $companyName;
-$companyLogoPath = trim((string)($dbSettings['company_logo_path'] ?? ''));
-$companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$branding = SystemSettings::branding($db, $companyName !== '' ? $companyName : 'Permits System');
+$dbCompanyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
+$companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Settings - Admin</title>
+    <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
+    <title>System Settings - <?= htmlspecialchars($dbCompanyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
     <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
     <style>
         .container {
@@ -346,7 +307,7 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         .field input:focus,
         .field select:focus {
             outline: none;
-            border-color: #0ea5e9;
+            border-color: var(--brand-primary);
             background: linear-gradient(135deg, #082f49 0%, #0c4a6e 100%);
             box-shadow: 
                 inset 0 2px 4px rgba(0, 0, 0, 0.2),
@@ -387,7 +348,7 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         }
         
         .info-box h4 {
-            color: #0ea5e9;
+            color: var(--brand-primary);
             margin-bottom: 12px;
             font-size: 14px;
             font-weight: 600;
@@ -424,7 +385,7 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         }
         
         .logo-preview img:hover {
-            border-color: #0ea5e9;
+            border-color: var(--brand-primary);
             box-shadow: 0 6px 16px rgba(6, 182, 212, 0.2);
         }
 
@@ -433,7 +394,7 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         }
         
         input[type="file"]::file-selector-button {
-            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-light) 100%);
             color: #ffffff;
             padding: 10px 16px;
             border: none;
@@ -453,6 +414,39 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         
         input[type="file"] {
             padding: 12px 16px;
+        }
+
+        .colour-picker {
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+        }
+
+        .colour-picker input[type="color"] {
+            width: 72px;
+            min-height: 48px;
+            padding: 4px;
+            cursor: pointer;
+        }
+
+        .colour-sample {
+            min-height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary));
+            color: var(--brand-on-primary);
+            font-weight: 700;
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 16px; }
+            .card { padding: 20px; }
+            .top-actions { width: 100%; }
+            .top-actions .btn { flex: 1; }
         }
     </style>
 </head>
@@ -483,26 +477,38 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
         
         <!-- Company Branding Section -->
         <div class="card">
-            <h2>🎨 Company Branding</h2>
-            <p class="card-description">Manage your company logo and branding</p>
+            <h2>Company Branding</h2>
+            <p class="card-description">Set the name, logo and colour shown to permit users and managers.</p>
             
             <form method="POST" enctype="multipart/form-data">
+                <?= Csrf::getFormField('admin-settings') ?>
                 <input type="hidden" name="action" value="save_branding">
 
                 <div class="field">
                     <label>
-                        Company Name (Branding)
-                        <div class="label-description">Used in site headers and branding areas</div>
+                        Company Name
+                        <div class="label-description">Shown in site headers, permits and QR printouts</div>
                     </label>
-                    <input type="text" name="company_name_branding" value="<?= htmlspecialchars($dbCompanyName) ?>" placeholder="Your company name">
+                    <input type="text" name="company_name_branding" value="<?= htmlspecialchars($dbCompanyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" placeholder="Your company name" maxlength="120" autocomplete="organization" required>
+                </div>
+
+                <div class="field">
+                    <label for="brand_primary_colour">
+                        Brand Colour
+                        <div class="label-description">Used for main buttons, focus indicators and highlights</div>
+                    </label>
+                    <div class="colour-picker">
+                        <input type="color" id="brand_primary_colour" name="brand_primary_colour" value="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="colour-sample" id="brandColourSample">Button preview</div>
+                    </div>
                 </div>
 
                 <?php if ($companyLogoUrl): ?>
                     <div class="field">
                         <label>Current Logo</label>
                         <div class="logo-preview">
-                            <img src="<?= $companyLogoUrl ?>" alt="<?= htmlspecialchars($dbCompanyName) ?> logo">
-                            <span style="color:#94a3b8;font-size:13px;">Displayed on dashboards, headers, and printed outputs.</span>
+                            <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($dbCompanyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> logo">
+                            <span style="color:#94a3b8;font-size:13px;">Displayed on dashboards, public pages and printed outputs.</span>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -510,52 +516,32 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
                 <div class="field">
                     <label>
                         Upload Logo
-                        <div class="label-description">PNG, JPG, WEBP, or SVG (max 2 MB, recommended 400×400px)</div>
+                        <div class="label-description">PNG, JPG or WEBP; max 2 MB and 2400×2400 pixels. A square transparent PNG works best.</div>
                     </label>
-                    <input type="file" name="company_logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                    <input type="file" name="company_logo" accept="image/png,image/jpeg,image/webp">
                 </div>
 
-                <button type="submit" class="btn btn-accent">💾 Save Branding</button>
+                <button type="submit" class="btn btn-accent">Save Branding</button>
             </form>
 
             <?php if ($companyLogoUrl): ?>
                 <form method="post" class="remove-logo-btn">
+                    <?= Csrf::getFormField('admin-settings') ?>
                     <input type="hidden" name="action" value="remove_logo">
-                    <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Remove the current company logo?')">🗑️ Remove Logo</button>
+                    <button type="submit" class="btn btn-danger btn-small" onclick="return confirm('Remove the current company logo?')">Remove Logo</button>
                 </form>
             <?php endif; ?>
         </div>
         
         <!-- System Settings Form -->
         <form method="POST">
+            <?= Csrf::getFormField('admin-settings') ?>
             <input type="hidden" name="action" value="save_settings">
-            
-            <!-- Company Information -->
-            <div class="card">
-                <h2>🏢 Company Information</h2>
-                <p class="card-description">Basic information about your organization</p>
-                
-                <div class="form-group">
-                    <label>
-                        Company Name (Environment)
-                        <div class="label-description">Your company or organization name (stored in .env)</div>
-                    </label>
-                    <input type="text" name="company_name" value="<?php echo htmlspecialchars($companyName); ?>" placeholder="Your Company Ltd">
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        Site Title
-                        <div class="label-description">Title displayed in browser and emails</div>
-                    </label>
-                    <input type="text" name="site_title" value="<?php echo htmlspecialchars($siteTitle); ?>" placeholder="Permits System">
-                </div>
-            </div>
             
             <!-- Regional Settings -->
             <div class="card">
-                <h2>🌍 Regional Settings</h2>
-                <p class="card-description">Configure timezone and date formats</p>
+                <h2>Regional Settings</h2>
+                <p class="card-description">Choose the timezone used for permit and activity timestamps.</p>
                 
                 <div class="form-group">
                     <label>
@@ -572,24 +558,11 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
                         <option value="Australia/Sydney" <?php echo $timezone === 'Australia/Sydney' ? 'selected' : ''; ?>>Australia/Sydney (AEDT)</option>
                     </select>
                 </div>
-                
-                <div class="form-group">
-                    <label>
-                        Date Format
-                        <div class="label-description">How dates are displayed throughout the system</div>
-                    </label>
-                    <select name="date_format">
-                        <option value="d/m/Y" <?php echo $dateFormat === 'd/m/Y' ? 'selected' : ''; ?>>DD/MM/YYYY (24/10/2025)</option>
-                        <option value="m/d/Y" <?php echo $dateFormat === 'm/d/Y' ? 'selected' : ''; ?>>MM/DD/YYYY (10/24/2025)</option>
-                        <option value="Y-m-d" <?php echo $dateFormat === 'Y-m-d' ? 'selected' : ''; ?>>YYYY-MM-DD (2025-10-24)</option>
-                        <option value="d M Y" <?php echo $dateFormat === 'd M Y' ? 'selected' : ''; ?>>DD Mon YYYY (24 Oct 2025)</option>
-                    </select>
-                </div>
             </div>
             
             <!-- Permit Settings -->
             <div class="card">
-                <h2>📋 Permit Settings</h2>
+                <h2>Permit Settings</h2>
                 <p class="card-description">Configure how permits are generated</p>
                 
                 <div class="form-group">
@@ -601,23 +574,37 @@ $companyLogoUrl = $companyLogoPath !== '' ? asset('/' . ltrim($companyLogoPath, 
                 </div>
                 
                 <div class="info-box">
-                    <h4>📌 Reference Number Format:</h4>
+                    <h4>Reference Number Format</h4>
                     <p>Permits will be numbered as: <strong><?php echo htmlspecialchars($permitPrefix); ?>-<?php echo date('Y'); ?>-####</strong><br>
                     Example: <?php echo htmlspecialchars($permitPrefix); ?>-<?php echo date('Y'); ?>-0001</p>
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-accent">💾 Save System Settings</button>
+            <button type="submit" class="btn btn-accent">Save System Settings</button>
         </form>
         
         <div class="info-box" style="margin-top: 24px;">
-            <h4>ℹ️ Important Notes:</h4>
-            <p>• Branding settings (company name, logo) are stored in the database<br>
-            • System settings are stored in the .env file in the root directory<br>
-            • Values with spaces are automatically quoted<br>
-            • Some changes may require a page refresh to take effect<br>
-            • Make sure to test your configuration after making changes</p>
+            <h4>About these settings</h4>
+            <p>Branding changes take effect across public and manager pages after saving.<br>
+            Regional and reference settings are stored safely in the application database.<br>
+            Test one permit after changing regional or reference settings.</p>
         </div>
     </div>
+    <script>
+        (function () {
+            var input = document.getElementById('brand_primary_colour');
+            var sample = document.getElementById('brandColourSample');
+            if (!input || !sample) return;
+            input.addEventListener('input', function () {
+                sample.style.background = input.value;
+                var hex = input.value.replace('#', '');
+                var red = parseInt(hex.slice(0, 2), 16);
+                var green = parseInt(hex.slice(2, 4), 16);
+                var blue = parseInt(hex.slice(4, 6), 16);
+                var luminance = (red * 0.299) + (green * 0.587) + (blue * 0.114);
+                sample.style.color = luminance > 155 ? '#0f172a' : '#ffffff';
+            });
+        }());
+    </script>
 </body>
 </html>

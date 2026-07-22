@@ -8,8 +8,11 @@
  * - $reason: Rejection reason
  */
 
-$baseUrl = $_ENV['APP_URL'] ?? 'http://localhost:8080';
-$formId = $form['id'] ?? '';
+$baseUrl = rtrim((string)($_ENV['APP_URL'] ?? 'http://localhost:8080'), '/');
+$uniqueLink = trim((string)($form['unique_link'] ?? ''));
+$permitUrl = $uniqueLink !== ''
+    ? $baseUrl . '/view-permit-public.php?link=' . rawurlencode($uniqueLink)
+    : $baseUrl;
 ?>
 <!DOCTYPE html>
 <html>
@@ -140,7 +143,7 @@ $formId = $form['id'] ?? '';
             </ul>
             
             <div style="text-align: center;">
-                <a href="<?= htmlspecialchars($baseUrl . '/form/' . $formId) ?>" class="btn">View Application Details</a>
+                <a href="<?= htmlspecialchars($permitUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" class="btn">View Application Details</a>
             </div>
         </div>
         <div class="footer">

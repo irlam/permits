@@ -5,24 +5,13 @@
 
 use Permits\SystemSettings;
 
+use Permits\Csrf;
+
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
+require_once __DIR__ . '/../src/Auth.php';
 
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login.php');
-    exit;
-}
-
-$stmt = $db->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$currentUser = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-if (!$currentUser || $currentUser['role'] !== 'admin') {
-    http_response_code(403);
-    echo '<h1>Access denied</h1><p>Administrator role required.</p>';
-    exit;
-}
+$auth = new Auth($db);
+$currentUser = $auth->requireRoles(['admin']);
 
 $feedback = [
     'success' => '',
@@ -46,58 +35,27 @@ try {
     $settings = SystemSettings::load($db, [], $defaults);
 } catch (\Throwable $e) {
     $settings = $defaults;
-    $feedback['error'] = 'Unable to load settings: ' . $e->getMessage();
+    error_log('[Permits email settings] Unable to load settings: ' . $e->getMessage());
+    $feedback['error'] = 'Email settings could not be loaded. Please try again or ask your hosting provider to check the server log.';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin-email-settings')) {
+        http_response_code(419);
+        echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page expired</title><h1>Page expired</h1><p>Refresh the email settings and try again.</p>';
+        exit;
+    }
+
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save') {
         try {
-            $emailEnabled = isset($_POST['email_enabled']);
-            $driver = strtolower(trim($_POST['mail_driver'] ?? 'smtp'));
-            $allowedDrivers = ['smtp', 'mail', 'log'];
-            if (!in_array($driver, $allowedDrivers, true)) {
-                $driver = 'smtp';
-            }
-
-            $host = trim((string)($_POST['smtp_host'] ?? ''));
-            $port = (int)($_POST['smtp_port'] ?? 587);
-            if ($port <= 0) {
-                $port = 587;
-            }
-
-            $smtpUser = trim((string)($_POST['smtp_user'] ?? ''));
-            $smtpPassInput = (string)($_POST['smtp_pass'] ?? '');
-            $smtpPass = $smtpPassInput !== '' ? $smtpPassInput : ($settings['smtp_pass'] ?? '');
-            $smtpSecure = strtolower(trim((string)($_POST['smtp_secure'] ?? 'tls')));
-            if (!in_array($smtpSecure, ['tls', 'ssl', 'none'], true)) {
-                $smtpSecure = 'tls';
-            }
-            if ($smtpSecure === 'none') {
-                $smtpSecure = '';
-            }
-
-            $timeout = (int)($_POST['smtp_timeout'] ?? 30);
-            if ($timeout <= 0) {
-                $timeout = 30;
-            }
-
-            $fromAddress = trim((string)($_POST['mail_from_address'] ?? ''));
-            $fromName = trim((string)($_POST['mail_from_name'] ?? 'Permits System'));
-
-            $payload = [
-                'email_enabled'     => $emailEnabled ? 'true' : 'false',
-                'mail_driver'       => $driver,
-                'smtp_host'         => $host,
-                'smtp_port'         => (string)$port,
-                'smtp_user'         => $smtpUser,
-                'smtp_pass'         => $smtpPass,
-                'smtp_secure'       => $smtpSecure,
-                'smtp_timeout'      => (string)$timeout,
-                'mail_from_address' => $fromAddress,
-                'mail_from_name'    => $fromName,
-            ];
+            $submitted = $_POST;
+            $submitted['email_enabled'] = isset($_POST['email_enabled']) ? 'true' : 'false';
+            $payload = SystemSettings::normaliseMailerSettings(
+                $submitted,
+                (string)($settings['smtp_pass'] ?? '')
+            );
 
             SystemSettings::save($db, $payload);
 
@@ -105,10 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $feedback['success'] = 'Email settings saved successfully.';
 
             if (function_exists('logActivity')) {
-                logActivity('settings_updated', 'mail', 'setting', 'email', 'SMTP settings updated by ' . ($currentUser['username'] ?? 'admin'));
+                $actor = (string)($currentUser['email'] ?? $currentUser['name'] ?? 'administrator');
+                logActivity('settings_updated', 'mail', 'setting', 'email', 'Email settings updated by ' . $actor);
             }
-    } catch (\Throwable $e) {
-            $feedback['error'] = 'Failed to save settings: ' . $e->getMessage();
+        } catch (\Throwable $e) {
+            error_log('[Permits email settings] Unable to save settings: ' . $e->getMessage());
+            $feedback['error'] = 'Email settings were not saved. Check the sender, SMTP host, port and timeout, then try again.';
         }
     }
 }
@@ -152,7 +112,7 @@ $displayPassword = '';
 </head>
 <body>
     <div class="wrap">
-        <a class="back" href="/admin.php">⬅ Back to Admin</a>
+        <a class="back" href="/admin.php">&larr; Back to Admin</a>
         <h1>Email Settings</h1>
         <p class="lead">Configure how the permits system sends email notifications. Values saved here override the .env defaults.</p>
 
@@ -166,12 +126,14 @@ $displayPassword = '';
 
         <div class="card">
             <form method="post" novalidate>
+                <?= Csrf::getFormField('admin-email-settings') ?>
                 <input type="hidden" name="action" value="save">
 
             <label class="checkbox-label">
                 <input type="checkbox" name="email_enabled" value="1" <?= ($settings['email_enabled'] ?? 'false') === 'true' ? 'checked' : '' ?>>
                 Enable outbound email delivery
             </label>
+            <p class="lead" style="margin: -8px 0 0;">When disabled, notifications stay safely queued until delivery is enabled. The log method writes full email content to the private <code>data/mail</code> folder and is intended for testing only.</p>
 
             <div class="grid">
                 <div>
@@ -185,7 +147,7 @@ $displayPassword = '';
                 </div>
                 <div>
                     <label for="smtp_host">SMTP Host</label>
-                    <input id="smtp_host" type="text" name="smtp_host" value="<?= htmlspecialchars($settings['smtp_host'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" placeholder="mail.example.com">
+                    <input id="smtp_host" type="text" name="smtp_host" value="<?= htmlspecialchars($settings['smtp_host'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" placeholder="mail.example.com" maxlength="253" autocomplete="off">
                 </div>
                 <div>
                     <label for="smtp_port">SMTP Port</label>
@@ -205,11 +167,11 @@ $displayPassword = '';
             <div class="grid">
                 <div>
                     <label for="smtp_user">SMTP Username</label>
-                    <input id="smtp_user" type="text" name="smtp_user" value="<?= htmlspecialchars($settings['smtp_user'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" autocomplete="username">
+                    <input id="smtp_user" type="text" name="smtp_user" value="<?= htmlspecialchars($settings['smtp_user'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" autocomplete="username" maxlength="255">
                 </div>
                 <div>
                     <label for="smtp_pass">SMTP Password</label>
-                    <input id="smtp_pass" type="password" name="smtp_pass" value="<?= $displayPassword; ?>" autocomplete="current-password" placeholder="Leave blank to keep existing">
+                    <input id="smtp_pass" type="password" name="smtp_pass" value="<?= $displayPassword; ?>" autocomplete="new-password" placeholder="Leave blank to keep existing" maxlength="4096">
                 </div>
                 <div>
                     <label for="smtp_timeout">SMTP Timeout (seconds)</label>
@@ -224,7 +186,7 @@ $displayPassword = '';
                 </div>
                 <div>
                     <label for="mail_from_name">From Name</label>
-                    <input id="mail_from_name" type="text" name="mail_from_name" value="<?= htmlspecialchars($settings['mail_from_name'] ?? 'Permits System', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" placeholder="Permits System">
+                    <input id="mail_from_name" type="text" name="mail_from_name" value="<?= htmlspecialchars($settings['mail_from_name'] ?? 'Permits System', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" placeholder="Permits System" maxlength="120">
                 </div>
             </div>
 

@@ -1,4 +1,5 @@
 <?php
+use Permits\PermitAccess;
 use Permits\SystemSettings;
 /**
  * Main Dashboard with Advanced Metrics
@@ -20,35 +21,20 @@ use Permits\SystemSettings;
 
 // Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
+require_once __DIR__ . '/src/Auth.php';
 
-require_once __DIR__ . '/src/check-expiry.php';
+$auth = new Auth($db);
+$auth->requireLogin();
+$currentUser = $auth->getCurrentUser();
+$isLoggedIn = $currentUser !== null;
 
-// Opportunistically sweep for expired permits while throttling the work
-if (function_exists('maybe_check_and_expire_permits')) {
-    maybe_check_and_expire_permits($db, 900);
-} elseif (function_exists('check_and_expire_permits')) {
-    check_and_expire_permits($db);
-}
-
-// Start session if not already active
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-if (empty($_SESSION['user_id'])) {
-    header('Location: /login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'] ?? '/dashboard.php'));
-    exit;
-}
-
-// Check if user is logged in
-$isLoggedIn = true;
-$currentUser = null;
-
-if ($isLoggedIn) {
-    $stmt = $db->pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
-}
+// Managers and administrators see organisation-wide data. Regular users only
+// see permits they hold, issued, or submitted using their account email.
+$permitScope = PermitAccess::sqlScope($currentUser ?? []);
+$permitScopeSql = $permitScope['sql'];
+$permitScopeParams = $permitScope['params'];
+$canViewAllPermits = PermitAccess::canViewAll($currentUser ?? []);
+$permitAudienceLabel = $canViewAllPermits ? 'System-wide permits' : 'Your permits';
 
 // Get metrics
 $metrics = [
@@ -71,56 +57,38 @@ $analytics = [
 ];
 
 try {
-    // Total permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms");
-    $metrics['total'] = $stmt->fetchColumn();
-    
-    // Pending permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'pending_approval'");
-    $metrics['pending'] = $stmt->fetchColumn();
-    
-    // Active permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'active'");
-    $metrics['active'] = $stmt->fetchColumn();
-    
-    // Expired permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'expired'");
-    $metrics['expired'] = $stmt->fetchColumn();
-    
-    // Rejected permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'rejected'");
-    $metrics['rejected'] = $stmt->fetchColumn();
-    
-    // Draft permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'draft'");
-    $metrics['draft'] = $stmt->fetchColumn();
-    
-    // Closed permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'closed'");
-    $metrics['closed'] = $stmt->fetchColumn();
-    
-    // Today's permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE DATE(created_at) = DATE(NOW())");
-    $analytics['todayCreated'] = $stmt->fetchColumn();
-    
-    // This week's permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE WEEK(created_at) = WEEK(NOW()) AND YEAR(created_at) = YEAR(NOW())");
-    $analytics['thisWeekCreated'] = $stmt->fetchColumn();
-    
-    // This month's permits
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())");
-    $analytics['thisMonthCreated'] = $stmt->fetchColumn();
-    
-    // Approval rate (approved / requires approval)
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE approval_status = 'approved' AND requires_approval = 1");
-    $approved = $stmt->fetchColumn();
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE requires_approval = 1");
-    $requiresApproval = $stmt->fetchColumn();
+    $stmt = $db->pdo->prepare("
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN f.status = 'pending_approval' THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN f.status = 'active' THEN 1 ELSE 0 END) AS active,
+            SUM(CASE WHEN f.status = 'expired' THEN 1 ELSE 0 END) AS expired,
+            SUM(CASE WHEN f.status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
+            SUM(CASE WHEN f.status = 'draft' THEN 1 ELSE 0 END) AS draft,
+            SUM(CASE WHEN f.status = 'closed' THEN 1 ELSE 0 END) AS closed,
+            SUM(CASE WHEN DATE(f.created_at) = CURRENT_DATE THEN 1 ELSE 0 END) AS today_created,
+            SUM(CASE WHEN YEARWEEK(f.created_at, 1) = YEARWEEK(CURRENT_DATE, 1) THEN 1 ELSE 0 END) AS week_created,
+            SUM(CASE WHEN YEAR(f.created_at) = YEAR(CURRENT_DATE) AND MONTH(f.created_at) = MONTH(CURRENT_DATE) THEN 1 ELSE 0 END) AS month_created,
+            SUM(CASE WHEN f.approval_status = 'approved' AND f.requires_approval = 1 THEN 1 ELSE 0 END) AS approved,
+            SUM(CASE WHEN f.requires_approval = 1 THEN 1 ELSE 0 END) AS requires_approval
+        FROM forms f
+        WHERE {$permitScopeSql}
+    ");
+    $stmt->execute($permitScopeParams);
+    $summary = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    foreach (array_keys($metrics) as $metric) {
+        $metrics[$metric] = (int)($summary[$metric] ?? 0);
+    }
+    $analytics['todayCreated'] = (int)($summary['today_created'] ?? 0);
+    $analytics['thisWeekCreated'] = (int)($summary['week_created'] ?? 0);
+    $analytics['thisMonthCreated'] = (int)($summary['month_created'] ?? 0);
+
+    $approved = (int)($summary['approved'] ?? 0);
+    $requiresApproval = (int)($summary['requires_approval'] ?? 0);
     $analytics['approvalRate'] = $requiresApproval > 0 ? round(($approved / $requiresApproval) * 100, 1) : 0;
-    
-    // Expiry rate
-    $stmt = $db->pdo->query("SELECT COUNT(*) FROM forms WHERE status = 'expired'");
-    $expiredCount = $stmt->fetchColumn();
+
+    $expiredCount = $metrics['expired'];
     $total = $metrics['total'];
     $analytics['expiryRate'] = $total > 0 ? round(($expiredCount / $total) * 100, 1) : 0;
     
@@ -128,20 +96,24 @@ try {
     // Ignore errors, metrics stay at 0
 }
 
-$companyName = SystemSettings::companyName($db) ?? 'Permits System';
-$companyLogoPath = SystemSettings::companyLogoPath($db);
+$branding = SystemSettings::branding($db);
+$companyName = $branding['company_name'];
+$companyLogoPath = $branding['company_logo_path'];
 $companyLogoUrl = $companyLogoPath ? asset('/' . ltrim($companyLogoPath, '/')) : null;
+$brandingCss = SystemSettings::brandingCssVariables($branding);
 
 // Get 7-day trend data for chart
 $permitTrends = [];
 try {
-    $stmt = $db->pdo->query("
+    $stmt = $db->pdo->prepare("
         SELECT DATE(created_at) as date, COUNT(*) as count 
-        FROM forms 
-        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        FROM forms f
+        WHERE {$permitScopeSql}
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         GROUP BY DATE(created_at)
         ORDER BY date ASC
     ");
+    $stmt->execute($permitScopeParams);
     $trends = $stmt->fetchAll();
     
     // Build 7-day array
@@ -165,8 +137,8 @@ $statusDistribution = [];
 try {
     $statuses = ['active', 'pending_approval', 'expired', 'draft', 'rejected', 'closed'];
     foreach ($statuses as $status) {
-        $stmt = $db->pdo->prepare("SELECT COUNT(*) FROM forms WHERE status = ?");
-        $stmt->execute([$status]);
+        $stmt = $db->pdo->prepare("SELECT COUNT(*) FROM forms f WHERE {$permitScopeSql} AND f.status = :distribution_status");
+        $stmt->execute(array_merge($permitScopeParams, ['distribution_status' => $status]));
         $count = $stmt->fetchColumn();
         if ($count > 0) {
             $statusDistribution[$status] = $count;
@@ -179,12 +151,27 @@ try {
 // Get recent activity log (last 8 items)
 $recentActivity = [];
 try {
-    $stmt = $db->pdo->query("
-        SELECT id, timestamp, action, description, user_email 
-        FROM activity_log 
-        ORDER BY timestamp DESC 
-        LIMIT 8
-    ");
+    if ($canViewAllPermits) {
+        $stmt = $db->pdo->query("
+            SELECT id, timestamp, action, description, user_email
+            FROM activity_log
+            ORDER BY timestamp DESC
+            LIMIT 8
+        ");
+    } else {
+        $stmt = $db->pdo->prepare("
+            SELECT id, timestamp, action, description, user_email
+            FROM activity_log
+            WHERE user_id = :activity_user_id
+               OR LOWER(TRIM(user_email)) = :activity_user_email
+            ORDER BY timestamp DESC
+            LIMIT 8
+        ");
+        $stmt->execute([
+            'activity_user_id' => (string)$currentUser['id'],
+            'activity_user_email' => strtolower(trim((string)$currentUser['email'])),
+        ]);
+    }
     $recentActivity = $stmt->fetchAll();
 } catch (Exception $e) {
     // Ignore
@@ -225,13 +212,8 @@ $filterActive = $statusFilter !== '';
 $permitsList = [];
 try {
     if ($isLoggedIn && $currentUser) {
-        $conditions = [];
-        $params = [];
-
-        if (!in_array($currentUser['role'], ['admin', 'manager'], true)) {
-            $conditions[] = 'f.holder_id = :holder';
-            $params['holder'] = $currentUser['id'];
-        }
+        $conditions = [$permitScopeSql];
+        $params = $permitScopeParams;
 
         if ($filterActive && $statusFilter !== 'total') {
             $dbStatus = $statusSqlMap[$statusFilter] ?? null;
@@ -279,13 +261,14 @@ function getStatusBadge($status) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="<?= htmlspecialchars($brandingCss, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Permits System</title>
+    <title>Dashboard - <?= htmlspecialchars($companyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
+    <meta name="theme-color" content="<?= htmlspecialchars($branding['primary_colour'], ENT_QUOTES, 'UTF-8') ?>">
     <link rel="stylesheet" href="<?=asset('/assets/app.css')?>">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <script src="<?php echo htmlspecialchars($app->url('/assets/vendor/chart.umd.min.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
     <style>
         .dashboard-header {
             background: linear-gradient(135deg, #0f172a 0%, #111a2e 100%);
@@ -370,15 +353,15 @@ function getStatusBadge($status) {
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #06b6d4, #0ea5e9);
+            background: linear-gradient(90deg, var(--brand-primary-light), var(--brand-primary));
             transform: scaleX(0);
             transform-origin: left;
             transition: transform 0.3s ease;
         }
 
         .metric-card:hover {
-            border-color: #0ea5e9;
-            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.15);
+            border-color: var(--brand-primary);
+            box-shadow: 0 8px 24px rgba(var(--brand-primary-rgb), 0.15);
             transform: translateY(-4px);
         }
 
@@ -521,7 +504,7 @@ function getStatusBadge($status) {
         }
 
         .kpi-badge {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.05) 100%);
+            background: linear-gradient(135deg, rgba(var(--brand-primary-light-rgb), 0.1) 0%, rgba(var(--brand-primary-rgb), 0.05) 100%);
             border: 1px solid rgba(6, 182, 212, 0.3);
             border-radius: 12px;
             padding: 16px;
@@ -579,6 +562,7 @@ function getStatusBadge($status) {
                 <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'manager'): ?>
                     <a href="<?php echo htmlspecialchars($app->url('manager-approvals.php')); ?>" class="btn btn-secondary">✅ Approvals</a>
                 <?php endif; ?>
+                <a href="<?php echo htmlspecialchars($app->url('account.php')); ?>" class="btn btn-secondary">🔑 My Account</a>
                 <a href="<?php echo htmlspecialchars($app->url('logout.php')); ?>" class="btn btn-secondary">🚪 Logout</a>
             <?php else: ?>
                 <a href="<?php echo htmlspecialchars($app->url('login.php')); ?>" class="btn btn-primary">🔐 Login</a>
@@ -622,14 +606,14 @@ function getStatusBadge($status) {
 
             <!-- Main Metrics -->
             <div class="metrics-grid">
-                <a href="<?php echo htmlspecialchars($app->url('dashboard.php?status=total')); ?>" class="metric-card" style="border-top: 3px solid #0ea5e9;">
+                <a href="<?php echo htmlspecialchars($app->url('dashboard.php?status=total')); ?>" class="metric-card" style="border-top: 3px solid var(--brand-primary);">
                     <div class="metric-header">
                         <span class="metric-icon">📊</span>
                         <span class="metric-trend">↑ All time</span>
                     </div>
                     <div class="metric-label">Total Permits</div>
                     <div class="metric-value"><?= number_format($metrics['total']); ?></div>
-                    <div class="metric-subtitle">System-wide permits</div>
+                    <div class="metric-subtitle"><?= htmlspecialchars($permitAudienceLabel) ?></div>
                 </a>
 
                 <a href="<?php echo htmlspecialchars($app->url('dashboard.php?status=pending')); ?>" class="metric-card pending" style="border-top: 3px solid #f59e0b;">
@@ -740,7 +724,7 @@ function getStatusBadge($status) {
                     <div class="empty-state">
                         <div class="empty-state-icon">📜</div>
                         <p><?php echo $filterActive ? 'No permits match this status yet.' : 'No recent permits to display just yet.'; ?></p>
-                        <a href="<?php echo htmlspecialchars($app->url('create-permit.php')); ?>" class="btn btn-primary" style="margin-top: 12px;">➕ Create New Permit</a>
+                        <a href="<?php echo htmlspecialchars($app->url('/#templates')); ?>" class="btn btn-primary" style="margin-top: 12px;">➕ Create New Permit</a>
                     </div>
                 <?php else: ?>
                     <table class="data-table">

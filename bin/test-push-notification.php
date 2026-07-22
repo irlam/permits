@@ -18,6 +18,11 @@
 
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit(1);
+}
+
 date_default_timezone_set('Europe/London');
 
 // --- Bootstrap (PDO + ENV) ---
@@ -43,7 +48,7 @@ if ($vapidPublic === '' || $vapidPrivate === '') {
     echo "✗ ERROR: VAPID keys not configured in .env file\n";
     echo "\n";
     echo "Please run the following steps:\n";
-    echo "  1. Generate VAPID keys: php generate_vapid.php\n";
+    echo "  1. Generate VAPID keys: php bin/generate-vapid.php\n";
     echo "  2. Copy the keys to your .env file\n";
     echo "  3. Set VAPID_SUBJECT in .env (e.g., 'mailto:your@email.com')\n";
     echo "\n";
