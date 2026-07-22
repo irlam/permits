@@ -9,7 +9,7 @@
  *   php bin/reminders.php 45        # custom minutes
  *
  * CRON example (every 15 minutes):
- *   */15 * * * * /usr/bin/php /path/to/httpdocs/bin/reminders.php 60 >/dev/null 2>&1
+ *   Every 15 minutes: /usr/bin/php /path/to/httpdocs/bin/reminders.php 60
  */
 
 declare(strict_types=1);

@@ -18,7 +18,7 @@ $root = dirname(__DIR__);
 require $root . '/vendor/autoload.php';
 [$app, $db] = require $root . '/src/bootstrap.php';
 
-session_start(); // to read user_id if your auth sets it
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 $userId = $_SESSION['user_id'] ?? null;
 
 function fail(int $code, string $msg): never {
@@ -45,6 +45,11 @@ function uuidv4(): string {
 
 $payload = read_json();
 
+if (!$userId) { fail(401, 'Authentication required'); }
+$userCheck = $db->pdo->prepare("SELECT id FROM users WHERE id = ? AND status = 'active'");
+$userCheck->execute([$userId]);
+if (!$userCheck->fetchColumn()) { fail(401, 'Authentication required'); }
+
 $endpoint = trim((string)($payload['endpoint'] ?? ''));
 $p256dh   = (string)($payload['keys']['p256dh'] ?? '');
 $auth     = (string)($payload['keys']['auth'] ?? '');
@@ -64,12 +69,7 @@ $id = uuidv4();
 // Upsert into MySQL by unique endpoint_hash
 $pdo = $db->pdo;
 $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-if ($driver !== 'mysql') {
-    // You can add SQLite variant if you need dev runs
-    fail(500, 'This endpoint requires MySQL');
-}
-
-$sql = "
+$sql = $driver === 'mysql' ? "
 INSERT INTO push_subscriptions
     (id, user_id, endpoint, endpoint_hash, p256dh, auth, created_at)
 VALUES
@@ -80,6 +80,11 @@ ON DUPLICATE KEY UPDATE
     auth = VALUES(auth),
     -- keep the most recent known user (nullable)
     user_id = VALUES(user_id)
+" : "
+INSERT INTO push_subscriptions (id,user_id,endpoint,endpoint_hash,p256dh,auth,created_at)
+VALUES (:id,:user_id,:endpoint,:endpoint_hash,:p256dh,:auth,datetime('now'))
+ON CONFLICT(endpoint_hash) DO UPDATE SET
+user_id=excluded.user_id, endpoint=excluded.endpoint, p256dh=excluded.p256dh, auth=excluded.auth
 ";
 
 $stmt = $pdo->prepare($sql);
@@ -93,8 +98,8 @@ $ok = $stmt->execute([
 ]);
 
 if (!$ok) {
-    $err = $stmt->errorInfo();
-    fail(500, 'DB error: ' . ($err[2] ?? 'unknown'));
+    error_log('Push subscription database operation failed');
+    fail(500, 'Unable to save subscription');
 }
 
 // Determine whether we inserted or updated

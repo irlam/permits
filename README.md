@@ -4,11 +4,12 @@ Modern permits management system with dashboard, notifications, export, authenti
 
 ## Quick Start
 
-1) `composer install`
-2) `cp .env.example .env` (set APP_URL; switch DB_DSN to MySQL if needed)
-3) `php bin/migrate.php` (if it exists, or skip if not)
-4) `php bin/migrate-features.php` (create new feature tables)
-5) Local dev: `composer run serve` then open http://localhost:8080
+1) `composer install --no-dev --classmap-authoritative`
+2) Copy `.env.example` to `.env`, set `APP_URL`, database credentials and fresh secrets
+3) Import `database/database.sql` for a new installation
+4) For an existing installation, import `database/imports/2026-07-production-hardening.sql`
+5) Run `php bin/migrate.php` to verify additive runtime columns
+6) Local dev: `composer run serve` then open http://localhost:8080
 
 ## Features
 

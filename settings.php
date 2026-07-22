@@ -28,6 +28,11 @@ use Permits\SystemSettings;
 
 // Initialize auth
 $auth = new Auth($db);
+$auth->requireLogin();
+if (!$auth->hasRole('admin')) {
+    http_response_code(403);
+    exit('Administrator access required.');
+}
 
 $error = '';
 $success = '';
@@ -96,11 +101,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           'image/png'  => 'png',
           'image/jpeg' => 'jpg',
           'image/webp' => 'webp',
-          'image/svg+xml' => 'svg',
         ];
 
         if (!isset($allowed[$mime])) {
-          throw new RuntimeException('Unsupported logo format. Please upload PNG, JPG, WEBP, or SVG files.');
+          throw new RuntimeException('Unsupported logo format. Please upload PNG, JPG, or WEBP files.');
         }
 
         $brandingDir = $root . '/uploads/branding';
@@ -151,7 +155,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $success = 'Company logo removed.';
     }
   } catch (\Exception $e) {
-    $error = 'Error updating settings: ' . $e->getMessage();
+    error_log('Settings update failed: ' . $e->getMessage());
+    $error = 'Unable to update settings.';
   }
 }
 

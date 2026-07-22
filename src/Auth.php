@@ -100,7 +100,8 @@ function login($email, $password) {
         session_regenerate_id(true);
         
         // Update last login time
-        $updateStmt = $db->pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+        $now = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
+        $updateStmt = $db->pdo->prepare("UPDATE users SET last_login = $now WHERE id = ?");
         $updateStmt->execute([$user['id']]);
         
         // Log login activity

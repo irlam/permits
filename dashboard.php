@@ -35,8 +35,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+if (empty($_SESSION['user_id'])) {
+    header('Location: /login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'] ?? '/dashboard.php'));
+    exit;
+}
+
 // Check if user is logged in
-$isLoggedIn = isset($_SESSION['user_id']);
+$isLoggedIn = true;
 $currentUser = null;
 
 if ($isLoggedIn) {

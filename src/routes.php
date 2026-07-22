@@ -4,6 +4,30 @@ use Psr\Http\Message\ServerRequestInterface as Req;
 use Ramsey\Uuid\Uuid;
 
 require_once __DIR__ . '/approval-notifications.php';
+require_once __DIR__ . '/Auth.php';
+
+/** @return array<string,mixed>|null */
+function routeUser($db): ?array {
+  startSession();
+  if (empty($_SESSION['user_id'])) { return null; }
+  $stmt = $db->pdo->prepare("SELECT id,email,name,role,status FROM users WHERE id=? AND status='active'");
+  $stmt->execute([$_SESSION['user_id']]);
+  return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+}
+
+function routeJson(Res $res, int $status, array $body): Res {
+  $res->getBody()->write(json_encode($body, JSON_UNESCAPED_SLASHES));
+  return $res->withStatus($status)->withHeader('Content-Type', 'application/json');
+}
+
+function routeRequireUser($db, Res $res, array $roles = []): array {
+  $user = routeUser($db);
+  if (!$user) { return [null, routeJson($res, 401, ['ok'=>false, 'error'=>'Authentication required'])]; }
+  if ($roles && !in_array(strtolower((string)$user['role']), $roles, true)) {
+    return [null, routeJson($res, 403, ['ok'=>false, 'error'=>'Insufficient permissions'])];
+  }
+  return [$user, null];
+}
 
 /**
  * Routes file.
@@ -71,6 +95,8 @@ $app->get('/', function(Req $req, Res $res) use ($db) {
 
 // Dashboard: statistics and overview
 $app->get('/dashboard', function(Req $req, Res $res) use ($db) {
+  [, $denied] = routeRequireUser($db, $res);
+  if ($denied) { return $denied; }
   $tpls = getTemplates($db);
   ob_start(); include __DIR__ . '/../templates/dashboard.php'; $html = ob_get_clean();
   $res->getBody()->write($html);
@@ -79,6 +105,8 @@ $app->get('/dashboard', function(Req $req, Res $res) use ($db) {
 
 // Render a new form from a template
 $app->get('/new/{templateId}', function(Req $req, Res $res, $args) use ($db) {
+  [, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $id = $args['templateId'];
   $stmt = $db->pdo->prepare("SELECT * FROM form_templates WHERE id=?");
   $stmt->execute([$id]);
@@ -95,6 +123,8 @@ $app->get('/new/{templateId}', function(Req $req, Res $res, $args) use ($db) {
 
 // Create/save a form (JSON body)
 $app->post('/api/forms', function(Req $req, Res $res) use ($db, $root) {
+  [$user, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $raw = (string)$req->getBody();
   $b = json_decode($raw, true);
   if (!is_array($b)) { $b = $req->getParsedBody(); }
@@ -103,17 +133,31 @@ $app->post('/api/forms', function(Req $req, Res $res) use ($db, $root) {
     return $res->withHeader('Content-Type','application/json')->withStatus(400);
   }
 
+  $templateId = (string)($b['template_id'] ?? '');
+  $validStatuses = ['draft','pending_approval'];
+  $status = strtolower((string)($b['status'] ?? 'draft'));
+  if (!in_array($status, $validStatuses, true)) {
+    return routeJson($res, 422, ['ok'=>false,'error'=>'Invalid initial status']);
+  }
+  $templateCheck = $db->pdo->prepare('SELECT id FROM form_templates WHERE id=? AND active=1');
+  $templateCheck->execute([$templateId]);
+  if (!$templateCheck->fetchColumn()) {
+    return routeJson($res, 422, ['ok'=>false,'error'=>'Invalid template']);
+  }
+
   $id = Uuid::uuid4()->toString();
+  $db->pdo->beginTransaction();
+  try {
   $ins = $db->pdo->prepare("INSERT INTO forms (id,template_id,site_block,ref,status,holder_id,issuer_id,valid_from,valid_to,metadata)
                              VALUES (?,?,?,?,?,?,?,?,?,?)");
   $ins->execute([
     $id,
-    $b['template_id'] ?? 'unknown',
+    $templateId,
     $b['meta']['block'] ?? 'Block 1',
     $b['meta']['permitNo'] ?? 'AUTO',
-    $b['status'] ?? 'draft',
+    $status,
     $b['holder_id'] ?? null,
-    $b['issuer_id'] ?? null,
+    $user['id'],
     $b['meta']['validFrom'] ?? null,
     $b['meta']['validTo'] ?? null,
     json_encode($b, JSON_UNESCAPED_UNICODE)
@@ -124,9 +168,15 @@ $app->post('/api/forms', function(Req $req, Res $res) use ($db, $root) {
     Uuid::uuid4()->toString(),
     $id,
     'created',
-    'web',
+    $user['id'],
     json_encode(['ip'=>($_SERVER['REMOTE_ADDR'] ?? '')], JSON_UNESCAPED_UNICODE)
   ]);
+  $db->pdo->commit();
+  } catch (\Throwable $e) {
+    if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
+    error_log('Permit create failed: ' . $e->getMessage());
+    return routeJson($res, 500, ['ok'=>false,'error'=>'Unable to create permit']);
+  }
 
   $res->getBody()->write(json_encode(['ok'=>true,'id'=>$id]));
 
@@ -150,6 +200,8 @@ $app->get('/api/templates', function(Req $req, Res $res) use ($db) {
 
 // View a single form by ID
 $app->get('/form/{formId}', function(Req $req, Res $res, $args) use ($db) {
+  [, $denied] = routeRequireUser($db, $res);
+  if ($denied) { return $denied; }
   $formId = $args['formId'];
   $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id=?");
   $stmt->execute([$formId]);
@@ -184,6 +236,8 @@ $app->get('/form/{formId}', function(Req $req, Res $res, $args) use ($db) {
 
 // Edit form page
 $app->get('/form/{formId}/edit', function(Req $req, Res $res, $args) use ($db) {
+  [, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $formId = $args['formId'];
   $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id=?");
   $stmt->execute([$formId]);
@@ -210,7 +264,9 @@ $app->get('/form/{formId}/edit', function(Req $req, Res $res, $args) use ($db) {
 });
 
 // Duplicate a form (create copy)
-$app->get('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($db) {
+$app->post('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($db) {
+  [$user, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $formId = $args['formId'];
   $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id=?");
   $stmt->execute([$formId]);
@@ -259,7 +315,7 @@ $app->get('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($
     Uuid::uuid4()->toString(),
     $newId,
     'created',
-    'web',
+    $user['id'],
     json_encode(['ip'=>($_SERVER['REMOTE_ADDR'] ?? ''), 'duplicated_from'=>$formId], JSON_UNESCAPED_UNICODE)
   ]);
   
@@ -269,6 +325,8 @@ $app->get('/form/{formId}/duplicate', function(Req $req, Res $res, $args) use ($
 
 // Update a form
 $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $root) {
+  [$user, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $formId = $args['formId'];
   $raw = (string)$req->getBody();
   $b = json_decode($raw, true);
@@ -290,10 +348,21 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $
   
   $oldStatus = $currentForm['status'];
   $newStatus = $b['status'] ?? $oldStatus;
+  $allowedTransitions = [
+    'draft' => ['draft','pending_approval'],
+    'pending_approval' => ['pending_approval','draft'],
+    'active' => ['active'], 'rejected' => ['rejected'], 'closed' => ['closed'], 'expired' => ['expired'],
+  ];
+  if (!in_array($newStatus, $allowedTransitions[$oldStatus] ?? [$oldStatus], true)) {
+    return routeJson($res, 409, ['ok'=>false,'error'=>'Invalid status transition']);
+  }
+  $now = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
+  $db->pdo->beginTransaction();
+  try {
   
   // Update form
   $upd = $db->pdo->prepare("UPDATE forms SET 
-    site_block=?, ref=?, status=?, valid_from=?, valid_to=?, metadata=?, updated_at=NOW()
+    site_block=?, ref=?, status=?, valid_from=?, valid_to=?, metadata=?, updated_at=$now
     WHERE id=?");
   $upd->execute([
     $b['meta']['block'] ?? $currentForm['site_block'],
@@ -312,7 +381,7 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $
       Uuid::uuid4()->toString(),
       $formId,
       'status_changed',
-      'web',
+      $user['id'],
       json_encode(['old'=>$oldStatus, 'new'=>$newStatus])
     ]);
   }
@@ -323,9 +392,15 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $
     Uuid::uuid4()->toString(),
     $formId,
     'updated',
-    'web',
+    $user['id'],
     json_encode(['ip'=>($_SERVER['REMOTE_ADDR'] ?? '')])
   ]);
+  $db->pdo->commit();
+  } catch (\Throwable $e) {
+    if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
+    error_log('Permit update failed: ' . $e->getMessage());
+    return routeJson($res, 500, ['ok'=>false,'error'=>'Unable to update permit']);
+  }
   
   if (strtolower((string)$newStatus) === 'pending_approval') {
     if ($oldStatus !== 'pending_approval' || empty($currentForm['notified_at'])) {
@@ -349,8 +424,14 @@ $app->put('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db, $
 
 // Delete a form
 $app->delete('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db) {
+  [, $denied] = routeRequireUser($db, $res, ['admin']);
+  if ($denied) { return $denied; }
   $formId = $args['formId'];
   
+  $files = $db->pdo->prepare('SELECT url FROM attachments WHERE form_id=?');
+  $files->execute([$formId]);
+  $attachmentFiles = $files->fetchAll(\PDO::FETCH_COLUMN);
+  $db->pdo->beginTransaction();
   // Delete attachments first (foreign key constraint)
   $db->pdo->prepare("DELETE FROM attachments WHERE form_id=?")->execute([$formId]);
   
@@ -360,8 +441,15 @@ $app->delete('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db
   // Delete form
   $stmt = $db->pdo->prepare("DELETE FROM forms WHERE id=?");
   $stmt->execute([$formId]);
+  if ($stmt->rowCount() > 0) { $db->pdo->commit(); }
+  else { $db->pdo->rollBack(); }
   
   if($stmt->rowCount() > 0) {
+    foreach ($attachmentFiles as $url) {
+      $path = realpath(dirname(__DIR__) . '/' . ltrim((string)$url, '/'));
+      $uploadRoot = realpath(dirname(__DIR__) . '/uploads');
+      if ($path && $uploadRoot && str_starts_with($path, $uploadRoot . DIRECTORY_SEPARATOR) && is_file($path)) { @unlink($path); }
+    }
     $res->getBody()->write(json_encode(['ok'=>true]));
   } else {
     $res->getBody()->write(json_encode(['ok'=>false,'error'=>'Form not found']));
@@ -373,6 +461,8 @@ $app->delete('/api/forms/{formId}', function(Req $req, Res $res, $args) use ($db
 
 // Upload attachment to a form
 $app->post('/api/forms/{formId}/attachments', function(Req $req, Res $res, $args) use ($db, $root) {
+  [$user, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $formId = $args['formId'];
   
   // Check form exists
@@ -389,13 +479,21 @@ $app->post('/api/forms/{formId}/attachments', function(Req $req, Res $res, $args
   }
   
   $file = $_FILES['file'];
+  if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || ($file['size'] ?? 0) > 10 * 1024 * 1024) {
+    return routeJson($res, 422, ['ok'=>false,'error'=>'Upload must be no larger than 10 MB']);
+  }
+  $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+  $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp','application/pdf'=>'pdf'];
+  if (!isset($allowed[$mime])) {
+    return routeJson($res, 422, ['ok'=>false,'error'=>'Unsupported file type']);
+  }
   $uploadDir = $root . '/uploads';
   if(!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
   }
   
   // Generate unique filename
-  $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+  $ext = $allowed[$mime];
   $filename = Uuid::uuid4()->toString() . '.' . $ext;
   $filepath = $uploadDir . '/' . $filename;
   
@@ -407,7 +505,7 @@ $app->post('/api/forms/{formId}/attachments', function(Req $req, Res $res, $args
   // Save to database
   $id = Uuid::uuid4()->toString();
   $url = '/uploads/' . $filename;
-  $kind = $file['type'];
+  $kind = $mime;
   $meta = json_encode([
     'original_name' => $file['name'],
     'size' => $file['size']
@@ -422,7 +520,7 @@ $app->post('/api/forms/{formId}/attachments', function(Req $req, Res $res, $args
     Uuid::uuid4()->toString(),
     $formId,
     'attachment_added',
-    'web',
+    $user['id'],
     json_encode(['filename'=>$file['name']])
   ]);
   
@@ -432,6 +530,8 @@ $app->post('/api/forms/{formId}/attachments', function(Req $req, Res $res, $args
 
 // Delete attachment
 $app->delete('/api/attachments/{attachmentId}', function(Req $req, Res $res, $args) use ($db, $root) {
+  [, $denied] = routeRequireUser($db, $res, ['admin','manager']);
+  if ($denied) { return $denied; }
   $attId = $args['attachmentId'];
   
   $stmt = $db->pdo->prepare("SELECT * FROM attachments WHERE id=?");
@@ -468,6 +568,8 @@ $app->delete('/api/attachments/{attachmentId}', function(Req $req, Res $res, $ar
 
 // ----- UPDATED: Push subscription (stores endpoint_hash; upserts for MySQL/SQLite)
 $app->post('/api/push/subscribe', function(Req $req, Res $res) use ($db) {
+  [$user, $denied] = routeRequireUser($db, $res);
+  if ($denied) { return $denied; }
   $b = $req->getParsedBody();
   // Allow raw JSON too
   if (!$b) {
@@ -479,7 +581,7 @@ $app->post('/api/push/subscribe', function(Req $req, Res $res) use ($db) {
   $endpoint = $b['endpoint'] ?? '';
   $p256dh   = $b['keys']['p256dh'] ?? '';
   $auth     = $b['keys']['auth'] ?? '';
-  $userId   = $b['user_id'] ?? 'anon';
+  $userId   = $user['id'];
 
   if (!$endpoint || !$p256dh || !$auth) {
     $res->getBody()->write(json_encode(['ok'=>false, 'error'=>'Invalid subscription payload']));

@@ -17,17 +17,19 @@
  * - Creates default admin account if none exists
  */
 
-// Security: Only allow from specific IPs
-$allowed_ips = ['127.0.0.1', '::1', '82.4.67.225']; // Add your IP here
-if (!in_array($_SERVER['REMOTE_ADDR'] ?? '', $allowed_ips)) {
-    die('Access denied. Add your IP to allowed_ips array.');
+// Legacy maintenance utility: never expose over HTTP. Prefer bin/migrate.php.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
 }
 
 // Load database connection
 try {
     [$app, $db, $root] = require __DIR__ . '/src/bootstrap.php';
 } catch (Exception $e) {
-    die("Error loading bootstrap: " . $e->getMessage());
+    error_log('Role update bootstrap failed: ' . $e->getMessage());
+    http_response_code(500);
+    exit('Unable to initialise the application.');
 }
 
 // Get action

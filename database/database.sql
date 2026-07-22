@@ -88,7 +88,7 @@ CREATE TABLE `forms` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `approval_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'pending, approved, rejected',
-  `approved_by` int DEFAULT NULL COMMENT 'User ID who approved/rejected',
+  `approved_by` varchar(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'User ID who approved/rejected',
   `approved_at` datetime DEFAULT NULL COMMENT 'When approved/rejected',
   `approval_notes` text COLLATE utf8mb4_unicode_ci COMMENT 'Notes from approver',
   `requires_approval` tinyint(1) DEFAULT '1' COMMENT 'Does this permit require approval',
@@ -99,6 +99,7 @@ CREATE TABLE `forms` (
   `expiry_duration` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '1 day',
   `expires_at` datetime DEFAULT NULL,
   `expired_at` datetime DEFAULT NULL
+  ,`work_started_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

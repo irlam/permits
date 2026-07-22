@@ -5,7 +5,7 @@
 
 # Composer
 /vendor/
-composer.lock
+# Application lockfile is committed for reproducible deployments.
 
 # User uploads
 /uploads/*
@@ -45,3 +45,11 @@ package-lock.json
 # PHP
 *.php~
 *.bak
+
+# Runtime/generated and local database material
+/backups/
+/data/*.sqlite
+/admin/test.txt
+/config/ai-settings.json
+/.phpunit.cache/
+/work-composer.phar
