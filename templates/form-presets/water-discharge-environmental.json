@@ -1,95 +1,154 @@
 {
-    "id": "water-discharge-environmental-v1",
-    "title": "Water Discharge/Environmental Permit",
-    "name": "Water Discharge/Environmental Permit",
-    "description": "Permit for water discharge or other environmental activities, ensuring compliance with environmental regulations.",
-    "meta": {
-        "fields": [
-            {
-                "key": "locationDischargePoint",
-                "label": "Location/Discharge Point",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "typeOfDischargeActivity",
-                "label": "Type of Discharge/Activity",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "volumeDuration",
-                "label": "Volume/Duration",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "environmentalControlsInPlace",
-                "label": "Environmental Controls in Place",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "water-discharge-environmental-v1",
+  "title": "Water Discharge/Environmental Permit",
+  "name": "Water Discharge/Environmental Permit",
+  "description": "Permit for water discharge or other environmental activities, ensuring compliance with environmental regulations.",
+  "meta": {
+    "fields": [
+      {
+        "key": "locationDischargePoint",
+        "label": "Location/Discharge Point",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "typeOfDischargeActivity",
+        "label": "Type of Discharge/Activity",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "volumeDuration",
+        "label": "Volume/Duration",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "environmentalControlsInPlace",
+        "label": "Environmental Controls in Place",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "DISCHARGE AUTHORIZATION",
+      "items": [
+        "Discharge consent obtained",
+        "Water quality tested",
+        "Treatment system operational",
+        "Monitoring plan in place",
+        "Regulatory limits confirmed"
+      ],
+      "fields": [
         {
-            "title": "DISCHARGE AUTHORIZATION",
-            "items": [
-                "Discharge consent obtained",
-                "Water quality tested",
-                "Treatment system operational",
-                "Monitoring plan in place",
-                "Regulatory limits confirmed"
-            ]
+          "label": "Discharge Consent / Permit Reference",
+          "type": "text"
         },
         {
-            "title": "ENVIRONMENTAL PROTECTION",
-            "items": [
-                "Pollution prevention measures active",
-                "Spill response kit available",
-                "Drainage system protected",
-                "Sampling and testing scheduled",
-                "Incident reporting procedure briefed"
-            ]
+          "label": "Receiving Water Body",
+          "type": "text",
+          "placeholder": "Name of watercourse, drain or ground"
+        },
+        {
+          "label": "Discharge pH / Quality Test Result",
+          "type": "text",
+          "placeholder": "pH range and turbidity NTU"
+        },
+        {
+          "label": "Maximum Permitted Discharge Rate",
+          "type": "text",
+          "placeholder": "litres/second or m³/hour"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "ENVIRONMENTAL PROTECTION",
+      "items": [
+        "Pollution prevention measures active",
+        "Spill response kit available",
+        "Drainage system protected",
+        "Sampling and testing scheduled",
+        "Incident reporting procedure briefed"
+      ],
+      "fields": [
+        {
+          "label": "Pollution Prevention Barriers",
+          "type": "select",
+          "options": [
+            "Bunded collection area",
+            "Oil / silt separator",
+            "Settlement lagoon",
+            "Geotextile silt fence",
+            "Combined measures"
+          ]
+        },
+        {
+          "label": "Spill Kit Location",
+          "type": "text"
+        },
+        {
+          "label": "Sampling Frequency",
+          "type": "select",
+          "options": [
+            "Continuous automated",
+            "Hourly manual",
+            "Twice daily",
+            "Daily",
+            "Start and end only"
+          ]
+        },
+        {
+          "label": "Environment Agency / SEPA Notification Reference",
+          "type": "text",
+          "placeholder": "Leave blank if pre-consented activity"
+        },
+        {
+          "label": "Post-discharge Monitoring Period",
+          "type": "text",
+          "placeholder": "hours or days of continued monitoring after completion"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

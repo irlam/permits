@@ -90,6 +90,34 @@
         "Area cleared of combustibles within min. 10m (incl. above/below/adjacent levels)",
         "Floors/walls/voids protected: non-combustible screens/blankets/spark containment",
         "Flammable liquids/pressurised containers removed from area"
+      ],
+      "fields": [
+        {
+          "label": "Fire Extinguisher Type & Location",
+          "type": "text",
+          "placeholder": "e.g. CO2 6kg – pillar A3"
+        },
+        {
+          "label": "Combustible Materials Removed / Protected",
+          "type": "textarea",
+          "placeholder": "List materials and action taken"
+        },
+        {
+          "label": "Hot Work Shield / Blanket Position",
+          "type": "text",
+          "placeholder": "Describe placement"
+        },
+        {
+          "label": "Welding / Cutting / Grinding Process",
+          "type": "select",
+          "options": [
+            "Welding",
+            "Cutting – disc",
+            "Cutting – torch",
+            "Grinding",
+            "Burning / brazing"
+          ]
+        }
       ]
     },
     {
@@ -97,6 +125,36 @@
       "items": [
         "Continuous fire watch maintained for duration of hot works",
         "Sparks and heat migration monitored"
+      ],
+      "fields": [
+        {
+          "label": "Fire Watcher Name",
+          "type": "text"
+        },
+        {
+          "label": "Communication Method",
+          "type": "select",
+          "options": [
+            "Radio",
+            "Mobile phone",
+            "Intercom",
+            "Whistle"
+          ]
+        },
+        {
+          "label": "Fire Watch Check Interval",
+          "type": "select",
+          "options": [
+            "Continuous",
+            "Every 15 minutes",
+            "Every 30 minutes"
+          ]
+        },
+        {
+          "label": "Monitoring Notes",
+          "type": "textarea",
+          "placeholder": "Record any incidents or concerns during fire watch"
+        }
       ]
     },
     {
@@ -104,6 +162,33 @@
       "items": [
         "Immediate area inspected on completion; no smouldering",
         "Re-check at 60 minutes completed and recorded"
+      ],
+      "fields": [
+        {
+          "label": "Work Completion Time",
+          "type": "time"
+        },
+        {
+          "label": "Fire Watch End Time (min. 60 min after)",
+          "type": "time"
+        },
+        {
+          "label": "60-minute Re-check Completed By",
+          "type": "text"
+        },
+        {
+          "label": "Area Confirmed Clear",
+          "type": "select",
+          "options": [
+            "Yes – no hotspots found",
+            "No – action taken (detail below)"
+          ]
+        },
+        {
+          "label": "Post-watch Findings",
+          "type": "textarea",
+          "placeholder": "Note any hotspots found and action taken"
+        }
       ]
     },
     {
@@ -111,6 +196,25 @@
       "items": [
         "Fire alarm reinstated and tested",
         "Permit closed by issuer and acknowledged by permit holder"
+      ],
+      "fields": [
+        {
+          "label": "Fire Alarm Reactivation Time",
+          "type": "time"
+        },
+        {
+          "label": "Reinstated By",
+          "type": "text"
+        },
+        {
+          "label": "Outstanding Actions",
+          "type": "textarea",
+          "placeholder": "Any follow-up actions required"
+        },
+        {
+          "label": "Permit Close-out Reference",
+          "type": "text"
+        }
       ]
     }
   ],

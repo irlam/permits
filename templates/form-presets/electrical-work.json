@@ -1,101 +1,196 @@
 {
-    "id": "electrical-work-v1",
-    "title": "Electrical Work Permit",
-    "name": "Electrical Work Permit",
-    "description": "Permit for electrical work, ensuring isolation and safety procedures are followed.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "workDescription",
-                "label": "Work Description",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "isolationRequired",
-                "label": "Isolation Required",
-                "type": "checkbox",
-                "required": true
-            },
-            {
-                "key": "lockout/TagoutApplied",
-                "label": "Lockout/Tagout Applied",
-                "type": "checkbox",
-                "required": true
-            },
-            {
-                "key": "pPERequired",
-                "label": "PPE Required",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            }
-        ]
-    },
-    "sections": [
-        {
-            "title": "ISOLATION & VERIFICATION",
-            "items": [
-                "Circuit/equipment isolated and locked out",
-                "Isolation verified with test equipment",
-                "Lock-out/Tag-out (LOTO) applied",
-                "Adjacent live equipment identified and protected",
-                "Permit-to-work issued and signed"
-            ]
-        },
-        {
-            "title": "SAFETY PRECAUTIONS",
-            "items": [
-                "Insulated tools and equipment used",
-                "Electrical PPE available (gloves, face shield)",
-                "Fire extinguisher readily available",
-                "Competent electrician assigned",
-                "Emergency procedures briefed"
-            ]
-        },
-        {
-            "title": "TESTING & ENERGIZATION",
-            "items": [
-                "Work inspected before re-energization",
-                "All persons clear of equipment",
-                "Test procedures followed",
-                "Circuit tested and commissioned",
-                "Isolation devices removed and recorded"
-            ]
-        }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
+  "id": "electrical-work-v1",
+  "title": "Electrical Work Permit",
+  "name": "Electrical Work Permit",
+  "description": "Permit for electrical work, ensuring isolation and safety procedures are followed.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "workDescription",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "isolationRequired",
+        "label": "Isolation Required",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "key": "lockout/TagoutApplied",
+        "label": "Lockout/Tagout Applied",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "key": "pPERequired",
+        "label": "PPE Required",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      }
     ]
+  },
+  "sections": [
+    {
+      "title": "ISOLATION & VERIFICATION",
+      "items": [
+        "Circuit/equipment isolated and locked out",
+        "Isolation verified with test equipment",
+        "Lock-out/Tag-out (LOTO) applied",
+        "Adjacent live equipment identified and protected",
+        "Permit-to-work issued and signed"
+      ],
+      "fields": [
+        {
+          "label": "Circuit / Board Reference",
+          "type": "text",
+          "placeholder": "Distribution board ref. and circuit no."
+        },
+        {
+          "label": "Voltage Level",
+          "type": "select",
+          "options": [
+            "ELV – below 50 V AC",
+            "LV – 50 V to 1,000 V AC",
+            "HV – above 1,000 V AC"
+          ]
+        },
+        {
+          "label": "Test Equipment ID / Calibration Ref.",
+          "type": "text"
+        },
+        {
+          "label": "Lock / LOTO Reference No.",
+          "type": "text"
+        },
+        {
+          "label": "Test for Dead Confirmed By",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "SAFETY PRECAUTIONS",
+      "items": [
+        "Insulated tools and equipment used",
+        "Electrical PPE available (gloves, face shield)",
+        "Fire extinguisher readily available",
+        "Competent electrician assigned",
+        "Emergency procedures briefed"
+      ],
+      "fields": [
+        {
+          "label": "Electrical PPE Available",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "insul_gloves",
+              "label": "Insulating gloves"
+            },
+            {
+              "value": "face_shield",
+              "label": "Face shield / arc flash visor"
+            },
+            {
+              "value": "insul_mat",
+              "label": "Insulating mat"
+            },
+            {
+              "value": "arc_suit",
+              "label": "Arc flash suit"
+            }
+          ]
+        },
+        {
+          "label": "Adjacent Live Parts Protected By",
+          "type": "select",
+          "options": [
+            "Insulating covers / shrouds",
+            "Perspex barriers",
+            "Physical screen",
+            "RCD fitted on feed",
+            "Not applicable – fully isolated"
+          ]
+        },
+        {
+          "label": "Responsible Electrician Name",
+          "type": "text"
+        },
+        {
+          "label": "Electrical Qualification / Ref.",
+          "type": "text",
+          "placeholder": "NVQ ref., JIB card no. or AM2 ref."
+        }
+      ]
+    },
+    {
+      "title": "TESTING & ENERGIZATION",
+      "items": [
+        "Work inspected before re-energization",
+        "All persons clear of equipment",
+        "Test procedures followed",
+        "Circuit tested and commissioned",
+        "Isolation devices removed and recorded"
+      ],
+      "fields": [
+        {
+          "label": "Test Results Summary",
+          "type": "textarea",
+          "placeholder": "Insulation resistance, continuity, RCD trip time"
+        },
+        {
+          "label": "All Persons Clear – Confirmed By",
+          "type": "text"
+        },
+        {
+          "label": "LOTO Removal Time",
+          "type": "time"
+        },
+        {
+          "label": "Re-energisation Authorised By",
+          "type": "text"
+        },
+        {
+          "label": "Commissioning / Minor Works Certificate Ref.",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

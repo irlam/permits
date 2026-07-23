@@ -1,89 +1,139 @@
 {
-    "id": "site-safety-inspection-v1",
-    "title": "Site Safety Inspection Permit",
-    "name": "Site Safety Inspection Permit",
-    "description": "Permit for conducting site safety inspections to proactively identify and address hazards.",
-    "meta": {
-        "fields": [
-            {
-                "key": "inspectionArea",
-                "label": "Inspection Area",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "inspectorName",
-                "label": "Inspector Name",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "hazardsIdentified",
-                "label": "Hazards Identified",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "correctiveActionsRequired",
-                "label": "Corrective Actions Required",
-                "type": "textarea",
-                "required": false
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "site-safety-inspection-v1",
+  "title": "Site Safety Inspection Permit",
+  "name": "Site Safety Inspection Permit",
+  "description": "Permit for conducting site safety inspections to proactively identify and address hazards.",
+  "meta": {
+    "fields": [
+      {
+        "key": "inspectionArea",
+        "label": "Inspection Area",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "inspectorName",
+        "label": "Inspector Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "hazardsIdentified",
+        "label": "Hazards Identified",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "correctiveActionsRequired",
+        "label": "Corrective Actions Required",
+        "type": "textarea",
+        "required": false
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "GENERAL SITE CONDITIONS",
+      "items": [
+        "Site access and egress safe",
+        "Welfare facilities adequate",
+        "Housekeeping standards met",
+        "Fire precautions in place",
+        "First aid provision checked"
+      ],
+      "fields": [
         {
-            "title": "GENERAL SITE CONDITIONS",
-            "items": [
-                "Site access and egress safe",
-                "Welfare facilities adequate",
-                "Housekeeping standards met",
-                "Fire precautions in place",
-                "First aid provision checked"
-            ]
+          "label": "Inspection Reference No.",
+          "type": "text"
         },
         {
-            "title": "WORK ACTIVITIES",
-            "items": [
-                "Permits to work in place",
-                "Method statements available",
-                "Equipment inspections current",
-                "PPE being worn correctly",
-                "Environmental controls operating"
-            ]
+          "label": "Inspection Date / Time",
+          "type": "datetime"
+        },
+        {
+          "label": "Overall Hazard Severity",
+          "type": "select",
+          "options": [
+            "Low – no immediate action required",
+            "Medium – action within 24 hours",
+            "High – immediate action required",
+            "Critical – work stopped"
+          ]
+        },
+        {
+          "label": "Immediate Actions Taken",
+          "type": "textarea",
+          "placeholder": "Describe any actions taken during inspection"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "WORK ACTIVITIES",
+      "items": [
+        "Permits to work in place",
+        "Method statements available",
+        "Equipment inspections current",
+        "PPE being worn correctly",
+        "Environmental controls operating"
+      ],
+      "fields": [
+        {
+          "label": "PTW Numbers Currently Active",
+          "type": "text",
+          "placeholder": "List all active permit numbers"
+        },
+        {
+          "label": "Equipment Inspection Status",
+          "type": "select",
+          "options": [
+            "All current",
+            "Some expired – detail in actions",
+            "All expired – work stopped"
+          ]
+        },
+        {
+          "label": "Non-conformance Reference",
+          "type": "text",
+          "placeholder": "If NCR raised, enter reference"
+        },
+        {
+          "label": "Follow-up Inspection Date",
+          "type": "date"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

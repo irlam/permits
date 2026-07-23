@@ -1,95 +1,166 @@
 {
-    "id": "roof-work-v1",
-    "title": "Roof Work Permit",
-    "name": "Roof Work Permit",
-    "description": "Permit for roof work, ensuring all safety protocols and fall protection measures are in place.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "workDescription",
-                "label": "Work Description",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "fallProtectionMeasures",
-                "label": "Fall Protection Measures",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "weatherConditions",
-                "label": "Weather Conditions",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "roof-work-v1",
+  "title": "Roof Work Permit",
+  "name": "Roof Work Permit",
+  "description": "Permit for roof work, ensuring all safety protocols and fall protection measures are in place.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "workDescription",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "fallProtectionMeasures",
+        "label": "Fall Protection Measures",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "weatherConditions",
+        "label": "Weather Conditions",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "ACCESS & EDGE PROTECTION",
+      "items": [
+        "Safe access route established",
+        "Edge protection installed",
+        "Fragile roof areas identified",
+        "Crawling boards/platforms provided",
+        "Weather conditions suitable"
+      ],
+      "fields": [
         {
-            "title": "ACCESS & EDGE PROTECTION",
-            "items": [
-                "Safe access route established",
-                "Edge protection installed",
-                "Fragile roof areas identified",
-                "Crawling boards/platforms provided",
-                "Weather conditions suitable"
-            ]
+          "label": "Roof Type",
+          "type": "select",
+          "options": [
+            "Flat – non-fragile",
+            "Flat – fragile (confirm before walking)",
+            "Pitched – tiles",
+            "Pitched – metal",
+            "Fragile – confirmed fragile roof material"
+          ]
         },
         {
-            "title": "FALL PREVENTION",
-            "items": [
-                "Collective protection prioritized",
-                "Personal fall arrest system if required",
-                "Rescue plan in place",
-                "Workers trained and competent",
-                "Tools secured with lanyards"
-            ]
+          "label": "Edge Protection Type",
+          "type": "select",
+          "options": [
+            "Double guardrail system",
+            "Parapet wall (confirm height)",
+            "Safety net below eaves",
+            "Combination of above"
+          ]
+        },
+        {
+          "label": "Access Method",
+          "type": "select",
+          "options": [
+            "Fixed roof ladder",
+            "Scaffolding staircase",
+            "MEWP – scissor lift",
+            "MEWP – boom lift",
+            "Crane-lifted man-basket"
+          ]
+        },
+        {
+          "label": "Maximum Working Height (metres)",
+          "type": "text"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "FALL PREVENTION",
+      "items": [
+        "Collective protection prioritized",
+        "Personal fall arrest system if required",
+        "Rescue plan in place",
+        "Workers trained and competent",
+        "Tools secured with lanyards"
+      ],
+      "fields": [
+        {
+          "label": "Harness / Restraint System",
+          "type": "select",
+          "options": [
+            "Fall restraint – prevents reaching edge",
+            "Fall arrest – stops fall after it occurs",
+            "Not required – full collective protection in place"
+          ]
+        },
+        {
+          "label": "Anchor Point Reference",
+          "type": "text",
+          "placeholder": "Structural anchor ID, tested load"
+        },
+        {
+          "label": "Crawling Boards / Walkways Used",
+          "type": "select",
+          "options": [
+            "Yes – route marked",
+            "No – surface confirmed safe to walk",
+            "Not required"
+          ]
+        },
+        {
+          "label": "Rescue Plan Reference",
+          "type": "text"
+        },
+        {
+          "label": "First Aider on Site",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

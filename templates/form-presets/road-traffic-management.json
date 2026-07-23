@@ -1,89 +1,162 @@
 {
-    "id": "road-traffic-management-v1",
-    "title": "Road/Traffic Management Permit",
-    "name": "Road/Traffic Management Permit",
-    "description": "Permit for road or traffic management activities, ensuring public and worker safety.",
-    "meta": {
-        "fields": [
-            {
-                "key": "locationArea",
-                "label": "Location/Area",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "purposeOfManagement",
-                "label": "Purpose of Management",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "trafficControlPlanReference",
-                "label": "Traffic Control Plan Reference",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "road-traffic-management-v1",
+  "title": "Road/Traffic Management Permit",
+  "name": "Road/Traffic Management Permit",
+  "description": "Permit for road or traffic management activities, ensuring public and worker safety.",
+  "meta": {
+    "fields": [
+      {
+        "key": "locationArea",
+        "label": "Location/Area",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "purposeOfManagement",
+        "label": "Purpose of Management",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "trafficControlPlanReference",
+        "label": "Traffic Control Plan Reference",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "TRAFFIC CONTROL PLAN",
+      "items": [
+        "Traffic management plan approved",
+        "Lane closures authorized",
+        "Signage and barriers installed",
+        "Diversion routes established",
+        "Emergency access maintained"
+      ],
+      "fields": [
         {
-            "title": "TRAFFIC CONTROL PLAN",
-            "items": [
-                "Traffic management plan approved",
-                "Lane closures authorized",
-                "Signage and barriers installed",
-                "Diversion routes established",
-                "Emergency access maintained"
-            ]
+          "label": "TMP Reference / Drawing No.",
+          "type": "text"
         },
         {
-            "title": "PERSONNEL & MONITORING",
-            "items": [
-                "Traffic marshals trained and positioned",
-                "High-visibility clothing worn",
-                "Two-way communication established",
-                "Public safety monitored",
-                "Incident response plan ready"
-            ]
+          "label": "Road Classification",
+          "type": "select",
+          "options": [
+            "Motorway",
+            "Dual carriageway",
+            "Single carriageway (rural)",
+            "Single carriageway (urban)",
+            "Private / estate road"
+          ]
+        },
+        {
+          "label": "Closure Type",
+          "type": "select",
+          "options": [
+            "Full road closure",
+            "Lane narrowing / taper",
+            "Contraflow",
+            "Rolling road block",
+            "Footway closure only"
+          ]
+        },
+        {
+          "label": "Reduced Speed Restriction",
+          "type": "select",
+          "options": [
+            "10 mph",
+            "20 mph",
+            "30 mph",
+            "40 mph",
+            "No change"
+          ]
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "PERSONNEL & MONITORING",
+      "items": [
+        "Traffic marshals trained and positioned",
+        "High-visibility clothing worn",
+        "Two-way communication established",
+        "Public safety monitored",
+        "Incident response plan ready"
+      ],
+      "fields": [
+        {
+          "label": "Number of Traffic Marshals Deployed",
+          "type": "text"
+        },
+        {
+          "label": "Communication Channel",
+          "type": "select",
+          "options": [
+            "Radio – channel noted on TMP",
+            "Mobile phone",
+            "Hand signals",
+            "Multiple – see TMP"
+          ]
+        },
+        {
+          "label": "Emergency Vehicle Access Maintained",
+          "type": "select",
+          "options": [
+            "Yes – route maintained",
+            "Yes – on-call opening arrangement",
+            "Not required"
+          ]
+        },
+        {
+          "label": "Incident Response Contact",
+          "type": "text"
+        },
+        {
+          "label": "Monitoring Notes",
+          "type": "textarea",
+          "placeholder": "Record any incidents or complaints during works"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

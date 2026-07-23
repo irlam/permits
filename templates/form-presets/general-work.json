@@ -5,14 +5,52 @@
   "description": "Permit for general work activities, ensuring all necessary safety checks are completed.",
   "meta": {
     "fields": [
-      { "key": "location", "label": "Location", "type": "text", "required": true },
-      { "key": "date", "label": "Date", "type": "date", "required": true },
-      { "key": "workDescription", "label": "Work Description", "type": "textarea", "required": true },
-      { "key": "personnelInvolved", "label": "Personnel Involved", "type": "text", "required": true },
-      { "key": "ppeRequired", "label": "PPE Required", "type": "textarea", "required": true },
-      { "key": "supervisor", "label": "Supervisor", "type": "text", "required": true },
-      { "key": "validFrom", "label": "Valid From", "type": "datetime" },
-      { "key": "validTo", "label": "Valid To", "type": "datetime" }
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "workDescription",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "ppeRequired",
+        "label": "PPE Required",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -24,6 +62,29 @@
         "Method statement available",
         "Emergency procedures briefed",
         "First aid provisions checked"
+      ],
+      "fields": [
+        {
+          "label": "Risk Assessment Reference",
+          "type": "text"
+        },
+        {
+          "label": "Method Statement Reference",
+          "type": "text"
+        },
+        {
+          "label": "Emergency Assembly Point",
+          "type": "text"
+        },
+        {
+          "label": "Overall Risk Rating",
+          "type": "select",
+          "options": [
+            "Low",
+            "Medium",
+            "High"
+          ]
+        }
       ]
     },
     {
@@ -34,6 +95,27 @@
         "Electrical equipment PAT tested",
         "Guards and safety devices functional",
         "Manual handling assessed"
+      ],
+      "fields": [
+        {
+          "label": "Plant / Equipment References",
+          "type": "text",
+          "placeholder": "List key plant IDs"
+        },
+        {
+          "label": "PAT Test / Inspection Certificate Ref.",
+          "type": "text",
+          "placeholder": "Leave blank if no electrical equipment"
+        },
+        {
+          "label": "Manual Handling Assessment Required",
+          "type": "select",
+          "options": [
+            "No – items under 25 kg",
+            "Yes – see risk assessment",
+            "N/A"
+          ]
+        }
       ]
     },
     {
@@ -44,6 +126,50 @@
         "Competency verified",
         "Safety briefing completed",
         "Communication systems tested"
+      ],
+      "fields": [
+        {
+          "label": "PPE Required",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "hard_hat",
+              "label": "Hard hat"
+            },
+            {
+              "value": "hi_vis",
+              "label": "Hi-vis clothing"
+            },
+            {
+              "value": "safety_boots",
+              "label": "Safety boots"
+            },
+            {
+              "value": "gloves",
+              "label": "Gloves"
+            },
+            {
+              "value": "eye_protection",
+              "label": "Eye protection"
+            },
+            {
+              "value": "hearing_protection",
+              "label": "Hearing protection"
+            },
+            {
+              "value": "rpe",
+              "label": "Respiratory protection (RPE)"
+            }
+          ]
+        },
+        {
+          "label": "Training / Induction Reference",
+          "type": "text"
+        },
+        {
+          "label": "Safety Briefing Completed At",
+          "type": "datetime"
+        }
       ]
     },
     {
@@ -54,6 +180,31 @@
         "Housekeeping standards maintained",
         "Waste disposal arranged",
         "Environmental protection measures in place"
+      ],
+      "fields": [
+        {
+          "label": "Barrier / Exclusion Zone Type",
+          "type": "select",
+          "options": [
+            "Plastic barriers and cones",
+            "Heras / metal fencing",
+            "Tape and posts",
+            "None – area not accessible to others"
+          ]
+        },
+        {
+          "label": "Environmental Risk",
+          "type": "select",
+          "options": [
+            "Low – no significant risk",
+            "Medium – drainage / watercourse nearby",
+            "High – sensitive receptor on site"
+          ]
+        },
+        {
+          "label": "Waste Disposal Arrangement",
+          "type": "text"
+        }
       ]
     },
     {
@@ -64,6 +215,29 @@
         "Barriers removed safely",
         "Final inspection completed",
         "Permit signed off and closed"
+      ],
+      "fields": [
+        {
+          "label": "Completion Time",
+          "type": "time"
+        },
+        {
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "label": "Final Inspection Completed",
+          "type": "select",
+          "options": [
+            "Yes – area clear",
+            "Yes – minor items remaining (detail below)"
+          ]
+        },
+        {
+          "label": "Outstanding Actions",
+          "type": "textarea",
+          "placeholder": "Any follow-up required"
+        }
       ]
     }
   ],

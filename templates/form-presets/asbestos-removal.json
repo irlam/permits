@@ -1,97 +1,179 @@
 {
-    "id": "asbestos-removal-v1",
-    "title": "Asbestos Removal Permit",
-    "name": "Asbestos Removal Permit",
-    "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "areaMaterialToBeRemoved",
-                "label": "Area/Material to be Removed",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "removalMethod",
-                "label": "Removal Method",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
-        {
-            "title": "SITE PREPARATION",
-            "items": [
-                "Asbestos survey completed and reviewed",
-                "Work area sealed and isolated",
-                "Negative air pressure system installed",
-                "Decontamination unit set up",
-                "Warning signs posted"
-            ]
-        },
-        {
-            "title": "RESPIRATORY PROTECTION",
-            "items": [
-                "RPE fit-tested and assigned",
-                "Face-fit records current",
-                "Spare filters/cartridges available",
-                "Emergency escape RPE provided"
-            ]
-        },
-        {
-            "title": "WASTE DISPOSAL",
-            "items": [
-                "Licensed waste contractor engaged",
-                "Double-bagged in marked bags",
-                "Waste consignment notes prepared",
-                "Transfer station notified"
-            ]
-        }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
+  "id": "asbestos-removal-v1",
+  "title": "Asbestos Removal Permit",
+  "name": "Asbestos Removal Permit",
+  "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "areaMaterialToBeRemoved",
+        "label": "Area/Material to be Removed",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "removalMethod",
+        "label": "Removal Method",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
+  },
+  "sections": [
+    {
+      "title": "SITE PREPARATION",
+      "items": [
+        "Asbestos survey completed and reviewed",
+        "Work area sealed and isolated",
+        "Negative air pressure system installed",
+        "Decontamination unit set up",
+        "Warning signs posted"
+      ],
+      "fields": [
+        {
+          "label": "Asbestos Survey Reference / Report No.",
+          "type": "text"
+        },
+        {
+          "label": "ACM Type",
+          "type": "select",
+          "options": [
+            "Chrysotile (white)",
+            "Amosite (brown)",
+            "Crocidolite (blue)",
+            "Mixed / unknown – treat as worst case"
+          ]
+        },
+        {
+          "label": "Licensed Contractor Registration No.",
+          "type": "text"
+        },
+        {
+          "label": "Negative Pressure Reading (Pa)",
+          "type": "text",
+          "placeholder": "Minimum -5 Pa required"
+        },
+        {
+          "label": "Enclosure Integrity Test Confirmed",
+          "type": "select",
+          "options": [
+            "Yes – smoke test passed",
+            "Yes – physical check only",
+            "Not required – notifiable non-licensed (NNLW)"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "RESPIRATORY PROTECTION",
+      "items": [
+        "RPE fit-tested and assigned",
+        "Face-fit records current",
+        "Spare filters/cartridges available",
+        "Emergency escape RPE provided"
+      ],
+      "fields": [
+        {
+          "label": "RPE Type Assigned",
+          "type": "select",
+          "options": [
+            "FFP3 disposable half mask",
+            "Full-face RPE with P3 filter",
+            "PAPR (powered air-purifying)",
+            "Air-line / SCBA"
+          ]
+        },
+        {
+          "label": "RPE Fit-test Certificate Reference",
+          "type": "text"
+        },
+        {
+          "label": "Decontamination Unit Location",
+          "type": "text"
+        },
+        {
+          "label": "Decon Unit Stages Confirmed Operational",
+          "type": "select",
+          "options": [
+            "3-stage (dirty / shower / clean)",
+            "2-stage (dirty / clean – low risk)",
+            "N/A – NNLW"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "WASTE DISPOSAL",
+      "items": [
+        "Licensed waste contractor engaged",
+        "Double-bagged in marked bags",
+        "Waste consignment notes prepared",
+        "Transfer station notified"
+      ],
+      "fields": [
+        {
+          "label": "Waste Carrier Licence No.",
+          "type": "text"
+        },
+        {
+          "label": "Consignment Note Reference",
+          "type": "text"
+        },
+        {
+          "label": "Disposal Site / Transfer Station",
+          "type": "text"
+        },
+        {
+          "label": "Clearance Air Test Reference",
+          "type": "text",
+          "placeholder": "4-stage clearance or visual inspection ref."
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

@@ -1,83 +1,164 @@
 {
-    "id": "restricted-area-entry-v1",
-    "title": "Restricted Area Entry Permit",
-    "name": "Restricted Area Entry Permit",
-    "description": "Permit for entry into restricted or controlled areas, ensuring authorization and safety compliance.",
-    "meta": {
-        "fields": [
-            {
-                "key": "area",
-                "label": "Area",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "purposeOfEntry",
-                "label": "Purpose of Entry",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelAuthorized",
-                "label": "Personnel Authorized",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "restricted-area-entry-v1",
+  "title": "Restricted Area Entry Permit",
+  "name": "Restricted Area Entry Permit",
+  "description": "Permit for entry into restricted or controlled areas, ensuring authorization and safety compliance.",
+  "meta": {
+    "fields": [
+      {
+        "key": "area",
+        "label": "Area",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "purposeOfEntry",
+        "label": "Purpose of Entry",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelAuthorized",
+        "label": "Personnel Authorized",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "ACCESS AUTHORIZATION",
+      "items": [
+        "Entry approval obtained",
+        "Security clearance verified",
+        "Escort assigned if required",
+        "Entry/exit logged",
+        "Communication method established"
+      ],
+      "fields": [
         {
-            "title": "ACCESS AUTHORIZATION",
-            "items": [
-                "Entry approval obtained",
-                "Security clearance verified",
-                "Escort assigned if required",
-                "Entry/exit logged",
-                "Communication method established"
-            ]
+          "label": "Access Authorisation Reference",
+          "type": "text"
         },
         {
-            "title": "AREA-SPECIFIC CONTROLS",
-            "items": [
-                "Hazards briefed",
-                "Required PPE worn",
-                "Emergency exits identified",
-                "Area restrictions observed",
-                "Equipment properly secured on exit"
-            ]
+          "label": "Security Clearance Level",
+          "type": "select",
+          "options": [
+            "Level 1 – escorted",
+            "Level 2 – unescorted short duration",
+            "Level 3 – unescorted full access"
+          ]
+        },
+        {
+          "label": "Planned Entry Time",
+          "type": "time"
+        },
+        {
+          "label": "Planned Exit Time",
+          "type": "time"
+        },
+        {
+          "label": "Escort Name (if required)",
+          "type": "text"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "AREA-SPECIFIC CONTROLS",
+      "items": [
+        "Hazards briefed",
+        "Required PPE worn",
+        "Emergency exits identified",
+        "Area restrictions observed",
+        "Equipment properly secured on exit"
+      ],
+      "fields": [
+        {
+          "label": "Area Hazards Present",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "radiation",
+              "label": "Radiation"
+            },
+            {
+              "value": "chemical",
+              "label": "Chemical"
+            },
+            {
+              "value": "confined_space",
+              "label": "Confined space"
+            },
+            {
+              "value": "electrical",
+              "label": "Electrical"
+            },
+            {
+              "value": "biological",
+              "label": "Biological"
+            },
+            {
+              "value": "height",
+              "label": "Working at height"
+            },
+            {
+              "value": "none",
+              "label": "No special hazards"
+            }
+          ]
+        },
+        {
+          "label": "PPE Required for Area",
+          "type": "text"
+        },
+        {
+          "label": "Property Taken into Area",
+          "type": "textarea",
+          "placeholder": "List items – all must be accounted for on exit"
+        },
+        {
+          "label": "Exit Confirmation Required",
+          "type": "select",
+          "options": [
+            "Yes – must sign out at security",
+            "Yes – permit holder to confirm exit",
+            "Not required"
+          ]
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

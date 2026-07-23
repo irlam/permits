@@ -1,85 +1,147 @@
 {
-    "id": "scaffolding-v1",
-    "title": "Scaffolding Permit",
-    "name": "Scaffolding Permit",
-    "description": "Permit for erection, modification, or dismantling of scaffolding, ensuring safety and compliance.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "typeOfScaffolding",
-                "label": "Type of Scaffolding",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "purpose",
-                "label": "Purpose",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "inspectionCompleted",
-                "label": "Inspection Completed",
-                "type": "checkbox",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            }
-        ]
-    },
-    "sections": [
+  "id": "scaffolding-v1",
+  "title": "Scaffolding Permit",
+  "name": "Scaffolding Permit",
+  "description": "Permit for erection, modification, or dismantling of scaffolding, ensuring safety and compliance.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "typeOfScaffolding",
+        "label": "Type of Scaffolding",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "purpose",
+        "label": "Purpose",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "inspectionCompleted",
+        "label": "Inspection Completed",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "SCAFFOLD DESIGN & ERECTION",
+      "items": [
+        "Scaffold designed by competent person",
+        "Ground conditions assessed and prepared",
+        "Base plates level and secure",
+        "Vertical and horizontal bracing installed",
+        "Guardrails and toe boards fitted"
+      ],
+      "fields": [
         {
-            "title": "SCAFFOLD DESIGN & ERECTION",
-            "items": [
-                "Scaffold designed by competent person",
-                "Ground conditions assessed and prepared",
-                "Base plates level and secure",
-                "Vertical and horizontal bracing installed",
-                "Guardrails and toe boards fitted"
-            ]
+          "label": "Design Reference / Drawing No.",
+          "type": "text"
         },
         {
-            "title": "INSPECTION & CERTIFICATION",
-            "items": [
-                "Scaffold inspected by competent person",
-                "Green tag attached and dated",
-                "Load capacity clearly marked",
-                "Access ladders secure",
-                "Weekly inspections scheduled"
-            ]
+          "label": "Scaffold Type",
+          "type": "select",
+          "options": [
+            "Independent tied",
+            "Putlog",
+            "Cantilever",
+            "Suspended (boatswain's chair/cradle)",
+            "Birdcage",
+            "Mobile tower"
+          ]
+        },
+        {
+          "label": "Scaffold Class / Loading",
+          "type": "select",
+          "options": [
+            "Class 1 – Light Duty (75 kg/m²)",
+            "Class 2 – General Purpose (150 kg/m²)",
+            "Class 3 – Heavy Duty (300 kg/m²)"
+          ]
+        },
+        {
+          "label": "Erection Supervisor Name",
+          "type": "text"
+        },
+        {
+          "label": "Erection Completion Date",
+          "type": "date"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "INSPECTION & CERTIFICATION",
+      "items": [
+        "Scaffold inspected by competent person",
+        "Green tag attached and dated",
+        "Load capacity clearly marked",
+        "Access ladders secure",
+        "Weekly inspections scheduled"
+      ],
+      "fields": [
+        {
+          "label": "Handover Certificate / Tag No.",
+          "type": "text"
+        },
+        {
+          "label": "Inspector Name",
+          "type": "text"
+        },
+        {
+          "label": "Maximum Load Capacity (kg/m²)",
+          "type": "text"
+        },
+        {
+          "label": "Next Inspection Due Date",
+          "type": "date"
+        },
+        {
+          "label": "Scaffold Status",
+          "type": "select",
+          "options": [
+            "Green – safe for use",
+            "Amber – restricted use (note below)",
+            "Red – do not use"
+          ]
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

@@ -1,93 +1,186 @@
 {
-    "id": "welding-cutting-v1",
-    "title": "Welding/Cutting Permit",
-    "name": "Welding/Cutting Permit",
-    "description": "Permit for welding or cutting operations, ensuring fire safety and hazard controls are in place.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "workDescription",
-                "label": "Work Description",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "fireWatchAssigned",
-                "label": "Fire Watch Assigned",
-                "type": "checkbox",
-                "required": true
-            },
-            {
-                "key": "pPERequired",
-                "label": "PPE Required",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            }
-        ]
-    },
-    "sections": [
-        {
-            "title": "FIRE PREVENTION",
-            "items": [
-                "Combustibles removed or protected",
-                "Fire watch assigned and briefed",
-                "Fire extinguisher available",
-                "Hot work shields/blankets in place",
-                "Floor openings covered"
-            ]
-        },
-        {
-            "title": "VENTILATION & FUMES",
-            "items": [
-                "Adequate ventilation provided",
-                "Respiratory protection available if required",
-                "Confined space procedures followed if applicable",
-                "Warning signs posted"
-            ]
-        },
-        {
-            "title": "POST-WORK INSPECTION",
-            "items": [
-                "Area inspected immediately after work",
-                "Fire watch maintained for 60 minutes minimum",
-                "Re-inspection completed",
-                "Permit closed and filed"
-            ]
-        }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
+  "id": "welding-cutting-v1",
+  "title": "Welding/Cutting Permit",
+  "name": "Welding/Cutting Permit",
+  "description": "Permit for welding or cutting operations, ensuring fire safety and hazard controls are in place.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "workDescription",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "fireWatchAssigned",
+        "label": "Fire Watch Assigned",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "key": "pPERequired",
+        "label": "PPE Required",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      }
     ]
+  },
+  "sections": [
+    {
+      "title": "FIRE PREVENTION",
+      "items": [
+        "Combustibles removed or protected",
+        "Fire watch assigned and briefed",
+        "Fire extinguisher available",
+        "Hot work shields/blankets in place",
+        "Floor openings covered"
+      ],
+      "fields": [
+        {
+          "label": "Fire Extinguisher Type",
+          "type": "select",
+          "options": [
+            "CO2",
+            "Dry powder",
+            "Foam",
+            "Water mist"
+          ]
+        },
+        {
+          "label": "Fire Extinguisher Location",
+          "type": "text"
+        },
+        {
+          "label": "Combustibles Protected By",
+          "type": "select",
+          "options": [
+            "Removal from area",
+            "Fireproof blanket / screen",
+            "Water spray",
+            "Combined measures"
+          ]
+        },
+        {
+          "label": "Floor Openings / Gaps Sealed",
+          "type": "select",
+          "options": [
+            "Yes – all sealed",
+            "None present",
+            "N/A"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "VENTILATION & FUMES",
+      "items": [
+        "Adequate ventilation provided",
+        "Respiratory protection available if required",
+        "Confined space procedures followed if applicable",
+        "Warning signs posted"
+      ],
+      "fields": [
+        {
+          "label": "Ventilation Type",
+          "type": "select",
+          "options": [
+            "Natural ventilation",
+            "Local exhaust ventilation (LEV)",
+            "Powered general ventilation",
+            "RPE only – no ventilation practical"
+          ]
+        },
+        {
+          "label": "Fume Extraction Equipment ID",
+          "type": "text",
+          "placeholder": "Leave blank if natural or RPE only"
+        },
+        {
+          "label": "RPE Type",
+          "type": "text",
+          "placeholder": "e.g. Half mask P3, powered PAPR"
+        },
+        {
+          "label": "Oxygen Level Confirmed Safe",
+          "type": "select",
+          "options": [
+            "Yes – tested before start",
+            "Not applicable",
+            "No – not tested (record reason)"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "POST-WORK INSPECTION",
+      "items": [
+        "Area inspected immediately after work",
+        "Fire watch maintained for 60 minutes minimum",
+        "Re-inspection completed",
+        "Permit closed and filed"
+      ],
+      "fields": [
+        {
+          "label": "Work Completion Time",
+          "type": "time"
+        },
+        {
+          "label": "Fire Watch End Time (min. 60 min)",
+          "type": "time"
+        },
+        {
+          "label": "Post-watch Re-inspection Completed By",
+          "type": "text"
+        },
+        {
+          "label": "Surface Temperature Check",
+          "type": "select",
+          "options": [
+            "Confirmed cool – no hotspots",
+            "Hotspot found – action taken",
+            "Not required"
+          ]
+        },
+        {
+          "label": "Permit Close-out Reference",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }
