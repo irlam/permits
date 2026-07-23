@@ -1,89 +1,182 @@
 {
-    "id": "permit-to-dig-v1",
-    "title": "Permit to Dig",
-    "name": "Permit to Dig",
-    "description": "Permit for digging or breaking ground, ensuring all underground services and hazards are identified.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "purposeOfDigging",
-                "label": "Purpose of Digging",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "undergroundServicesChecked",
-                "label": "Underground Services Checked",
-                "type": "checkbox",
-                "required": true
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "permit-to-dig-v1",
+  "title": "Permit to Dig",
+  "name": "Permit to Dig",
+  "description": "Permit for digging or breaking ground, ensuring all underground services and hazards are identified.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "purposeOfDigging",
+        "label": "Purpose of Digging",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "undergroundServicesChecked",
+        "label": "Underground Services Checked",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "SERVICE LOCATION",
+      "items": [
+        "Utility drawings obtained",
+        "Cable/pipe locator used",
+        "Trial holes dug to confirm location",
+        "Services marked on ground",
+        "Utility companies notified"
+      ],
+      "fields": [
         {
-            "title": "SERVICE LOCATION",
-            "items": [
-                "Utility drawings obtained",
-                "Cable/pipe locator used",
-                "Trial holes dug to confirm location",
-                "Services marked on ground",
-                "Utility companies notified"
-            ]
+          "label": "Service Reference Drawing No.",
+          "type": "text"
         },
         {
-            "title": "EXCAVATION SAFETY",
-            "items": [
-                "Hand dig zone within 0.5m of services",
-                "Excavation supported if required",
-                "Services protected/diverted",
-                "Emergency contacts available",
-                "Backfill and reinstatement planned"
-            ]
+          "label": "CAT Scan / Locator Used",
+          "type": "select",
+          "options": [
+            "Yes – results recorded",
+            "No – drawings only",
+            "N/A – no services expected"
+          ]
+        },
+        {
+          "label": "Services Found",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "electric",
+              "label": "Electric"
+            },
+            {
+              "value": "gas",
+              "label": "Gas"
+            },
+            {
+              "value": "water",
+              "label": "Water"
+            },
+            {
+              "value": "telecom",
+              "label": "Telecoms"
+            },
+            {
+              "value": "drainage",
+              "label": "Drainage"
+            },
+            {
+              "value": "district_heat",
+              "label": "District Heating"
+            },
+            {
+              "value": "none",
+              "label": "None found"
+            }
+          ]
+        },
+        {
+          "label": "Locator Equipment ID",
+          "type": "text"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "EXCAVATION SAFETY",
+      "items": [
+        "Hand dig zone within 0.5m of services",
+        "Excavation supported if required",
+        "Services protected/diverted",
+        "Emergency contacts available",
+        "Backfill and reinstatement planned"
+      ],
+      "fields": [
+        {
+          "label": "Hand-dig Zone Width from Service",
+          "type": "text",
+          "placeholder": "metres (min. 0.5m required)"
+        },
+        {
+          "label": "Trench Support Method",
+          "type": "select",
+          "options": [
+            "Not required – shallow / safe ground",
+            "Drag/trench box",
+            "Sheet piling",
+            "Timber shoring"
+          ]
+        },
+        {
+          "label": "Service Protection / Diversion Reference",
+          "type": "text",
+          "placeholder": "Diversion design ref. or 'none'"
+        },
+        {
+          "label": "Emergency Contacts Posted",
+          "type": "select",
+          "options": [
+            "Yes",
+            "No – detail reason"
+          ]
+        },
+        {
+          "label": "Backfill Compaction Method",
+          "type": "select",
+          "options": [
+            "Imported fill – hand compact",
+            "Imported fill – plate compact",
+            "Concrete encasement",
+            "Excavated material – layer compact"
+          ]
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

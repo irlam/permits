@@ -1,95 +1,151 @@
 {
-    "id": "building-inspection-v1",
-    "title": "Building Inspection Permit",
-    "name": "Building Inspection Permit",
-    "description": "Permit for building inspections to ensure compliance with codes, regulations, and safety standards.",
-    "meta": {
-        "fields": [
-            {
-                "key": "buildingArea",
-                "label": "Building/Area",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "inspectorName",
-                "label": "Inspector Name",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "inspectionType",
-                "label": "Inspection Type",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "findings",
-                "label": "Findings",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "correctiveActions",
-                "label": "Corrective Actions",
-                "type": "textarea",
-                "required": false
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "building-inspection-v1",
+  "title": "Building Inspection Permit",
+  "name": "Building Inspection Permit",
+  "description": "Permit for building inspections to ensure compliance with codes, regulations, and safety standards.",
+  "meta": {
+    "fields": [
+      {
+        "key": "buildingArea",
+        "label": "Building/Area",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "inspectorName",
+        "label": "Inspector Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "inspectionType",
+        "label": "Inspection Type",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "findings",
+        "label": "Findings",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "correctiveActions",
+        "label": "Corrective Actions",
+        "type": "textarea",
+        "required": false
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "INSPECTION SCOPE",
+      "items": [
+        "Inspection checklist prepared",
+        "Structural elements identified",
+        "Services systems mapped",
+        "Safety equipment tested",
+        "Documentation reviewed"
+      ],
+      "fields": [
         {
-            "title": "INSPECTION SCOPE",
-            "items": [
-                "Inspection checklist prepared",
-                "Structural elements identified",
-                "Services systems mapped",
-                "Safety equipment tested",
-                "Documentation reviewed"
-            ]
+          "label": "Inspection Reference No.",
+          "type": "text"
         },
         {
-            "title": "FINDINGS & ACTIONS",
-            "items": [
-                "Defects noted and categorized",
-                "Photos/measurements taken",
-                "Immediate hazards addressed",
-                "Remedial actions assigned",
-                "Report issued to stakeholders"
-            ]
+          "label": "Building Regulation Stage",
+          "type": "select",
+          "options": [
+            "Commencement notice",
+            "Foundations",
+            "DPC / ground floor slab",
+            "Drainage",
+            "Structural frame",
+            "Insulation / fabric",
+            "Final – completion certificate"
+          ]
+        },
+        {
+          "label": "Drawings Reviewed",
+          "type": "text",
+          "placeholder": "Drawing revision numbers inspected"
+        },
+        {
+          "label": "Access Provided By",
+          "type": "text"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "FINDINGS & ACTIONS",
+      "items": [
+        "Defects noted and categorized",
+        "Photos/measurements taken",
+        "Immediate hazards addressed",
+        "Remedial actions assigned",
+        "Report issued to stakeholders"
+      ],
+      "fields": [
+        {
+          "label": "Total Defects / Non-conformances",
+          "type": "text",
+          "placeholder": "Number identified"
+        },
+        {
+          "label": "Critical Defects Count",
+          "type": "text",
+          "placeholder": "Items requiring stop / rework before proceeding"
+        },
+        {
+          "label": "Remedial Works Required By",
+          "type": "date"
+        },
+        {
+          "label": "Inspection Report Reference",
+          "type": "text"
+        },
+        {
+          "label": "Re-inspection Required",
+          "type": "select",
+          "options": [
+            "Yes – after remedials complete",
+            "No – accepted with minor actions only"
+          ]
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

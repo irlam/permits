@@ -1,89 +1,145 @@
 {
-    "id": "temporary-works-v1",
-    "title": "Temporary Works Permit",
-    "name": "Temporary Works Permit",
-    "description": "Permit for temporary works such as shoring, formwork, or falsework, ensuring design and safety compliance.",
-    "meta": {
-        "fields": [
-            {
-                "key": "locationArea",
-                "label": "Location/Area",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "typeOfTemporaryWorks",
-                "label": "Type of Temporary Works",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "designReference",
-                "label": "Design Reference",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "temporary-works-v1",
+  "title": "Temporary Works Permit",
+  "name": "Temporary Works Permit",
+  "description": "Permit for temporary works such as shoring, formwork, or falsework, ensuring design and safety compliance.",
+  "meta": {
+    "fields": [
+      {
+        "key": "locationArea",
+        "label": "Location/Area",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "typeOfTemporaryWorks",
+        "label": "Type of Temporary Works",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "designReference",
+        "label": "Design Reference",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "DESIGN & APPROVAL",
+      "items": [
+        "Temporary works design completed",
+        "Design checked and approved",
+        "Loading calculations verified",
+        "Materials specification confirmed",
+        "Construction sequence planned"
+      ],
+      "fields": [
         {
-            "title": "DESIGN & APPROVAL",
-            "items": [
-                "Temporary works design completed",
-                "Design checked and approved",
-                "Loading calculations verified",
-                "Materials specification confirmed",
-                "Construction sequence planned"
-            ]
+          "label": "Design / Unique Reference (TWUR)",
+          "type": "text"
         },
         {
-            "title": "INSTALLATION & MONITORING",
-            "items": [
-                "Installation supervised",
-                "Erected per design",
-                "Inspection regime established",
-                "Load restrictions posted",
-                "Dismantling procedure prepared"
-            ]
+          "label": "Temporary Works Coordinator (TWC) Name",
+          "type": "text"
+        },
+        {
+          "label": "Temporary Works Designer Name",
+          "type": "text"
+        },
+        {
+          "label": "Design Check Certificate Reference",
+          "type": "text"
+        },
+        {
+          "label": "Category",
+          "type": "select",
+          "options": [
+            "Category 1 – simple, low risk",
+            "Category 2 – significant risk, third-party check",
+            "Category 3 – complex, independent check"
+          ]
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "INSTALLATION & MONITORING",
+      "items": [
+        "Installation supervised",
+        "Erected per design",
+        "Inspection regime established",
+        "Load restrictions posted",
+        "Dismantling procedure prepared"
+      ],
+      "fields": [
+        {
+          "label": "Installation Supervisor Name",
+          "type": "text"
+        },
+        {
+          "label": "Monitoring Frequency",
+          "type": "select",
+          "options": [
+            "Daily visual check",
+            "Weekly formal inspection",
+            "After each pour / loading event",
+            "After adverse weather",
+            "Continuous instrumented"
+          ]
+        },
+        {
+          "label": "Maximum Permitted Load (kN/m²)",
+          "type": "text"
+        },
+        {
+          "label": "Dismantling Procedure Reference",
+          "type": "text"
+        },
+        {
+          "label": "Removal Authorised By (TWC sign-off required)",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

@@ -5,14 +5,52 @@
   "description": "Permit for excavation work, ensuring all underground hazards and safety measures are addressed.",
   "meta": {
     "fields": [
-      { "key": "location", "label": "Location", "type": "text", "required": true },
-      { "key": "date", "label": "Date", "type": "date", "required": true },
-      { "key": "workDescription", "label": "Work Description", "type": "textarea", "required": true },
-      { "key": "depthOfExcavation", "label": "Depth of Excavation (meters)", "type": "number", "required": true },
-      { "key": "personnelInvolved", "label": "Personnel Involved", "type": "text", "required": true },
-      { "key": "supervisor", "label": "Supervisor", "type": "text", "required": true },
-      { "key": "validFrom", "label": "Valid From", "type": "datetime" },
-      { "key": "validTo", "label": "Valid To", "type": "datetime" }
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "workDescription",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "depthOfExcavation",
+        "label": "Depth of Excavation (meters)",
+        "type": "number",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -24,6 +62,28 @@
         "Adjacent structures inspected for potential impact",
         "Weather conditions checked (rain, freezing, high winds)",
         "Emergency access and egress routes established"
+      ],
+      "fields": [
+        {
+          "label": "Services Survey Reference / Drawing No.",
+          "type": "text"
+        },
+        {
+          "label": "Ground Condition Assessment",
+          "type": "select",
+          "options": [
+            "Stable / firm",
+            "Soft / loose",
+            "Waterlogged",
+            "Potentially contaminated",
+            "Previously disturbed"
+          ]
+        },
+        {
+          "label": "Trial Hole Findings",
+          "type": "textarea",
+          "placeholder": "Record services found, depths and conditions"
+        }
       ]
     },
     {
@@ -35,6 +95,35 @@
         "Spoil heaps placed minimum 1.5m from excavation edge",
         "Traffic management and signage in place",
         "Competent person assigned to supervise excavation"
+      ],
+      "fields": [
+        {
+          "label": "Maximum Excavation Depth",
+          "type": "text",
+          "placeholder": "metres"
+        },
+        {
+          "label": "Support Method",
+          "type": "select",
+          "options": [
+            "None – battered/benched sides only",
+            "Drag boxes",
+            "Hydraulic props",
+            "Sheet piling",
+            "Timber shoring",
+            "Other"
+          ]
+        },
+        {
+          "label": "Barrier Type",
+          "type": "text",
+          "placeholder": "e.g. Heras fencing, pedestrian barrier"
+        },
+        {
+          "label": "Spoil Heap Distance from Edge",
+          "type": "text",
+          "placeholder": "metres (min. 1.5m required)"
+        }
       ]
     },
     {
@@ -46,6 +135,26 @@
         "Fall protection if depth exceeds 2m",
         "Gas detection equipment if required",
         "First aid kit and emergency equipment available"
+      ],
+      "fields": [
+        {
+          "label": "Gas Detection Equipment ID",
+          "type": "text",
+          "placeholder": "Leave blank if not required"
+        },
+        {
+          "label": "Contamination Risk Assessed",
+          "type": "select",
+          "options": [
+            "No contamination risk",
+            "Low risk – nitrile gloves required",
+            "High risk – full protective suit required"
+          ]
+        },
+        {
+          "label": "PPE Checklist Confirmed By",
+          "type": "text"
+        }
       ]
     },
     {
@@ -55,6 +164,34 @@
         "Atmospheric monitoring if confined space risk",
         "Continuous monitoring during mechanical excavation",
         "Re-inspection after weather events or ground movement"
+      ],
+      "fields": [
+        {
+          "label": "Last Inspection Date / Time",
+          "type": "datetime"
+        },
+        {
+          "label": "Inspector Name",
+          "type": "text"
+        },
+        {
+          "label": "Inspection Frequency",
+          "type": "select",
+          "options": [
+            "Before each shift",
+            "Daily",
+            "Twice daily",
+            "After every weather event or ground movement"
+          ]
+        },
+        {
+          "label": "Atmospheric Monitoring Required",
+          "type": "select",
+          "options": [
+            "Yes – confined space risk present",
+            "No"
+          ]
+        }
       ]
     },
     {
@@ -65,6 +202,30 @@
         "Surface reinstated to original condition",
         "Area inspected and signed off",
         "Permit closed and filed"
+      ],
+      "fields": [
+        {
+          "label": "Backfill Specification Reference",
+          "type": "text"
+        },
+        {
+          "label": "Surface Reinstatement Type",
+          "type": "select",
+          "options": [
+            "Temporary – cold lay",
+            "Permanent – tarmac",
+            "Permanent – concrete",
+            "Reinstatement by others – specify"
+          ]
+        },
+        {
+          "label": "Reinstatement Inspection Date",
+          "type": "date"
+        },
+        {
+          "label": "Completed By",
+          "type": "text"
+        }
       ]
     }
   ],

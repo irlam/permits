@@ -1,89 +1,148 @@
 {
-    "id": "crane-lifting-v1",
-    "title": "Crane/Lifting Operations Permit",
-    "name": "Crane/Lifting Operations Permit",
-    "description": "Permit for crane and lifting operations, ensuring all safety checks and authorizations are in place.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "typeOfLiftCrane",
-                "label": "Type of Lift/Crane",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "liftPlanReference",
-                "label": "Lift Plan Reference",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "crane-lifting-v1",
+  "title": "Crane/Lifting Operations Permit",
+  "name": "Crane/Lifting Operations Permit",
+  "description": "Permit for crane and lifting operations, ensuring all safety checks and authorizations are in place.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "typeOfLiftCrane",
+        "label": "Type of Lift/Crane",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "liftPlanReference",
+        "label": "Lift Plan Reference",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "LIFT PLANNING",
+      "items": [
+        "Lift plan prepared and approved",
+        "Load weight verified",
+        "Crane capacity confirmed",
+        "Ground conditions assessed",
+        "Overhead clearances checked"
+      ],
+      "fields": [
         {
-            "title": "LIFT PLANNING",
-            "items": [
-                "Lift plan prepared and approved",
-                "Load weight verified",
-                "Crane capacity confirmed",
-                "Ground conditions assessed",
-                "Overhead clearances checked"
-            ]
+          "label": "Lift Plan Reference",
+          "type": "text"
         },
         {
-            "title": "RIGGING & EXECUTION",
-            "items": [
-                "Lifting gear inspected and certified",
-                "Slinging method approved",
-                "Banksman/signaller appointed",
-                "Exclusion zone established",
-                "Trial lift completed"
-            ]
+          "label": "Lift Category",
+          "type": "select",
+          "options": [
+            "Routine",
+            "Non-routine",
+            "Complex",
+            "Critical – requires Appointed Person sign-off"
+          ]
+        },
+        {
+          "label": "Load Weight (tonnes)",
+          "type": "text"
+        },
+        {
+          "label": "Crane Safe Working Load at Working Radius (tonnes)",
+          "type": "text"
+        },
+        {
+          "label": "Working Radius (metres)",
+          "type": "text"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "RIGGING & EXECUTION",
+      "items": [
+        "Lifting gear inspected and certified",
+        "Slinging method approved",
+        "Banksman/signaller appointed",
+        "Exclusion zone established",
+        "Trial lift completed"
+      ],
+      "fields": [
+        {
+          "label": "Slinging Method",
+          "type": "select",
+          "options": [
+            "Single leg chain/sling",
+            "Two leg bridle",
+            "Four leg bridle",
+            "Endless round sling",
+            "Shackle to lifting eye",
+            "Spreader beam"
+          ]
+        },
+        {
+          "label": "Lifting Gear Certificate Reference",
+          "type": "text"
+        },
+        {
+          "label": "Appointed Person Name",
+          "type": "text"
+        },
+        {
+          "label": "Exclusion Zone Radius (metres)",
+          "type": "text"
+        },
+        {
+          "label": "Trial Lift Height (metres)",
+          "type": "text",
+          "placeholder": "0.5 m recommended before full lift"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

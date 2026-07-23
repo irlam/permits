@@ -1,95 +1,144 @@
 {
-    "id": "blasting-explosives-v1",
-    "title": "Blasting/Explosives Permit",
-    "name": "Blasting/Explosives Permit",
-    "description": "Permit for blasting or use of explosives, ensuring all regulatory and safety requirements are met.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "typeOfExplosive",
-                "label": "Type of Explosive",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "quantity",
-                "label": "Quantity",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "blastingPlanReference",
-                "label": "Blasting Plan Reference",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "blasting-explosives-v1",
+  "title": "Blasting/Explosives Permit",
+  "name": "Blasting/Explosives Permit",
+  "description": "Permit for blasting or use of explosives, ensuring all regulatory and safety requirements are met.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "typeOfExplosive",
+        "label": "Type of Explosive",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "quantity",
+        "label": "Quantity",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "blastingPlanReference",
+        "label": "Blasting Plan Reference",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "EXPLOSIVES MANAGEMENT",
+      "items": [
+        "Explosives inventory recorded",
+        "Magazine secured and logged",
+        "Competent shot-firer appointed",
+        "Blast plan approved",
+        "Seismograph monitoring arranged"
+      ],
+      "fields": [
         {
-            "title": "EXPLOSIVES MANAGEMENT",
-            "items": [
-                "Explosives inventory recorded",
-                "Magazine secured and logged",
-                "Competent shot-firer appointed",
-                "Blast plan approved",
-                "Seismograph monitoring arranged"
-            ]
+          "label": "Explosives Magazine Reference",
+          "type": "text"
         },
         {
-            "title": "AREA SECURITY",
-            "items": [
-                "Exclusion zone established and marked",
-                "All personnel evacuated",
-                "Traffic stopped",
-                "Audible warnings given",
-                "All-clear signal arranged"
-            ]
+          "label": "Shot-firer Licence Number",
+          "type": "text"
+        },
+        {
+          "label": "Quantity and Type Authorised",
+          "type": "text",
+          "placeholder": "kg explosive / detonators"
+        },
+        {
+          "label": "Seismograph / Monitoring Equipment ID",
+          "type": "text",
+          "placeholder": "Leave blank if not required"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "AREA SECURITY",
+      "items": [
+        "Exclusion zone established and marked",
+        "All personnel evacuated",
+        "Traffic stopped",
+        "Audible warnings given",
+        "All-clear signal arranged"
+      ],
+      "fields": [
+        {
+          "label": "Exclusion Zone Radius (metres)",
+          "type": "text"
+        },
+        {
+          "label": "Evacuation Confirmed By",
+          "type": "text"
+        },
+        {
+          "label": "All-clear Signal Type",
+          "type": "select",
+          "options": [
+            "Siren",
+            "Radio communication",
+            "Flag signal",
+            "Combined signals"
+          ]
+        },
+        {
+          "label": "Misfire Procedure Reference",
+          "type": "text"
+        },
+        {
+          "label": "Post-blast Fume Clearance Time (minutes)",
+          "type": "text",
+          "placeholder": "Minimum 30 minutes in open, longer in confined areas"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

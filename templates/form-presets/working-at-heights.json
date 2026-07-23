@@ -5,16 +5,64 @@
   "description": "Permit for work performed at heights, ensuring fall protection and safety measures are in place.",
   "meta": {
     "fields": [
-      { "key": "location", "label": "Location", "type": "text", "required": true },
-      { "key": "date", "label": "Date", "type": "date", "required": true },
-      { "key": "workDescription", "label": "Work Description", "type": "textarea", "required": true },
-      { "key": "height", "label": "Height (meters)", "type": "number", "required": true },
-      { "key": "personnelInvolved", "label": "Personnel Involved", "type": "text", "required": true },
-      { "key": "fallProtection", "label": "Fall Protection Equipment", "type": "textarea", "required": true },
-      { "key": "weather", "label": "Weather Conditions", "type": "text", "required": false },
-      { "key": "supervisor", "label": "Supervisor", "type": "text", "required": true },
-      { "key": "validFrom", "label": "Valid From", "type": "datetime" },
-      { "key": "validTo", "label": "Valid To", "type": "datetime" }
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "workDescription",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "height",
+        "label": "Height (meters)",
+        "type": "number",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "fallProtection",
+        "label": "Fall Protection Equipment",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "weather",
+        "label": "Weather Conditions",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -26,6 +74,32 @@
         "Weather conditions checked (wind, rain, ice)",
         "Fragile surfaces identified and marked",
         "Overhead hazards assessed (power lines, structures)"
+      ],
+      "fields": [
+        {
+          "label": "Maximum Working Height",
+          "type": "text",
+          "placeholder": "metres above ground / floor"
+        },
+        {
+          "label": "Fall Risk Rating",
+          "type": "select",
+          "options": [
+            "Low",
+            "Medium",
+            "High"
+          ]
+        },
+        {
+          "label": "Wind Speed at Assessment",
+          "type": "text",
+          "placeholder": "mph or Beaufort scale"
+        },
+        {
+          "label": "Fragile Surface Locations",
+          "type": "textarea",
+          "placeholder": "Mark on plan or describe position"
+        }
       ]
     },
     {
@@ -36,6 +110,32 @@
         "Anchor points identified, tested and certified",
         "Rescue plan established and communicated",
         "Edge protection installed where required"
+      ],
+      "fields": [
+        {
+          "label": "Collective Protection Type",
+          "type": "select",
+          "options": [
+            "Guardrails",
+            "Safety nets",
+            "Scaffolding platform",
+            "Crash deck",
+            "None – individual PFAS only"
+          ]
+        },
+        {
+          "label": "Harness Serial Number",
+          "type": "text"
+        },
+        {
+          "label": "Anchor Point Reference",
+          "type": "text",
+          "placeholder": "Structural anchor ID or location"
+        },
+        {
+          "label": "Rescue Plan Reference",
+          "type": "text"
+        }
       ]
     },
     {
@@ -46,6 +146,35 @@
         "Equipment appropriate for task and height",
         "Safe access and egress routes established",
         "Equipment secured against movement"
+      ],
+      "fields": [
+        {
+          "label": "Equipment Type",
+          "type": "select",
+          "options": [
+            "Fixed ladder",
+            "Extension ladder",
+            "Scaffold",
+            "Podium steps",
+            "Mobile scaffold tower",
+            "MEWP – scissor lift",
+            "MEWP – boom lift",
+            "Other"
+          ]
+        },
+        {
+          "label": "Equipment ID / Tag Number",
+          "type": "text"
+        },
+        {
+          "label": "Last Inspection Date",
+          "type": "date"
+        },
+        {
+          "label": "MEWP Operator Certificate No.",
+          "type": "text",
+          "placeholder": "Leave blank if not applicable"
+        }
       ]
     },
     {
@@ -56,6 +185,29 @@
         "Workers trained and certified for working at height",
         "Tool lanyards used for all hand tools",
         "Emergency rescue equipment available"
+      ],
+      "fields": [
+        {
+          "label": "Harness Pre-use Inspection Reference",
+          "type": "text"
+        },
+        {
+          "label": "Working at Height Training Certificate",
+          "type": "text",
+          "placeholder": "Reference or expiry date"
+        },
+        {
+          "label": "PPE Checked By",
+          "type": "text"
+        },
+        {
+          "label": "Tool Lanyards Fitted",
+          "type": "select",
+          "options": [
+            "Yes – all tools secured",
+            "Not applicable – no hand tools at height"
+          ]
+        }
       ]
     },
     {
@@ -65,6 +217,31 @@
         "Debris netting installed where required",
         "Public/traffic excluded from work zone",
         "Work stopped if weather conditions deteriorate"
+      ],
+      "fields": [
+        {
+          "label": "Exclusion Zone Width Below Work",
+          "type": "text",
+          "placeholder": "metres"
+        },
+        {
+          "label": "Debris Netting Fitted",
+          "type": "select",
+          "options": [
+            "Yes",
+            "No – exclusion zone only",
+            "Not required"
+          ]
+        },
+        {
+          "label": "Public Access Risk",
+          "type": "select",
+          "options": [
+            "No public access possible",
+            "Public excluded by barriers",
+            "Public nearby – enhanced controls"
+          ]
+        }
       ]
     },
     {
@@ -74,6 +251,30 @@
         "Work area inspected and cleared",
         "Access equipment dismantled or secured",
         "Permit closed and signed off"
+      ],
+      "fields": [
+        {
+          "label": "Permit Close-out Time",
+          "type": "time"
+        },
+        {
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "label": "Access Equipment Secured / Removed",
+          "type": "select",
+          "options": [
+            "Yes – removed",
+            "Yes – secured in place",
+            "Partial – detail below"
+          ]
+        },
+        {
+          "label": "Outstanding Items",
+          "type": "textarea",
+          "placeholder": "Any follow-up actions"
+        }
       ]
     }
   ],

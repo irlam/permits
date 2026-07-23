@@ -1,89 +1,148 @@
 {
-    "id": "concrete-pouring-v1",
-    "title": "Concrete Pouring Permit",
-    "name": "Concrete Pouring Permit",
-    "description": "Permit for concrete pouring or pumping operations, ensuring all safety and quality measures are in place.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "areaSection",
-                "label": "Area/Section",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "mixTypeSpecification",
-                "label": "Mix Type/Specification",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "concrete-pouring-v1",
+  "title": "Concrete Pouring Permit",
+  "name": "Concrete Pouring Permit",
+  "description": "Permit for concrete pouring or pumping operations, ensuring all safety and quality measures are in place.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "areaSection",
+        "label": "Area/Section",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "mixTypeSpecification",
+        "label": "Mix Type/Specification",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "FORMWORK & REINFORCEMENT",
+      "items": [
+        "Formwork inspected and braced",
+        "Reinforcement checked and tied",
+        "Pour sequence planned",
+        "Concrete mix approved",
+        "Weather forecast checked"
+      ],
+      "fields": [
         {
-            "title": "FORMWORK & REINFORCEMENT",
-            "items": [
-                "Formwork inspected and braced",
-                "Reinforcement checked and tied",
-                "Pour sequence planned",
-                "Concrete mix approved",
-                "Weather forecast checked"
-            ]
+          "label": "Formwork Design Reference",
+          "type": "text"
         },
         {
-            "title": "POURING OPERATIONS",
-            "items": [
-                "Delivery schedule confirmed",
-                "Pump/chute positioned safely",
-                "Vibration equipment ready",
-                "Competent personnel assigned",
-                "Curing materials available"
-            ]
+          "label": "Formwork Inspection Completed By",
+          "type": "text"
+        },
+        {
+          "label": "Pour Volume (m³)",
+          "type": "text"
+        },
+        {
+          "label": "Concrete Grade / Specification",
+          "type": "text",
+          "placeholder": "e.g. C25/30 XC1, 20mm aggregate"
+        },
+        {
+          "label": "Reinforcement / Rebar Check",
+          "type": "select",
+          "options": [
+            "Checked and matches drawings",
+            "Minor variations – noted on mark-up",
+            "N/A – no rebar (mass concrete)"
+          ]
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "POURING OPERATIONS",
+      "items": [
+        "Delivery schedule confirmed",
+        "Pump/chute positioned safely",
+        "Vibration equipment ready",
+        "Competent personnel assigned",
+        "Curing materials available"
+      ],
+      "fields": [
+        {
+          "label": "Delivery Vehicle Registration",
+          "type": "text"
+        },
+        {
+          "label": "Pump / Crane / Skip Reference",
+          "type": "text",
+          "placeholder": "Method of placing concrete"
+        },
+        {
+          "label": "Pour Start Time",
+          "type": "time"
+        },
+        {
+          "label": "Curing Method",
+          "type": "select",
+          "options": [
+            "Wet curing – hessian and water",
+            "Curing membrane spray",
+            "Polythene sheeting",
+            "Heated enclosure – frost protection",
+            "Other – detail in notes"
+          ]
+        },
+        {
+          "label": "Weather at Time of Pour",
+          "type": "text",
+          "placeholder": "Temperature, wind, rain – stop if <5°C or >35°C"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

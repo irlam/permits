@@ -1,95 +1,161 @@
 {
-    "id": "hazardous-materials-v1",
-    "title": "Hazardous Materials Handling Permit",
-    "name": "Hazardous Materials Handling Permit",
-    "description": "Permit for handling, storage, or transport of hazardous materials on site.",
-    "meta": {
-        "fields": [
-            {
-                "key": "materialNameType",
-                "label": "Material Name/Type",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "quantity",
-                "label": "Quantity",
-                "type": "text",
-                "required": false
-            },
-            {
-                "key": "personnelInvolved",
-                "label": "Personnel Involved",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "pPERequired",
-                "label": "PPE Required",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "hazardous-materials-v1",
+  "title": "Hazardous Materials Handling Permit",
+  "name": "Hazardous Materials Handling Permit",
+  "description": "Permit for handling, storage, or transport of hazardous materials on site.",
+  "meta": {
+    "fields": [
+      {
+        "key": "materialNameType",
+        "label": "Material Name/Type",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "quantity",
+        "label": "Quantity",
+        "type": "text",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "pPERequired",
+        "label": "PPE Required",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "MATERIAL IDENTIFICATION",
+      "items": [
+        "Material safety data sheet (MSDS) reviewed",
+        "Hazard classification confirmed",
+        "Exposure limits identified",
+        "Incompatible materials separated",
+        "Emergency procedures posted"
+      ],
+      "fields": [
         {
-            "title": "MATERIAL IDENTIFICATION",
-            "items": [
-                "Material safety data sheet (MSDS) reviewed",
-                "Hazard classification confirmed",
-                "Exposure limits identified",
-                "Incompatible materials separated",
-                "Emergency procedures posted"
-            ]
+          "label": "MSDS / SDS Reference",
+          "type": "text"
         },
         {
-            "title": "HANDLING CONTROLS",
-            "items": [
-                "Appropriate PPE worn",
-                "Spill kit readily available",
-                "Ventilation adequate",
-                "Dispensing equipment suitable",
-                "Waste disposal arranged"
-            ]
+          "label": "UN Number",
+          "type": "text",
+          "placeholder": "e.g. UN1263"
+        },
+        {
+          "label": "Hazard Classification",
+          "type": "select",
+          "options": [
+            "Flammable liquid / gas",
+            "Corrosive",
+            "Toxic",
+            "Oxidising",
+            "Explosive",
+            "Harmful / irritant",
+            "Environmental hazard"
+          ]
+        },
+        {
+          "label": "Quantity Authorised on Site",
+          "type": "text",
+          "placeholder": "litres or kg"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "HANDLING CONTROLS",
+      "items": [
+        "Appropriate PPE worn",
+        "Spill kit readily available",
+        "Ventilation adequate",
+        "Dispensing equipment suitable",
+        "Waste disposal arranged"
+      ],
+      "fields": [
+        {
+          "label": "PPE Required",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "chem_gloves",
+              "label": "Chemical-resistant gloves"
+            },
+            {
+              "value": "face_shield",
+              "label": "Face shield / goggles"
+            },
+            {
+              "value": "chem_suit",
+              "label": "Chemical-resistant suit"
+            },
+            {
+              "value": "rpe",
+              "label": "Respiratory protection"
+            }
+          ]
+        },
+        {
+          "label": "Spill Kit Location",
+          "type": "text"
+        },
+        {
+          "label": "Storage / Bunded Area Location",
+          "type": "text"
+        },
+        {
+          "label": "Waste Disposal Method",
+          "type": "text",
+          "placeholder": "Licensed contractor ref. or disposal route"
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

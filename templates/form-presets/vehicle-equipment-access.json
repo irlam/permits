@@ -1,95 +1,148 @@
 {
-    "id": "vehicle-equipment-access-v1",
-    "title": "Vehicle/Equipment Access Permit",
-    "name": "Vehicle/Equipment Access Permit",
-    "description": "Permit for vehicle or equipment access to controlled areas, ensuring safety and authorization.",
-    "meta": {
-        "fields": [
-            {
-                "key": "location",
-                "label": "Location",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "date",
-                "label": "Date",
-                "type": "date",
-                "required": true
-            },
-            {
-                "key": "vehicleEquipmentType",
-                "label": "Vehicle/Equipment Type",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "operatorName",
-                "label": "Operator Name",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "purposeOfAccess",
-                "label": "Purpose of Access",
-                "type": "textarea",
-                "required": true
-            },
-            {
-                "key": "accessTime",
-                "label": "Access Time",
-                "type": "time",
-                "required": true
-            },
-            {
-                "key": "supervisor",
-                "label": "Supervisor",
-                "type": "text",
-                "required": true
-            },
-            {
-                "key": "signatures",
-                "label": "Signatures",
-                "type": "signature",
-                "required": true
-            },
-            {
-                "key": "validFrom",
-                "label": "Valid From",
-                "type": "datetime"
-            },
-            {
-                "key": "validTo",
-                "label": "Valid To",
-                "type": "datetime"
-            }
-        ]
-    },
-    "sections": [
+  "id": "vehicle-equipment-access-v1",
+  "title": "Vehicle/Equipment Access Permit",
+  "name": "Vehicle/Equipment Access Permit",
+  "description": "Permit for vehicle or equipment access to controlled areas, ensuring safety and authorization.",
+  "meta": {
+    "fields": [
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "vehicleEquipmentType",
+        "label": "Vehicle/Equipment Type",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "operatorName",
+        "label": "Operator Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "purposeOfAccess",
+        "label": "Purpose of Access",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "accessTime",
+        "label": "Access Time",
+        "type": "time",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "VEHICLE/EQUIPMENT CHECKS",
+      "items": [
+        "Vehicle/equipment inspected",
+        "Operator licensed/certified",
+        "Lights and warnings functional",
+        "Load secure and within limits",
+        "Route surveyed and approved"
+      ],
+      "fields": [
         {
-            "title": "VEHICLE/EQUIPMENT CHECKS",
-            "items": [
-                "Vehicle/equipment inspected",
-                "Operator licensed/certified",
-                "Lights and warnings functional",
-                "Load secure and within limits",
-                "Route surveyed and approved"
-            ]
+          "label": "Vehicle Registration / Equipment ID",
+          "type": "text"
         },
         {
-            "title": "ACCESS CONTROLS",
-            "items": [
-                "Pedestrian/vehicle segregation",
-                "Speed limits posted and enforced",
-                "Reversing aids/banksman used",
-                "Ground conditions suitable",
-                "Parking/maneuvering area designated"
-            ]
+          "label": "Operator Licence / Certificate No.",
+          "type": "text"
+        },
+        {
+          "label": "Pre-use Inspection Completed By",
+          "type": "text"
+        },
+        {
+          "label": "Defects Noted",
+          "type": "textarea",
+          "placeholder": "Enter 'None' or describe defects and action taken"
         }
-    ],
-    "signatures": [
-        "issuer_issue",
-        "holder_accept",
-        "issuer_close"
-    ]
+      ]
+    },
+    {
+      "title": "ACCESS CONTROLS",
+      "items": [
+        "Pedestrian/vehicle segregation",
+        "Speed limits posted and enforced",
+        "Reversing aids/banksman used",
+        "Ground conditions suitable",
+        "Parking/maneuvering area designated"
+      ],
+      "fields": [
+        {
+          "label": "Maximum Permitted Speed on Site (mph)",
+          "type": "text"
+        },
+        {
+          "label": "Banksman / Spotter Name",
+          "type": "text",
+          "placeholder": "Required for all reversing movements"
+        },
+        {
+          "label": "Pedestrian Segregation Method",
+          "type": "select",
+          "options": [
+            "Physical barriers / Heras fencing",
+            "Painted demarcation lines",
+            "Marshal / banksman",
+            "Traffic cones only"
+          ]
+        },
+        {
+          "label": "Permitted Access Time Window",
+          "type": "text",
+          "placeholder": "e.g. 07:00–18:00 Mon–Fri"
+        },
+        {
+          "label": "Weigh-bridge / Load Check Required",
+          "type": "select",
+          "options": [
+            "Yes – confirm before accessing",
+            "No – not applicable"
+          ]
+        }
+      ]
+    }
+  ],
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }
