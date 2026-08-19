@@ -89,4 +89,19 @@ final class PermitFormValidatorTest extends TestCase
         $answers['check_one_note'] = 'Loose guard; replacement arranged before starting.';
         self::assertSame([], PermitFormValidator::validate($this->structure, $answers));
     }
+
+    public function testNaSafetyAnswerRequiresSupportingDetail(): void
+    {
+        $answers = [
+            'location' => 'Plant room',
+            'start' => '2026-07-22T09:30',
+            'check_one' => 'na',
+        ];
+
+        $errors = PermitFormValidator::validate($this->structure, $answers);
+        self::assertStringContainsString('explaining the N/A answer', $errors['check_one']);
+
+        $answers['check_one_note'] = 'No stored pressure or secondary energy source is fitted to this equipment.';
+        self::assertSame([], PermitFormValidator::validate($this->structure, $answers));
+    }
 }
