@@ -34,6 +34,26 @@ $checker = new ProductionHealthCheck(
 );
 $report = $checker->run();
 
+// Phase 4 adds linked-permit/SIMOPS controls. Keep this explicit at the CLI
+// release gate so a code deploy without `php bin/migrate.php` cannot appear
+// production-ready while permit linking and conflict interlocks are unavailable.
+try {
+    $db->pdo->query('SELECT 1 FROM permit_links LIMIT 1');
+    $permitLinksReady = true;
+} catch (Throwable $e) {
+    $permitLinksReady = false;
+}
+$phase4CheckKey = 'database.table.permit_links';
+$report['checks'][$phase4CheckKey] = [
+    'ok' => $permitLinksReady,
+    'message' => $permitLinksReady
+        ? "Required Phase 4 table 'permit_links' is readable."
+        : "Required Phase 4 table 'permit_links' is missing or inaccessible. Run php bin/migrate.php.",
+];
+if (!$permitLinksReady && !in_array($phase4CheckKey, $report['failures'], true)) {
+    $report['failures'][] = $phase4CheckKey;
+}
+
 foreach ($report['checks'] as $check) {
     echo ($check['ok'] ? '[PASS] ' : '[FAIL] ') . $check['message'] . "\n";
 }
