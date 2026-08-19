@@ -1,0 +1,152 @@
+{
+  "id": "concrete-pouring-v2",
+  "title": "Concrete Pouring Permit",
+  "name": "Concrete Pouring Permit",
+  "version": 2,
+  "description": "Pre-pour hold-point and work authorisation for concrete placement, covering formwork / falsework, reinforcement and embeds, plant access, wet-cement exposure, quality checks and safe hand-back.",
+  "meta": {
+    "title": "Concrete Pour and Hold-Point Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"location","label":"Exact Pour Location / Element","type":"text","required":true},
+      {"key":"drawingReference","label":"Construction Drawing / Pour Card Reference and Revision","type":"text","required":true},
+      {"key":"scope","label":"Element / Pour Description","type":"textarea","required":true},
+      {"key":"volume","label":"Planned Pour Volume (m³)","type":"number","required":true,"min":0,"step":0.1},
+      {"key":"concreteSpec","label":"Concrete Grade / Specification","type":"text","required":true},
+      {"key":"contractor","label":"Concrete / Formwork Contractor","type":"text","required":true},
+      {"key":"supervisor","label":"Pour Supervisor / Person in Charge","type":"text","required":true},
+      {"key":"rams","label":"RAMS / Concrete Pour Method Reference","type":"text","required":true},
+      {"key":"prePourReference","label":"Pre-pour Inspection / Hold-point Reference","type":"text","required":true},
+      {"key":"temporaryWorksReference","label":"Temporary Works / Formwork / Falsework Reference","type":"text","required":false},
+      {"key":"placingMethod","label":"Concrete Placing Method","type":"select","required":true,"options":["Pump","Direct chute","Crane and skip","Dumper / buggy","Other"]},
+      {"key":"validFrom","label":"Pour Authorised From","type":"datetime","required":true},
+      {"key":"validTo","label":"Pour Authorisation Expires","type":"datetime","required":true}
+    ]
+  },
+  "sections": [
+    {
+      "title": "DRAWINGS, REINFORCEMENT AND EMBEDDED ITEMS",
+      "items": [
+        "The latest approved drawings and specifications are available at the pour location",
+        "Reinforcement size, spacing, laps, couplers and cover have been checked against the design",
+        "Cast-in items, bolts, sleeves, waterstops, services and openings have been checked",
+        "Construction joints, stop ends and interfaces with previous concrete are prepared as specified",
+        "The pour area is clean and free from unacceptable debris, standing water or contamination",
+        "Survey / dimensional checks and required hold points have been completed"
+      ],
+      "fields": [
+        {"key":"rebarCheck","label":"Reinforcement / Cover / Coupler Check Result","type":"textarea","required":true},
+        {"key":"embedCheck","label":"Cast-in Items / Services / Openings Check","type":"textarea","required":true},
+        {"key":"surveyCheck","label":"Survey / Level / Dimension Check Reference","type":"text","required":false},
+        {"key":"holdPointReleasedBy","label":"Design / Quality Hold Point Released By","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "FORMWORK, FALSEWORK AND TEMPORARY WORKS",
+      "items": [
+        "Formwork / falsework is installed in accordance with its design or approved standard arrangement",
+        "Supports, props, ties, bracing, foundations and bearing surfaces have been inspected",
+        "The temporary works are capable of carrying the foreseeable wet-concrete and construction loads",
+        "Access platforms, edges and openings are protected for the pour operation",
+        "Any temporary works inspection / permit-to-load hold point has been completed before pouring",
+        "Unauthorised alteration or removal of formwork / supports during the pour is prevented"
+      ],
+      "fields": [
+        {"key":"formworkDesign","label":"Formwork / Falsework Design or Standard Arrangement Reference","type":"text","required":true},
+        {"key":"twCoordinator","label":"Temporary Works Coordinator / Responsible Person","type":"text","required":false},
+        {"key":"formworkInspection","label":"Pre-pour Formwork / Falsework Inspection Reference","type":"text","required":true},
+        {"key":"permitToLoad","label":"Temporary Works Permit-to-Load / Pour Release Reference (if applicable)","type":"text","required":false},
+        {"key":"formworkInspector","label":"Formwork / Temporary Works Inspection Completed By","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "DELIVERY, PUMPING, PLANT AND TRAFFIC CONTROL",
+      "items": [
+        "Concrete delivery and pump / placing plant positions are planned before the pour starts",
+        "Vehicle and pedestrian routes are segregated and reversing is minimised",
+        "Pump outriggers / stabilisers are positioned on suitable ground or designed support",
+        "Concrete pump lines, couplings, restraints and end hoses are suitable and checked before use",
+        "Exclusion zones are provided around moving plant, suspended skips and line-of-fire hazards",
+        "Overhead services and other clearance restrictions have been assessed"
+      ],
+      "fields": [
+        {"key":"deliveryPlan","label":"Delivery / Traffic / Logistics Arrangement","type":"textarea","required":true},
+        {"key":"pumpId","label":"Concrete Pump / Placing Plant ID","type":"text","required":false},
+        {"key":"pumpSetup","label":"Pump Setup / Outrigger / Ground Support Details","type":"textarea","required":false},
+        {"key":"vehicleMarshaller","label":"Vehicle Marshaller / Signaller (if required)","type":"text","required":false},
+        {"key":"exclusionZones","label":"Plant / Pump / Skip Exclusion Zones","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "WET CEMENT, COSHH, PPE AND WELFARE",
+      "items": [
+        "Wet-cement skin and eye exposure has been assessed under the site COSHH arrangements",
+        "Workers have suitable waterproof gloves and protective clothing for the task",
+        "Footwear and clothing arrangements prevent wet concrete being trapped against the skin",
+        "Eye / face protection is available where splashing is foreseeable",
+        "Clean water and suitable washing / welfare facilities are immediately available",
+        "Workers understand the need to remove contaminated clothing and wash exposed skin promptly"
+      ],
+      "fields": [
+        {"key":"coshhReference","label":"Concrete / Cement COSHH Assessment Reference","type":"text","required":true},
+        {"key":"ppe","label":"Wet-cement PPE / Skin Protection Requirements","type":"textarea","required":true},
+        {"key":"welfare","label":"Washing / Welfare / Emergency Eye-wash Arrangements","type":"textarea","required":true},
+        {"key":"skinControls","label":"Skin Exposure / Contaminated Clothing Controls","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "POUR SEQUENCE, QUALITY AND ENVIRONMENTAL CONTROLS",
+      "items": [
+        "The pour sequence and placement rate are compatible with the formwork / temporary works design",
+        "Concrete delivery tickets and specification will be checked before discharge",
+        "Specified testing, sampling and quality records are arranged",
+        "Vibration / compaction equipment is suitable and available",
+        "Weather conditions and the planned concrete protection / curing measures have been assessed",
+        "Concrete washout and waste arrangements prevent uncontrolled discharge"
+      ],
+      "fields": [
+        {"key":"pourSequence","label":"Pour Sequence / Placement Rate / Lift Details","type":"textarea","required":true},
+        {"key":"qualityTests","label":"Required Slump / Flow / Cube / Other Test Regime","type":"textarea","required":true},
+        {"key":"weather","label":"Weather Conditions / Hot, Cold, Wind or Rain Controls","type":"textarea","required":true},
+        {"key":"curing","label":"Curing / Protection Method","type":"textarea","required":true},
+        {"key":"washout","label":"Concrete Washout / Waste Location and Controls","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "AUTHORISATION TO POUR",
+      "items": [
+        "All required pre-pour inspections and hold points are complete",
+        "The pour team has been briefed on the sequence, hazards and stop-work conditions",
+        "Linked permits and temporary works controls remain valid for the planned pour",
+        "The person authorising the pour is satisfied that concrete placement can start"
+      ],
+      "fields": [
+        {"key":"issuerName","label":"Pour Authorised By","type":"text","required":true},
+        {"key":"holderName","label":"Pour Supervisor Acceptance","type":"text","required":true},
+        {"key":"authorisationAt","label":"Pour Authorisation Date / Time","type":"datetime","required":true},
+        {"key":"stopConditions","label":"Stop-pour / Escalation Conditions","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "COMPLETION, CURING AND HAND-BACK",
+      "items": [
+        "The pour is complete and the final concrete level / finish has been checked",
+        "Formwork / falsework remains in place for the required period and will only be altered under the approved sequence",
+        "Curing and protection measures have been installed",
+        "Test samples, delivery records and pour records have been completed",
+        "Spills, washout and access routes have been left safe and controlled",
+        "Any defects, delays, cold joints or deviations have been recorded and escalated"
+      ],
+      "fields": [
+        {"key":"pourCompletedAt","label":"Pour Completed Date / Time","type":"datetime","required":true},
+        {"key":"actualVolume","label":"Actual Concrete Volume / Delivery Summary","type":"textarea","required":true},
+        {"key":"qualityRecords","label":"Test / Cube / Delivery / Pour Record References","type":"textarea","required":true},
+        {"key":"defects","label":"Defects / Deviations / Remedial Actions","type":"textarea","required":false},
+        {"key":"handBackTo","label":"Area / Element Handed Back To","type":"text","required":true},
+        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true}
+      ]
+    }
+  ],
+  "signatures": ["issuer_issue","holder_accept","competent_person","issuer_close"]
+}
