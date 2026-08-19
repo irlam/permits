@@ -7,9 +7,8 @@ namespace Permits;
  * Presentation helpers for template pickers.
  *
  * Historical template versions remain in the database for existing permits,
- * while public pickers show only the newest version of each named template.
- * Legacy overlapping permit names are folded into their preferred specialist
- * template so users cannot accidentally choose a weaker duplicate form.
+ * while public pickers show only the preferred/newest version of each permit.
+ * Legacy overlapping names are folded into their stronger canonical template.
  */
 final class TemplateCatalog
 {
@@ -23,6 +22,9 @@ final class TemplateCatalog
         'hazardous materials handling permit' => 'Hazardous Substances Handling Permit',
         'road/traffic management permit' => 'Traffic Management Interface Permit',
         'excavation permit' => 'Permit to Dig / Excavation Permit',
+        'permit to dig' => 'Permit to Dig / Excavation Permit',
+        'working at heights permit' => 'Working at Height Permit',
+        'asbestos removal permit' => 'Asbestos Work Permit',
     ];
 
     /** @var array<string,string> */
@@ -31,10 +33,17 @@ final class TemplateCatalog
         'lifting operations permit' => 'lifting-operations-v1',
         'electrical isolation & energisation permit' => 'electrical-isolation-v1',
         'roof access permit' => 'roof-access-v1',
-        'hot works permit' => 'hot-works-v1',
+        'hot works permit' => 'hot-works-v2',
         'hazardous substances handling permit' => 'hazardous-substances-v1',
         'traffic management interface permit' => 'traffic-management-v1',
-        'permit to dig / excavation permit' => 'permit-to-dig-v1',
+        'permit to dig / excavation permit' => 'permit-to-dig-v2',
+        'working at height permit' => 'working-at-height-v2',
+        'asbestos work permit' => 'asbestos-work-v2',
+        'lockout/tagout permit' => 'lockout-tagout-v2',
+        'confined space entry permit' => 'confined-space-entry-v2',
+        'temporary works permit' => 'temporary-works-v2',
+        'scaffolding permit' => 'scaffolding-v2',
+        'demolition permit' => 'demolition-v2',
     ];
 
     /**
