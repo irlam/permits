@@ -1,0 +1,83 @@
+{
+  "id": "building-inspection-v2",
+  "title": "Building Inspection Checklist",
+  "name": "Building Inspection Checklist",
+  "version": 2,
+  "workflow": "inspection",
+  "description": "Structured building inspection record for documenting condition, defects, hold points, corrective actions and sign-off. It records findings and does not itself authorise high-risk work.",
+  "meta": {
+    "title": "Inspection Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"buildingArea","label":"Building / Area Inspected","type":"text","required":true},
+      {"key":"inspectionType","label":"Inspection Type","type":"select","required":true,"options":["Structural / frame","Envelope / fabric","Fire stopping / compartmentation","MEP / services","Waterproofing","Quality hold point","Pre-handover","Other"]},
+      {"key":"inspectionScope","label":"Inspection Scope","type":"textarea","required":true},
+      {"key":"inspectorName","label":"Inspector Name","type":"text","required":true},
+      {"key":"inspectorCompany","label":"Inspector Company / Organisation","type":"text","required":true},
+      {"key":"inspectionAt","label":"Inspection Date / Time","type":"datetime","required":true},
+      {"key":"drawingsReference","label":"Relevant Drawings / Specification References","type":"textarea","required":true}
+    ]
+  },
+  "sections": [
+    {
+      "title": "PREPARATION AND SCOPE",
+      "items": [
+        "The inspection scope and acceptance criteria are understood",
+        "Current drawings, specifications and relevant records are available",
+        "Safe access to the inspection area has been confirmed",
+        "Any separate permit required for access or intrusive inspection is in place",
+        "Previous defects, NCRs or outstanding actions relevant to this area have been reviewed"
+      ],
+      "fields": [
+        {"key":"previousRecords","label":"Previous Inspection / NCR / Defect References","type":"textarea","required":false},
+        {"key":"linkedPermits","label":"Linked Permit References (if required for access or intrusive work)","type":"textarea","required":false},
+        {"key":"acceptanceCriteria","label":"Acceptance / Hold-point Criteria","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "INSPECTION FINDINGS",
+      "items": [
+        "The inspected work is consistent with the available drawings and specification",
+        "Visible workmanship and finishes are acceptable for the stage inspected",
+        "Required measurements, tests or observations have been recorded",
+        "Defects and non-conformances have been clearly identified and evidenced",
+        "Any immediate safety issue has been escalated and made safe",
+        "Work that must remain visible for inspection has not been covered or closed prematurely"
+      ],
+      "fields": [
+        {"key":"inspectionOutcome","label":"Inspection Outcome","type":"select","required":true,"options":["Pass","Pass with observations","Fail - remedial work required","Hold point - do not proceed","Immediate safety issue escalated"]},
+        {"key":"findings","label":"Inspection Findings","type":"textarea","required":true},
+        {"key":"defectsCount","label":"Number of Defects / Non-conformances","type":"number","required":true,"min":0,"step":1},
+        {"key":"criticalFindings","label":"Critical / Stop-work Findings","type":"textarea","required":false},
+        {"key":"evidenceReference","label":"Photo / Measurement / Test Evidence Reference","type":"textarea","required":false}
+      ]
+    },
+    {
+      "title": "CORRECTIVE ACTIONS AND FOLLOW-UP",
+      "items": [
+        "Each required corrective action has a clear owner",
+        "Target dates have been set for outstanding actions",
+        "Items requiring re-inspection are identified",
+        "Relevant supervisors or package owners have been informed of the findings",
+        "The inspection record will be retained with the project quality / safety records"
+      ],
+      "fields": [
+        {"key":"correctiveActions","label":"Corrective Actions Required","type":"textarea","required":false},
+        {"key":"actionOwner","label":"Action Owner / Responsible Person","type":"text","required":false},
+        {"key":"actionDue","label":"Action Due Date","type":"date","required":false},
+        {"key":"reinspectionRequired","label":"Re-inspection Required?","type":"select","required":true,"options":["Yes","No"]},
+        {"key":"reinspectionDate","label":"Planned Re-inspection Date","type":"date","required":false}
+      ]
+    },
+    {
+      "title": "INSPECTION SIGN-OFF",
+      "fields": [
+        {"key":"inspectorSignoff","label":"Inspector Sign-off Name","type":"text","required":true},
+        {"key":"reviewedBy","label":"Reviewed / Acknowledged By","type":"text","required":false},
+        {"key":"signoffAt","label":"Sign-off Date / Time","type":"datetime","required":true},
+        {"key":"finalComments","label":"Final Comments","type":"textarea","required":false}
+      ]
+    }
+  ],
+  "signatures": ["inspector_signoff"]
+}
