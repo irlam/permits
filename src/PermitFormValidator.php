@@ -71,11 +71,12 @@ final class PermitFormValidator
                 if (
                     $finalSubmission
                     && !empty($field['scoreItem'])
-                    && strtolower($stringValue) === 'no'
+                    && in_array(strtolower($stringValue), ['no', 'na'], true)
                     && self::isBlank($values[$name . '_note'] ?? null)
                     && self::isBlank($values[$name . '_media'] ?? null)
                 ) {
-                    $errors[$name] = $label . ' needs a note or photo explaining the No answer.';
+                    $answerLabel = strtolower($stringValue) === 'na' ? 'N/A' : 'No';
+                    $errors[$name] = $label . ' needs a note or photo explaining the ' . $answerLabel . ' answer.';
                     continue;
                 }
 
