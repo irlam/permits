@@ -54,15 +54,18 @@ final class AdminWorkflowUxRegressionTest extends TestCase
 
     public function testLoggedOutPermitViewerGetsAContextPreservingTeamLogin(): void
     {
-        $view = file_get_contents($this->root . '/view-permit-public.php');
+        $view = file_get_contents($this->root . '/view-permit-public-legacy.php');
+        $wrapper = file_get_contents($this->root . '/view-permit-public.php');
         $home = file_get_contents($this->root . '/index.php');
         self::assertIsString($view);
+        self::assertIsString($wrapper);
         self::assertIsString($home);
 
         self::assertStringContainsString("$" . "permitReturnPath = '/view-permit-public.php?link='", $view);
         self::assertStringContainsString("urlencode($" . "permitReturnPath)", $view);
         self::assertStringContainsString('if ($isActive && !$currentUserIsActive)', $view);
         self::assertStringContainsString('Team sign in', $view);
+        self::assertStringContainsString('Workflow / Handover', $wrapper);
         self::assertStringContainsString('>Team sign in</a>', $home);
     }
 
