@@ -46,6 +46,43 @@ final class BrandingAndTemplateCatalogTest extends TestCase
         self::assertSame('hot', $templates[1]['id']);
     }
 
+    public function testTemplatePickerConsolidatesLegacyOverlappingPermits(): void
+    {
+        $templates = TemplateCatalog::latestByName([
+            ['id' => 'general-work-v1', 'name' => 'General Work Permit', 'version' => 5],
+            ['id' => 'general-ptw-v1', 'name' => 'General Permit to Work', 'version' => 1],
+            ['id' => 'crane-lifting-v1', 'name' => 'Crane/Lifting Operations Permit', 'version' => 4],
+            ['id' => 'lifting-operations-v1', 'name' => 'Lifting Operations Permit', 'version' => 1],
+            ['id' => 'electrical-work-v1', 'name' => 'Electrical Work Permit', 'version' => 3],
+            ['id' => 'electrical-isolation-v1', 'name' => 'Electrical Isolation & Energisation Permit', 'version' => 1],
+            ['id' => 'roof-work-v1', 'name' => 'Roof Work Permit', 'version' => 3],
+            ['id' => 'roof-access-v1', 'name' => 'Roof Access Permit', 'version' => 1],
+            ['id' => 'welding-cutting-v1', 'name' => 'Welding/Cutting Permit', 'version' => 3],
+            ['id' => 'hot-works-v1', 'name' => 'Hot Works Permit', 'version' => 2],
+            ['id' => 'hazardous-materials-v1', 'name' => 'Hazardous Materials Handling Permit', 'version' => 3],
+            ['id' => 'hazardous-substances-v1', 'name' => 'Hazardous Substances Handling Permit', 'version' => 1],
+            ['id' => 'road-traffic-management-v1', 'name' => 'Road/Traffic Management Permit', 'version' => 3],
+            ['id' => 'traffic-management-v1', 'name' => 'Traffic Management Interface Permit', 'version' => 1],
+            ['id' => 'excavation-v1', 'name' => 'Excavation Permit', 'version' => 5],
+            ['id' => 'permit-to-dig-v1', 'name' => 'Permit to Dig / Excavation Permit', 'version' => 2],
+        ]);
+
+        self::assertCount(8, $templates);
+        $byName = [];
+        foreach ($templates as $template) {
+            $byName[$template['name']] = $template['id'];
+        }
+
+        self::assertSame('general-ptw-v1', $byName['General Permit to Work']);
+        self::assertSame('lifting-operations-v1', $byName['Lifting Operations Permit']);
+        self::assertSame('electrical-isolation-v1', $byName['Electrical Isolation & Energisation Permit']);
+        self::assertSame('roof-access-v1', $byName['Roof Access Permit']);
+        self::assertSame('hot-works-v1', $byName['Hot Works Permit']);
+        self::assertSame('hazardous-substances-v1', $byName['Hazardous Substances Handling Permit']);
+        self::assertSame('traffic-management-v1', $byName['Traffic Management Interface Permit']);
+        self::assertSame('permit-to-dig-v1', $byName['Permit to Dig / Excavation Permit']);
+    }
+
     public function testPublicPermitPagesUseTheStoredBrandingPaletteAndIdentity(): void
     {
         $root = dirname(__DIR__);
