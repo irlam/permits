@@ -1,0 +1,85 @@
+{
+  "id": "site-safety-inspection-v2",
+  "title": "Site Safety Inspection Checklist",
+  "name": "Site Safety Inspection Checklist",
+  "version": 2,
+  "workflow": "inspection",
+  "description": "Site safety inspection record for identifying unsafe conditions, checking controls, assigning actions and escalating significant findings. It does not replace task RAMS or permits to work.",
+  "meta": {
+    "title": "Inspection Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"inspectionArea","label":"Inspection Area / Zone","type":"text","required":true},
+      {"key":"inspectionType","label":"Inspection Type","type":"select","required":true,"options":["Routine site inspection","Weekly management inspection","Targeted high-risk activity inspection","Post-incident / follow-up inspection","Client / joint inspection","Other"]},
+      {"key":"inspectorName","label":"Inspector Name","type":"text","required":true},
+      {"key":"inspectorCompany","label":"Inspector Company / Organisation","type":"text","required":true},
+      {"key":"inspectionAt","label":"Inspection Date / Time","type":"datetime","required":true},
+      {"key":"peoplePresent","label":"People Accompanying Inspection","type":"textarea","required":false}
+    ]
+  },
+  "sections": [
+    {
+      "title": "GENERAL SITE CONDITIONS",
+      "items": [
+        "Site access, egress and emergency routes are clear and safe",
+        "Housekeeping and material storage are adequately controlled",
+        "Welfare facilities are available, clean and suitable",
+        "Fire precautions, escape arrangements and emergency information are in place",
+        "First-aid provision and emergency contacts are available",
+        "Temporary lighting, edge protection and general access routes are suitable"
+      ],
+      "fields": [
+        {"key":"generalFindings","label":"General Site Condition Findings","type":"textarea","required":false},
+        {"key":"immediateActions","label":"Immediate Actions Taken During Inspection","type":"textarea","required":false}
+      ]
+    },
+    {
+      "title": "WORK ACTIVITIES AND HIGH-RISK CONTROLS",
+      "items": [
+        "Current high-risk work has the correct permit / authorisation where required",
+        "RAMS and task briefings are available and understood for work observed",
+        "Work at height controls and access equipment are suitable",
+        "Excavations, openings and temporary works are adequately controlled",
+        "Lifting operations and exclusion arrangements are suitably controlled",
+        "Plant, vehicles and pedestrians are adequately segregated",
+        "Electrical equipment, temporary supplies and isolations are suitably controlled",
+        "PPE requirements are suitable and being followed",
+        "Environmental controls for dust, noise, waste and spills are being maintained"
+      ],
+      "fields": [
+        {"key":"activePermitReferences","label":"Active Permit References Checked","type":"textarea","required":false},
+        {"key":"highRiskFindings","label":"High-risk Activity Findings","type":"textarea","required":false},
+        {"key":"stopWorkReference","label":"Stop-work / Escalation Reference (if applicable)","type":"text","required":false}
+      ]
+    },
+    {
+      "title": "FINDINGS, ACTIONS AND ESCALATION",
+      "items": [
+        "Immediate danger has been stopped or made safe before the inspection continues",
+        "Each significant finding has been clearly described and evidenced",
+        "Corrective actions have a named owner",
+        "Action target dates reflect the seriousness of the finding",
+        "Significant issues have been escalated to the appropriate site management",
+        "Follow-up or re-inspection requirements are recorded"
+      ],
+      "fields": [
+        {"key":"overallRating","label":"Overall Inspection Rating","type":"select","required":true,"options":["Good / acceptable","Improvement required","Significant issues identified","Critical issue - work stopped / escalated"]},
+        {"key":"hazardsIdentified","label":"Hazards / Non-conformances Identified","type":"textarea","required":true},
+        {"key":"correctiveActions","label":"Corrective Actions Required","type":"textarea","required":false},
+        {"key":"actionOwner","label":"Action Owner / Responsible Person","type":"text","required":false},
+        {"key":"actionDue","label":"Action Due Date","type":"date","required":false},
+        {"key":"followUpDate","label":"Follow-up Inspection Date","type":"date","required":false}
+      ]
+    },
+    {
+      "title": "INSPECTION SIGN-OFF",
+      "fields": [
+        {"key":"inspectorSignoff","label":"Inspector Sign-off Name","type":"text","required":true},
+        {"key":"managerAcknowledgement","label":"Manager / Supervisor Acknowledgement","type":"text","required":false},
+        {"key":"signoffAt","label":"Sign-off Date / Time","type":"datetime","required":true},
+        {"key":"closingComments","label":"Closing Comments","type":"textarea","required":false}
+      ]
+    }
+  ],
+  "signatures": ["inspector_signoff"]
+}

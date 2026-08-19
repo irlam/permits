@@ -6,7 +6,7 @@
  * - Versioned cache keys for safe roll-outs
  */
 
-const SW_VERSION = 'permits-sw-v2.2.0';
+const SW_VERSION = 'permits-sw-v2.3.0';
 const PRECACHE = `permits-precache-${SW_VERSION}`;
 const RUNTIME = `permits-runtime-${SW_VERSION}`;
 
@@ -15,6 +15,8 @@ const PRECACHE_URLS = [
   '/manifest.webmanifest',
   '/assets/app.css',
   '/assets/app.js',
+  '/assets/phase3-status.js',
+  '/assets/phase3c-picker.js',
   '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',

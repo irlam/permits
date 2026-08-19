@@ -187,7 +187,7 @@ $appConfig = [
     'DB_PORT'       => $_ENV['DB_PORT']       ?? '3306',
     'DB_DATABASE'    => $_ENV['DB_DATABASE']   ?? '',
     'DB_USERNAME'    => $_ENV['DB_USERNAME']   ?? '',
-    'DB_PASSWORD'    => $_ENV['DB_PASSWORD']   ?? '',
+    'DB_PASSWORD'    => $_ENV['DB_PASSWORD'] ?? '',
     'DB_CHARSET'     => $_ENV['DB_CHARSET']    ?? 'utf8mb4',
     'DB_COLLATION'   => $_ENV['DB_COLLATION']  ?? 'utf8mb4_unicode_ci',
 
@@ -209,6 +209,31 @@ $appConfig = [
 
 /** 9) Create App + DB */
 $app = new App($appConfig);
+
+// Prevent bookmarked or copied legacy template URLs from starting new work on
+// superseded schemas. Existing draft/reopen bearer links are deliberately left
+// alone so historical records remain usable and readable.
+if (PHP_SAPI !== 'cli') {
+    $scriptName = basename((string)($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? ''));
+    if (
+        in_array($scriptName, ['create-permit-public.php', 'create-inspection-public.php'], true)
+        && empty($_GET['draft'])
+        && empty($_GET['reopen'])
+        && isset($_GET['template'])
+        && is_scalar($_GET['template'])
+    ) {
+        $requestedTemplateId = trim((string)$_GET['template']);
+        $resolvedTemplateId = TemplateCatalog::replacementForId($requestedTemplateId) ?? $requestedTemplateId;
+        $expectedScript = TemplateCatalog::isInspection($resolvedTemplateId)
+            ? 'create-inspection-public.php'
+            : 'create-permit-public.php';
+
+        if ($resolvedTemplateId !== $requestedTemplateId || $scriptName !== $expectedScript) {
+            header('Location: ' . $app->url('/' . $expectedScript . '?template=' . rawurlencode($resolvedTemplateId)), true, 302);
+            exit;
+        }
+    }
+}
 
 // Db class should be the hardened version we sent earlier
 require_once __DIR__ . '/Db.php';
