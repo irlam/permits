@@ -1,0 +1,140 @@
+{
+  "id": "blasting-explosives-v2",
+  "title": "Blasting/Explosives Permit",
+  "name": "Blasting/Explosives Permit",
+  "version": 2,
+  "description": "Specialist permit for blasting or explosives work. Use only where the activity is authorised by the project explosives arrangements and undertaken by suitably competent, appointed personnel.",
+  "meta": {
+    "title": "Blast Permit and Work Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"location","label":"Exact Blast Location / Area","type":"text","required":true},
+      {"key":"scope","label":"Purpose and Scope of Blast","type":"textarea","required":true},
+      {"key":"blastType","label":"Blast / Explosives Activity Type","type":"select","required":true,"options":["Production / rock blast","Controlled demolition blast","Trench / excavation blast","Specialist explosive operation","Other - describe in scope"]},
+      {"key":"contractor","label":"Explosives Contractor / Company","type":"text","required":true},
+      {"key":"shotfirer","label":"Appointed Shotfirer / Person in Charge","type":"text","required":true},
+      {"key":"shotfirerCompetence","label":"Shotfirer Competence / Appointment Reference","type":"text","required":true},
+      {"key":"blastSpecification","label":"Blasting Specification / Blast Plan Reference","type":"text","required":true},
+      {"key":"explosivesAuthorisation","label":"Explosives Licence / Certificate / Storage Reference (as applicable)","type":"text","required":true},
+      {"key":"rams","label":"RAMS / Safe System of Work Reference","type":"text","required":true},
+      {"key":"explosivesPlanned","label":"Explosive and Detonator Types / Planned Quantity","type":"textarea","required":true},
+      {"key":"validFrom","label":"Permit Valid From","type":"datetime","required":true},
+      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
+    ]
+  },
+  "sections": [
+    {
+      "title": "AUTHORISATION, INFORMATION AND BLAST DESIGN",
+      "items": [
+        "The blast is covered by the project explosives management arrangements and required legal permissions",
+        "A suitably competent shotfirer / person in charge has been formally appointed",
+        "The current blasting specification / blast plan is available and understood",
+        "Borehole, face, geological and nearby asset information has been checked where relevant",
+        "Risks to people, structures, services, roads and neighbouring operations have been assessed",
+        "Weather and conditions that could affect safe explosives handling or firing have been assessed"
+      ],
+      "fields": [
+        {"key":"blastDrawingRevision","label":"Blast Drawing / Specification Revision","type":"text","required":true},
+        {"key":"nearbyAssets","label":"Nearby Structures / Services / Sensitive Receptors","type":"textarea","required":true},
+        {"key":"monitoringPlan","label":"Vibration / Air Overpressure / Seismograph Monitoring Plan (if required)","type":"textarea","required":false},
+        {"key":"weatherConditions","label":"Weather / Environmental Conditions and Restrictions","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "EXPLOSIVES RECEIPT, STORAGE AND CHARGING",
+      "items": [
+        "Explosives and detonators will be received, transported, stored and issued under the approved explosives arrangements",
+        "Explosives inventory and quantities issued to the blast will be recorded",
+        "Explosives and detonators will be protected from unauthorised access, damage and incompatible storage",
+        "Only authorised personnel will handle or charge explosives",
+        "The charging sequence and hole identification match the current blast specification",
+        "Ignition sources, radio-frequency controls and other restrictions specified by the blast plan are in place"
+      ],
+      "fields": [
+        {"key":"storageReference","label":"Magazine / Temporary Storage / Issue Record Reference","type":"text","required":true},
+        {"key":"issuedQuantity","label":"Explosives / Detonators Issued to Blast","type":"textarea","required":true},
+        {"key":"chargingSupervisor","label":"Charging Supervised By","type":"text","required":true},
+        {"key":"communicationsRestrictions","label":"Radio / Mobile / Ignition Source Restrictions","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "EXCLUSION ZONE, SECURITY AND WARNING SYSTEM",
+      "items": [
+        "The blast danger / exclusion zone has been defined from the blast specification and site conditions",
+        "Access points, roads and work areas affected by the blast will be controlled",
+        "Sentries / guards are positioned where required and understand their duties",
+        "All persons will be accounted for and cleared from the danger zone before firing",
+        "Warning and all-clear signals are agreed, distinguishable and briefed",
+        "Vehicle and plant movements into the blast area are prevented during the controlled period"
+      ],
+      "fields": [
+        {"key":"exclusionZone","label":"Blast Exclusion / Danger Zone and Boundaries","type":"textarea","required":true},
+        {"key":"sentries","label":"Sentry / Guard Positions and Names","type":"textarea","required":true},
+        {"key":"warningSequence","label":"Warning, Firing and All-clear Signal Sequence","type":"textarea","required":true},
+        {"key":"evacuationConfirmedBy","label":"Area Clearance / Evacuation Confirmed By","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "FIRING, MISFIRE AND EMERGENCY CONTROLS",
+      "items": [
+        "The firing system has been checked in accordance with the approved blast procedure",
+        "Final clearance will be confirmed immediately before firing",
+        "The shotfirer retains control of the firing decision and firing device",
+        "A site-specific misfire procedure is available and understood",
+        "No person will re-enter after a suspected misfire until authorised under the misfire procedure",
+        "Emergency contacts and arrangements for fire, injury, flyrock or unintended detonation are available"
+      ],
+      "fields": [
+        {"key":"firingSystem","label":"Firing System / Initiation Method","type":"text","required":true},
+        {"key":"finalClearanceBy","label":"Final Clearance Confirmed By","type":"text","required":true},
+        {"key":"misfireProcedure","label":"Misfire Procedure Reference","type":"text","required":true},
+        {"key":"emergencyArrangements","label":"Emergency Contacts / Response Arrangements","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "POST-BLAST INSPECTION AND AREA RELEASE",
+      "items": [
+        "The shotfirer will inspect the blast area before the all-clear is given",
+        "The inspection will check for misfires, unexploded explosives, unstable ground and flyrock hazards",
+        "Post-blast fumes and visibility will be assessed before people are allowed to re-enter",
+        "Damage or unexpected effects to nearby structures, services or plant will be checked where relevant",
+        "Unused explosives, detonators and explosive-contaminated items will be accounted for and returned or disposed of by an authorised method",
+        "The blast area will remain controlled until the shotfirer formally releases it"
+      ],
+      "fields": [
+        {"key":"postBlastInspectionBy","label":"Post-blast Inspection Completed By","type":"text","required":true},
+        {"key":"reentryCriteria","label":"Re-entry / Fume Clearance Criteria and Time","type":"textarea","required":true},
+        {"key":"misfireOutcome","label":"Misfire / Unexploded Explosive Check Result","type":"textarea","required":true},
+        {"key":"explosivesAccounted","label":"Explosives and Detonators Accounted For / Returned","type":"textarea","required":true},
+        {"key":"areaReleasedAt","label":"Area Released / All-clear Date and Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "AUTHORISATION TO PROCEED",
+      "fields": [
+        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
+        {"key":"issuerRole","label":"Permit Issuer Role","type":"text","required":true},
+        {"key":"shotfirerAcceptance","label":"Shotfirer / Person in Charge Acceptance","type":"text","required":true},
+        {"key":"authorisationAt","label":"Authorisation Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "The blast is complete and the area has been formally released",
+        "Any misfire, damage, unusual event or deviation has been recorded and escalated",
+        "Explosives records and monitoring results have been completed",
+        "Outstanding restrictions have been communicated to the person receiving the area"
+      ],
+      "fields": [
+        {"key":"blastOutcome","label":"Blast Outcome / Work Completed Summary","type":"textarea","required":true},
+        {"key":"monitoringResults","label":"Monitoring Results / Record References","type":"textarea","required":false},
+        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false},
+        {"key":"handBackTo","label":"Area Handed Back To","type":"text","required":true},
+        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true}
+      ]
+    }
+  ],
+  "signatures": ["issuer_issue","holder_accept","competent_person","issuer_close"]
+}

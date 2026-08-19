@@ -1,0 +1,143 @@
+{
+  "id": "restricted-area-entry-v2",
+  "title": "Restricted Area Entry Permit",
+  "name": "Restricted Area Entry Permit",
+  "version": 2,
+  "description": "Permit for controlled entry to a restricted work area. It does not replace specialist permits such as confined space, electrical isolation, asbestos or work at height where those hazards apply.",
+  "meta": {
+    "title": "Restricted Area and Entry Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"area","label":"Restricted Area / Zone","type":"text","required":true},
+      {"key":"entryPoint","label":"Approved Entry / Exit Point","type":"text","required":true},
+      {"key":"purposeOfEntry","label":"Purpose and Scope of Entry","type":"textarea","required":true},
+      {"key":"contractor","label":"Company / Contractor","type":"text","required":true},
+      {"key":"personInCharge","label":"Person in Charge / Supervisor","type":"text","required":true},
+      {"key":"entrants","label":"Authorised Entrants","type":"textarea","required":true},
+      {"key":"accessAuthority","label":"Area Owner / Access Authority","type":"text","required":true},
+      {"key":"rams","label":"RAMS / Safe System of Work Reference","type":"text","required":true},
+      {"key":"linkedPermits","label":"Linked Permits / Isolations / SIMOPS References","type":"textarea","required":false},
+      {"key":"validFrom","label":"Entry Authorised From","type":"datetime","required":true},
+      {"key":"validTo","label":"Entry Authorisation Expires","type":"datetime","required":true}
+    ]
+  },
+  "sections": [
+    {
+      "title": "ACCESS AUTHORITY AND AREA STATUS",
+      "items": [
+        "The area owner / controller has authorised the planned entry",
+        "The purpose, scope and boundaries of the entry are clearly defined",
+        "The restricted area is not being treated as a substitute for a specialist permit where one is required",
+        "Current area conditions and simultaneous operations have been checked",
+        "Access restrictions, occupancy limits and prohibited activities have been briefed"
+      ],
+      "fields": [
+        {"key":"authorisationReference","label":"Access Authorisation / Area Control Reference","type":"text","required":true},
+        {"key":"entryConditions","label":"Area-specific Entry Conditions / Restrictions","type":"textarea","required":true},
+        {"key":"occupancyLimit","label":"Maximum Occupancy / Entry Limit (if applicable)","type":"text","required":false},
+        {"key":"simops","label":"Simultaneous Operations / Interfaces","type":"textarea","required":false}
+      ]
+    },
+    {
+      "title": "HAZARDS AND LINKED CONTROLS",
+      "items": [
+        "Area-specific hazards have been identified and briefed to entrants",
+        "Required isolations and specialist permits are in place before entry",
+        "Changes in process, plant condition or neighbouring work will trigger reassessment",
+        "Required PPE / RPE has been selected for the actual hazards",
+        "Entrants understand what conditions require immediate withdrawal"
+      ],
+      "fields": [
+        {"key":"hazards","label":"Area Hazards Present","type":"multiselect","required":true,"options":[
+          {"value":"moving_plant","label":"Moving plant / vehicles"},
+          {"value":"electrical","label":"Electrical / energised systems"},
+          {"value":"chemical","label":"Chemical / hazardous substances"},
+          {"value":"radiation","label":"Radiation / controlled source"},
+          {"value":"pressure","label":"Pressure / process systems"},
+          {"value":"height","label":"Work at height / falling objects"},
+          {"value":"noise","label":"Noise / vibration"},
+          {"value":"temperature","label":"Heat / cold"},
+          {"value":"biological","label":"Biological"},
+          {"value":"other","label":"Other"}
+        ]},
+        {"key":"hazardControls","label":"Hazard Controls / Isolations in Place","type":"textarea","required":true},
+        {"key":"ppe","label":"Required PPE / RPE","type":"textarea","required":true},
+        {"key":"withdrawalCriteria","label":"Stop-work / Immediate Withdrawal Conditions","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "ENTRY CONTROL, SECURITY AND ACCOUNTABILITY",
+      "items": [
+        "Only named and authorised persons will enter the restricted area",
+        "The approved entry point is controlled against unauthorised access",
+        "An entry / exit log or equivalent accountability method is in place",
+        "An escort is provided where the area rules require one",
+        "Tools, equipment and materials taken into the area are controlled and accounted for"
+      ],
+      "fields": [
+        {"key":"accessControlMethod","label":"Access Control Method","type":"select","required":true,"options":["Controlled door / gate","Security / access desk","Key / access card","Physical barrier and authorised controller","Other"]},
+        {"key":"escort","label":"Escort / Area Controller (if required)","type":"text","required":false},
+        {"key":"entryLog","label":"Entry / Exit Log Reference or Accountability Method","type":"text","required":true},
+        {"key":"equipmentRegister","label":"Tools / Equipment / Materials Taken Into Area","type":"textarea","required":false}
+      ]
+    },
+    {
+      "title": "COMMUNICATIONS AND EMERGENCY ARRANGEMENTS",
+      "items": [
+        "A reliable communication method is available for the duration of entry",
+        "Entrants know how to raise an alarm and obtain assistance",
+        "Emergency exits and evacuation routes are known and unobstructed",
+        "Area-specific emergency arrangements have been briefed",
+        "The person in charge knows how entrants will be accounted for during an evacuation"
+      ],
+      "fields": [
+        {"key":"communications","label":"Communication Method / Channel","type":"text","required":true},
+        {"key":"emergencyProcedure","label":"Area Emergency / Evacuation Procedure Reference","type":"text","required":true},
+        {"key":"emergencyContact","label":"Emergency Contact / Control Point","type":"text","required":true},
+        {"key":"musterPoint","label":"Muster / Accountability Point","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "ENTRY, HANDOVER AND EXIT CONFIRMATION",
+      "items": [
+        "The area condition is acceptable immediately before entry",
+        "All entrants have received the final briefing before entry",
+        "Entry conditions will be handed over if supervision changes",
+        "All entrants will sign / be recorded out when leaving",
+        "The area will be checked and secured when the authorised entry ends"
+      ],
+      "fields": [
+        {"key":"entryConfirmedBy","label":"Pre-entry Condition Confirmed By","type":"text","required":true},
+        {"key":"actualEntryAt","label":"Actual Entry Date / Time","type":"datetime","required":true},
+        {"key":"allOutConfirmedBy","label":"All Persons Out / Accounted For Confirmed By","type":"text","required":true},
+        {"key":"actualExitAt","label":"Final Exit Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "AUTHORISATION TO ENTER",
+      "fields": [
+        {"key":"issuerName","label":"Permit Issuer / Area Authority","type":"text","required":true},
+        {"key":"holderName","label":"Permit Holder / Person in Charge","type":"text","required":true},
+        {"key":"authorisationAt","label":"Authorisation Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "All persons are confirmed out of the restricted area",
+        "Tools, equipment and materials are accounted for",
+        "Temporary controls have been removed or formally handed over",
+        "The entry point and restricted area have been returned to the area owner / controller"
+      ],
+      "fields": [
+        {"key":"workCompleted","label":"Work / Entry Completed Summary","type":"textarea","required":true},
+        {"key":"areaCondition","label":"Area Condition on Exit","type":"textarea","required":true},
+        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false},
+        {"key":"handBackTo","label":"Hand-back To / Area Owner","type":"text","required":true},
+        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true}
+      ]
+    }
+  ],
+  "signatures": ["issuer_issue","holder_accept","issuer_close"]
+}

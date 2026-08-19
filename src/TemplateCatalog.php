@@ -44,6 +44,10 @@ final class TemplateCatalog
         'temporary works permit' => 'temporary-works-v2',
         'scaffolding permit' => 'scaffolding-v2',
         'demolition permit' => 'demolition-v2',
+        'blasting/explosives permit' => 'blasting-explosives-v2',
+        'restricted area entry permit' => 'restricted-area-entry-v2',
+        'vehicle/equipment access permit' => 'vehicle-equipment-access-v2',
+        'concrete pouring permit' => 'concrete-pouring-v2',
     ];
 
     /**
