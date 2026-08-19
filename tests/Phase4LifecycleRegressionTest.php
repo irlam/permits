@@ -14,7 +14,7 @@ final class Phase4LifecycleRegressionTest extends TestCase
 
     public function testWorkflowPageContainsAcceptanceSuspensionRevalidationHandoverAndLinks(): void
     {
-        $source = (string)file_get_contents($this->root . '/permit-workflow.php');
+        $source = (string)file_get_contents($this->root . '/permit-workflow-legacy.php');
         foreach ([
             "value=\"accept\"",
             "value=\"suspend\"",
@@ -30,6 +30,11 @@ final class Phase4LifecycleRegressionTest extends TestCase
         }
         self::assertStringContainsString('PermitAccess::canAccessPermit', $source);
         self::assertStringContainsString("['manager', 'admin']", $source);
+
+        $privacyWrapper = (string)file_get_contents($this->root . '/permit-workflow.php');
+        self::assertStringContainsString('permit-workflow-legacy.php', $privacyWrapper);
+        self::assertStringContainsString('name="accepted_email"', $privacyWrapper);
+        self::assertStringContainsString('value="" autocomplete="email"', $privacyWrapper);
     }
 
     public function testStartWorkHasExplicitConflictInterlock(): void
@@ -57,7 +62,7 @@ final class Phase4LifecycleRegressionTest extends TestCase
         self::assertStringContainsString('Suspended', $source);
         self::assertStringContainsString('Awaiting acceptance', $source);
         self::assertStringContainsString('Control / handover', $source);
-        self::assertStringContainsString('relation_type = \'conflict\'', $source);
+        self::assertStringContainsString("relation_type = 'conflict'", $source);
         self::assertStringContainsString('requires_approval = 1', $source);
     }
 
