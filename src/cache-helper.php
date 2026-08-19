@@ -141,14 +141,19 @@ function cache_meta_tags(): void
     echo '<link rel="icon" type="image/svg+xml" href="' . $faviconUrl . '">';
     echo '<link rel="shortcut icon" href="' . $faviconUrl . '">';
 
-    // Homepage-only progressive enhancements. Each script no-ops when its
-    // target markup is absent, while keeping permit/inspection/admin pages lean.
+    // Page-specific progressive enhancements. Keep specialist assets off pages
+    // that do not use them so admin and permit screens remain lean.
     $scriptName = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
     if ($scriptName === '' || $scriptName === 'index.php') {
         $statusScript = htmlspecialchars(asset('/assets/phase3-status.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $pickerScript = htmlspecialchars(asset('/assets/phase3c-picker.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         echo '<script src="' . $statusScript . '" defer></script>';
         echo '<script src="' . $pickerScript . '" defer></script>';
+    }
+
+    if ($scriptName === 'create-inspection-public.php') {
+        $inspectionControls = htmlspecialchars(asset('/assets/inspection-controls.css'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        echo '<link rel="stylesheet" href="' . $inspectionControls . '">';
     }
 }
 
