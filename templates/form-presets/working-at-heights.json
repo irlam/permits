@@ -1,316 +1,120 @@
 {
   "id": "working-at-heights-v1",
-  "title": "Working at Heights Permit",
-  "name": "Working at Heights Permit",
-  "description": "Permit for work performed at heights, ensuring fall protection and safety measures are in place.",
+  "title": "Working at Height Permit",
+  "name": "Working at Height Permit",
+  "version": 2,
+  "description": "Permit for work at height using the avoid, prevent and minimise hierarchy, with equipment, falling-object and rescue controls.",
   "meta": {
+    "title": "Permit and Work Details",
     "fields": [
-      {
-        "key": "location",
-        "label": "Location",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "date",
-        "label": "Date",
-        "type": "date",
-        "required": true
-      },
-      {
-        "key": "workDescription",
-        "label": "Work Description",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "height",
-        "label": "Height (meters)",
-        "type": "number",
-        "required": true
-      },
-      {
-        "key": "personnelInvolved",
-        "label": "Personnel Involved",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "fallProtection",
-        "label": "Fall Protection Equipment",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "weather",
-        "label": "Weather Conditions",
-        "type": "text",
-        "required": false
-      },
-      {
-        "key": "supervisor",
-        "label": "Supervisor",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "validFrom",
-        "label": "Valid From",
-        "type": "datetime"
-      },
-      {
-        "key": "validTo",
-        "label": "Valid To",
-        "type": "datetime"
-      }
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"location","label":"Exact Work Location","type":"text","required":true},
+      {"key":"workDescription","label":"Scope of Work at Height","type":"textarea","required":true},
+      {"key":"maximumHeight","label":"Maximum Working Height (m)","type":"number","required":true,"min":0,"step":0.1},
+      {"key":"contractorCompany","label":"Contractor / Company","type":"text","required":true},
+      {"key":"ramsReference","label":"RAMS / Work-at-Height Plan Reference","type":"text","required":true},
+      {"key":"personInCharge","label":"Person in Charge / Supervisor","type":"text","required":true},
+      {"key":"workers","label":"Workers Covered by Permit","type":"textarea","required":true},
+      {"key":"validFrom","label":"Permit Valid From","type":"datetime","required":true},
+      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
     ]
   },
   "sections": [
     {
-      "title": "FALL HAZARD ASSESSMENT",
+      "title": "WORK-AT-HEIGHT HIERARCHY AND PLANNING",
       "items": [
-        "Work height measured and documented",
-        "Fall risks identified and assessed",
-        "Weather conditions checked (wind, rain, ice)",
-        "Fragile surfaces identified and marked",
-        "Overhead hazards assessed (power lines, structures)"
+        "The task has been reviewed to avoid work at height where reasonably practicable",
+        "Where work at height cannot be avoided, collective fall prevention has been considered before personal protection",
+        "Where a fall cannot be prevented, measures minimise the distance and consequences of a fall",
+        "The work has been properly planned, supervised and assigned to competent people",
+        "Safe access and egress have been planned",
+        "Fragile surfaces, openings, edges and changes in level have been identified",
+        "Overhead lines, cranes and other overhead hazards have been assessed",
+        "Weather and lighting conditions are suitable and stop-work limits are understood"
       ],
       "fields": [
-        {
-          "label": "Maximum Working Height",
-          "type": "text",
-          "placeholder": "metres above ground / floor"
-        },
-        {
-          "label": "Fall Risk Rating",
-          "type": "select",
-          "options": [
-            "Low",
-            "Medium",
-            "High"
-          ]
-        },
-        {
-          "label": "Wind Speed at Assessment",
-          "type": "text",
-          "placeholder": "mph or Beaufort scale"
-        },
-        {
-          "label": "Fragile Surface Locations",
-          "type": "textarea",
-          "placeholder": "Mark on plan or describe position"
-        }
+        {"key":"hierarchyDecision","label":"Why Work at Height Cannot Be Avoided / Hierarchy Selection","type":"textarea","required":true},
+        {"key":"accessMethod","label":"Access / Work Equipment","type":"select","required":true,"options":["Existing protected workplace","Scaffold","Mobile tower","MEWP - scissor","MEWP - boom","Podium / step platform","Ladder / stepladder","Rope access","Other"]},
+        {"key":"fragileSurfaces","label":"Fragile Surfaces / Openings / Edge Hazards","type":"textarea","required":true},
+        {"key":"weatherLimits","label":"Weather / Wind Stop-Work Limits","type":"textarea","required":true}
       ]
     },
     {
-      "title": "FALL PROTECTION MEASURES",
+      "title": "FALL PREVENTION AND ACCESS EQUIPMENT",
       "items": [
-        "Collective protection provided where possible (guardrails, nets)",
-        "Personal fall arrest system (PFAS) available and inspected",
-        "Anchor points identified, tested and certified",
-        "Rescue plan established and communicated",
-        "Edge protection installed where required"
+        "Selected access equipment is suitable, stable, strong enough and appropriate for the task duration",
+        "Collective edge protection / guardrails are installed where required",
+        "Scaffolds, towers and MEWPs have current inspection / handover records where applicable",
+        "Ladders are used only where justified by the risk assessment and are secured / positioned correctly",
+        "MEWP operators are competent and the machine is suitable for the ground and task where applicable",
+        "Work restraint is preferred to fall arrest where personal fall protection is necessary",
+        "Anchors and lifelines are suitable, identified and within inspection / certification requirements"
       ],
       "fields": [
-        {
-          "label": "Collective Protection Type",
-          "type": "select",
-          "options": [
-            "Guardrails",
-            "Safety nets",
-            "Scaffolding platform",
-            "Crash deck",
-            "None – individual PFAS only"
-          ]
-        },
-        {
-          "label": "Harness Serial Number",
-          "type": "text"
-        },
-        {
-          "label": "Anchor Point Reference",
-          "type": "text",
-          "placeholder": "Structural anchor ID or location"
-        },
-        {
-          "label": "Rescue Plan Reference",
-          "type": "text"
-        }
+        {"key":"equipmentId","label":"Access Equipment ID / Scaffold Tag / MEWP Number","type":"text","required":true},
+        {"key":"inspectionReference","label":"Inspection / Handover / Thorough Examination Reference","type":"text","required":true},
+        {"key":"fallProtectionSystem","label":"Fall Protection System","type":"select","required":true,"options":["Collective protection only","Work restraint","Fall arrest","Safety net / soft landing","No personal fall protection required - collective controls adequate"]},
+        {"key":"harnessLanyardIds","label":"Harness / Lanyard / Fall-Arrest Equipment IDs","type":"textarea","required":false},
+        {"key":"anchorReferences","label":"Anchor / Lifeline References","type":"textarea","required":false}
       ]
     },
     {
-      "title": "ACCESS EQUIPMENT & INSPECTION",
+      "title": "FALLING OBJECTS AND EXCLUSION ZONE",
       "items": [
-        "Ladders/scaffolds inspected and tagged",
-        "Mobile elevated work platforms (MEWPs) certified",
-        "Equipment appropriate for task and height",
-        "Safe access and egress routes established",
-        "Equipment secured against movement"
+        "Tools and materials are secured against falling where practicable",
+        "Toe boards, brick guards, debris netting or equivalent protection are provided where required",
+        "An exclusion zone below / around the work has been established and maintained",
+        "People and traffic cannot pass beneath suspended or overhead work unless adequately protected",
+        "Materials are stored so they cannot roll, slide or be blown from height"
       ],
       "fields": [
-        {
-          "label": "Equipment Type",
-          "type": "select",
-          "options": [
-            "Fixed ladder",
-            "Extension ladder",
-            "Scaffold",
-            "Podium steps",
-            "Mobile scaffold tower",
-            "MEWP – scissor lift",
-            "MEWP – boom lift",
-            "Other"
-          ]
-        },
-        {
-          "label": "Equipment ID / Tag Number",
-          "type": "text"
-        },
-        {
-          "label": "Last Inspection Date",
-          "type": "date"
-        },
-        {
-          "label": "MEWP Operator Certificate No.",
-          "type": "text",
-          "placeholder": "Leave blank if not applicable"
-        }
+        {"key":"toolMaterialControls","label":"Tool / Material Tethering and Falling-Object Controls","type":"textarea","required":true},
+        {"key":"exclusionZone","label":"Exclusion Zone / Protection Below","type":"textarea","required":true}
       ]
     },
     {
-      "title": "PPE & COMPETENCY",
+      "title": "COMPETENCE, PPE AND RESCUE",
       "items": [
-        "Hard hats, safety boots, high-visibility clothing worn",
-        "Full body harness fitted correctly if PFAS required",
-        "Workers trained and certified for working at height",
-        "Tool lanyards used for all hand tools",
-        "Emergency rescue equipment available"
+        "Workers are trained and competent for the selected access and fall-protection system",
+        "Required PPE has been checked before use",
+        "A rescue plan has been prepared for foreseeable falls or incapacitation at height",
+        "Rescue arrangements do not rely solely on the fire and rescue service",
+        "Rescue equipment is available and rescuers are trained where required",
+        "Suspension intolerance / trauma has been considered where fall-arrest equipment is used",
+        "Communication and emergency arrangements have been briefed to the team"
       ],
       "fields": [
-        {
-          "label": "Harness Pre-use Inspection Reference",
-          "type": "text"
-        },
-        {
-          "label": "Working at Height Training Certificate",
-          "type": "text",
-          "placeholder": "Reference or expiry date"
-        },
-        {
-          "label": "PPE Checked By",
-          "type": "text"
-        },
-        {
-          "label": "Tool Lanyards Fitted",
-          "type": "select",
-          "options": [
-            "Yes – all tools secured",
-            "Not applicable – no hand tools at height"
-          ]
-        }
-      ]
-    },
-    {
-      "title": "ENVIRONMENTAL CONTROLS",
-      "items": [
-        "Area below secured/barriered to prevent access",
-        "Debris netting installed where required",
-        "Public/traffic excluded from work zone",
-        "Work stopped if weather conditions deteriorate"
-      ],
-      "fields": [
-        {
-          "label": "Exclusion Zone Width Below Work",
-          "type": "text",
-          "placeholder": "metres"
-        },
-        {
-          "label": "Debris Netting Fitted",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No – exclusion zone only",
-            "Not required"
-          ]
-        },
-        {
-          "label": "Public Access Risk",
-          "type": "select",
-          "options": [
-            "No public access possible",
-            "Public excluded by barriers",
-            "Public nearby – enhanced controls"
-          ]
-        }
-      ]
-    },
-    {
-      "title": "COMPLETION & HANDBACK",
-      "items": [
-        "All tools and equipment removed from height",
-        "Work area inspected and cleared",
-        "Access equipment dismantled or secured",
-        "Permit closed and signed off"
-      ],
-      "fields": [
-        {
-          "label": "Permit Close-out Time",
-          "type": "time"
-        },
-        {
-          "label": "Closed By",
-          "type": "text"
-        },
-        {
-          "label": "Access Equipment Secured / Removed",
-          "type": "select",
-          "options": [
-            "Yes – removed",
-            "Yes – secured in place",
-            "Partial – detail below"
-          ]
-        },
-        {
-          "label": "Outstanding Items",
-          "type": "textarea",
-          "placeholder": "Any follow-up actions"
-        }
+        {"key":"competenceEvidence","label":"Training / Competence Evidence","type":"textarea","required":true},
+        {"key":"rescuePlanReference","label":"Rescue Plan Reference","type":"text","required":true},
+        {"key":"rescueMethod","label":"Rescue Method / Equipment / Named Rescuers","type":"textarea","required":true},
+        {"key":"emergencyCommunication","label":"Emergency Communication Method","type":"text","required":true}
       ]
     },
     {
       "title": "AUTHORIZATION TO START",
       "fields": [
-        {
-          "key": "issuerName",
-          "label": "Permit Issuer Name",
-          "type": "text"
-        },
-        {
-          "key": "issuerRole",
-          "label": "Permit Issuer Role",
-          "type": "text"
-        },
-        {
-          "key": "holderName",
-          "label": "Permit Holder Name",
-          "type": "text"
-        },
-        {
-          "key": "holderCompany",
-          "label": "Holder Company",
-          "type": "text"
-        },
-        {
-          "key": "authorizationAt",
-          "label": "Authorization Date/Time",
-          "type": "datetime"
-        }
+        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
+        {"key":"holderName","label":"Permit Holder Name","type":"text","required":true},
+        {"key":"holderCompany","label":"Holder Company","type":"text","required":true},
+        {"key":"authorizationAt","label":"Authorization Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "COMPLETION AND HAND-BACK",
+      "items": [
+        "All workers, tools and loose materials have been removed from height",
+        "Temporary openings and edges have been made safe",
+        "Access equipment has been removed, secured or formally handed over",
+        "Exclusion zones are only removed when overhead hazards have been eliminated",
+        "The area has been inspected and left safe"
+      ],
+      "fields": [
+        {"key":"workCompletedSummary","label":"Work Completed Summary","type":"textarea","required":true},
+        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true},
+        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false}
       ]
     }
   ],
-  "signatures": [
-    "issuer_issue",
-    "holder_accept",
-    "issuer_close"
-  ]
+  "signatures": ["issuer_issue","holder_accept","issuer_close"]
 }
