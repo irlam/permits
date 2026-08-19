@@ -6,7 +6,7 @@
  * - Versioned cache keys for safe roll-outs
  */
 
-const SW_VERSION = 'permits-sw-v2.1.0';
+const SW_VERSION = 'permits-sw-v2.2.0';
 const PRECACHE = `permits-precache-${SW_VERSION}`;
 const RUNTIME = `permits-runtime-${SW_VERSION}`;
 
@@ -15,6 +15,7 @@ const PRECACHE_URLS = [
   '/manifest.webmanifest',
   '/assets/app.css',
   '/assets/app.js',
+  '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',
   '/assets/pwa/icon-192.png',
@@ -58,6 +59,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   const isStaticAsset = url.pathname.startsWith('/assets/')
     || url.pathname === '/manifest.webmanifest'
+    || url.pathname === '/favicon.svg'
     || url.pathname === '/icon-192.png'
     || url.pathname === '/icon-512.png';
 
