@@ -125,7 +125,7 @@ final class PublicPermitLifecycleRegressionTest extends TestCase
             self::assertStringContainsString('$auth->requireJson(', $source, $path);
         }
 
-        $workflow = file_get_contents($this->root . '/permit-workflow.php');
+        $workflow = file_get_contents($this->root . '/permit-workflow-legacy.php');
         self::assertStringContainsString("Csrf::validateRequest('permit-workflow'", $workflow);
         self::assertStringContainsString("Csrf::getFormField('permit-workflow')", $workflow);
 
