@@ -140,6 +140,14 @@ function cache_meta_tags(): void
     $faviconUrl = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     echo '<link rel="icon" type="image/svg+xml" href="' . $faviconUrl . '">';
     echo '<link rel="shortcut icon" href="' . $faviconUrl . '">';
+
+    // Phase 3 homepage enhancement. The script no-ops unless #status-checker
+    // is present, and is kept out of admin/permit pages entirely.
+    $scriptName = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($scriptName === '' || $scriptName === 'index.php') {
+        $statusScript = htmlspecialchars(asset('/assets/phase3-status.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        echo '<script src="' . $statusScript . '" defer></script>';
+    }
 }
 
 // Call headers automatically when file is included
