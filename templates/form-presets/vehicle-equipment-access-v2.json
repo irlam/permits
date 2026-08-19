@@ -1,0 +1,137 @@
+{
+  "id": "vehicle-equipment-access-v2",
+  "title": "Vehicle/Equipment Access Permit",
+  "name": "Vehicle/Equipment Access Permit",
+  "version": 2,
+  "description": "Permit for controlled access and movement of vehicles or mobile equipment in a site area, covering operator competence, route suitability, pedestrian segregation, reversing, loading and parking controls.",
+  "meta": {
+    "title": "Vehicle / Equipment and Access Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"location","label":"Destination / Work Area","type":"text","required":true},
+      {"key":"accessRoute","label":"Approved Access Route / Gate","type":"text","required":true},
+      {"key":"vehicleType","label":"Vehicle / Equipment Type","type":"text","required":true},
+      {"key":"vehicleId","label":"Registration / Fleet / Plant ID","type":"text","required":true},
+      {"key":"company","label":"Owner / Haulier / Contractor","type":"text","required":true},
+      {"key":"operator","label":"Driver / Operator Name","type":"text","required":true},
+      {"key":"operatorCompetence","label":"Driver / Operator Authorisation or Competence Reference","type":"text","required":true},
+      {"key":"purpose","label":"Purpose of Access / Load / Task","type":"textarea","required":true},
+      {"key":"dimensionsLoad","label":"Vehicle Dimensions / Weight / Load Restrictions (if relevant)","type":"textarea","required":false},
+      {"key":"trafficPlan","label":"Traffic Management Plan / Logistics Plan Reference","type":"text","required":true},
+      {"key":"supervisor","label":"Site Supervisor / Logistics Contact","type":"text","required":true},
+      {"key":"validFrom","label":"Access Valid From","type":"datetime","required":true},
+      {"key":"validTo","label":"Access Valid To","type":"datetime","required":true}
+    ]
+  },
+  "sections": [
+    {
+      "title": "VEHICLE, EQUIPMENT AND OPERATOR READINESS",
+      "items": [
+        "The vehicle / equipment is suitable for the intended site task and route",
+        "The driver / operator is authorised and competent for the vehicle or equipment",
+        "Required pre-use checks have been completed with no safety-critical defects outstanding",
+        "Brakes, steering, tyres / tracks, lights, mirrors, cameras and warning devices are serviceable as applicable",
+        "The load is secure and within the vehicle / route limits",
+        "The driver has received the relevant site traffic and access rules"
+      ],
+      "fields": [
+        {"key":"preUseCheck","label":"Pre-use Inspection / Check Reference","type":"text","required":true},
+        {"key":"defects","label":"Defects / Restrictions and Actions Taken","type":"textarea","required":true},
+        {"key":"loadDetails","label":"Load / Attachment / Trailer Details","type":"textarea","required":false},
+        {"key":"driverBriefing","label":"Driver Site Briefing / Induction Reference","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "ROUTE, GROUND AND SITE SUITABILITY",
+      "items": [
+        "Vehicle and pedestrian routes have been planned to keep people and vehicles apart where possible",
+        "The route has adequate width, height, turning space and visibility for the vehicle and load",
+        "Ground, haul-road, slab or working-platform capacity is suitable for the intended vehicle / equipment",
+        "Overhead services, structures, edges, excavations and other clearance hazards have been assessed",
+        "Crossing points, gates, doors and blind corners are controlled where required",
+        "Lighting and route condition are adequate for the planned movement"
+      ],
+      "fields": [
+        {"key":"routeAssessment","label":"Route Survey / Access Assessment","type":"textarea","required":true},
+        {"key":"groundCapacity","label":"Ground / Slab / Working Platform Suitability Reference","type":"text","required":false},
+        {"key":"clearanceRestrictions","label":"Height / Width / Weight / Overhead Restrictions","type":"textarea","required":false},
+        {"key":"pedestrianControls","label":"Pedestrian Segregation / Crossing Controls","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "MOVEMENT, REVERSING AND SIGNALLING",
+      "items": [
+        "Vehicle movements and the need for reversing have been minimised",
+        "A one-way or drive-through route is used where reasonably practicable",
+        "Reversing areas are controlled so non-essential pedestrians are kept out",
+        "A trained and authorised signaller / marshaller is used only where the risk assessment requires one",
+        "Driver and signaller have agreed the signalling / communication method where a signaller is used",
+        "The driver will stop immediately if visibility is inadequate or the signaller is lost from view"
+      ],
+      "fields": [
+        {"key":"movementMethod","label":"Movement / Manoeuvring Method","type":"select","required":true,"options":["Drive-through / no reversing","One-way route","Controlled reversing required","Static access only"]},
+        {"key":"signaller","label":"Signaller / Vehicle Marshaller (if required)","type":"text","required":false},
+        {"key":"signalMethod","label":"Agreed Signals / Radio Channel (if applicable)","type":"text","required":false},
+        {"key":"speedLimit","label":"Site / Area Speed Limit","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "LOADING, UNLOADING, PARKING AND ISOLATION",
+      "items": [
+        "Loading / unloading will take place in a designated safe area",
+        "People are excluded from crush, trapping and load-fall zones during loading / unloading",
+        "The vehicle / equipment will be parked on suitable ground and secured against unintended movement",
+        "Parking will not block pedestrian routes, emergency routes or visibility",
+        "Vehicle / equipment isolation is defined before people work on, under or around it",
+        "Keys, parking brakes, chocks, stabilisers or other controls are used where required"
+      ],
+      "fields": [
+        {"key":"loadingArea","label":"Loading / Unloading / Work Position","type":"text","required":true},
+        {"key":"loadingControls","label":"Loading / Unloading Exclusion and Control Measures","type":"textarea","required":true},
+        {"key":"parkingLocation","label":"Approved Parking / Stand-down Location","type":"text","required":true},
+        {"key":"isolationControls","label":"Parking / Isolation / Immobilisation Controls","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "ENVIRONMENTAL, EMERGENCY AND INTERFACE CONTROLS",
+      "items": [
+        "Public-road, delivery, crane, lifting or other simultaneous-operation interfaces have been identified",
+        "Emergency access and escape routes remain available",
+        "Fuel, hydraulic oil and other spill risks are controlled",
+        "Breakdown / recovery arrangements avoid exposing people to moving vehicle risks",
+        "Any change to route, vehicle, load, weather or site condition will trigger reassessment"
+      ],
+      "fields": [
+        {"key":"interfaces","label":"Other Work / Traffic / Public Interfaces","type":"textarea","required":false},
+        {"key":"spillControls","label":"Fuel / Oil Spill Controls and Equipment","type":"textarea","required":false},
+        {"key":"breakdownPlan","label":"Breakdown / Recovery / Emergency Arrangement","type":"textarea","required":true},
+        {"key":"stopConditions","label":"Stop-work / Reassessment Triggers","type":"textarea","required":true}
+      ]
+    },
+    {
+      "title": "AUTHORISATION TO ACCESS",
+      "fields": [
+        {"key":"issuerName","label":"Permit Issuer / Logistics Controller","type":"text","required":true},
+        {"key":"holderName","label":"Driver / Operator / Permit Holder","type":"text","required":true},
+        {"key":"authorisationAt","label":"Access Authorised Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "EXIT AND CLOSE-OUT",
+      "items": [
+        "The vehicle / equipment has completed the authorised task and left or parked in the approved location",
+        "No damage, collision, spill or unsafe condition remains unreported",
+        "Temporary traffic controls have been removed or formally handed over",
+        "The work / access area is left safe for normal site operations"
+      ],
+      "fields": [
+        {"key":"exitAt","label":"Vehicle / Equipment Exit or Stand-down Date / Time","type":"datetime","required":true},
+        {"key":"incidentsDefects","label":"Incidents / Damage / Defects / Spills","type":"textarea","required":false},
+        {"key":"areaCondition","label":"Area / Route Condition on Completion","type":"textarea","required":true},
+        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true}
+      ]
+    }
+  ],
+  "signatures": ["issuer_issue","holder_accept","issuer_close"]
+}
