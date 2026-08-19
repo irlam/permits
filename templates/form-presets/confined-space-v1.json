@@ -4,17 +4,64 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text", "placeholder": "Auto or manual reference" },
-      { "key": "site", "label": "Project / Site", "type": "text" },
-      { "key": "spaceId", "label": "Confined Space ID", "type": "text", "placeholder": "Tank / chamber / void ref" },
-      { "key": "location", "label": "Exact Location", "type": "text" },
-      { "key": "description", "label": "Task Description", "type": "textarea" },
-      { "key": "supervisor", "label": "Entry Supervisor", "type": "text" },
-      { "key": "entrantTeam", "label": "Authorised Entrants", "type": "textarea", "placeholder": "List names" },
-      { "key": "attendant", "label": "Top Person / Attendant", "type": "text" },
-      { "key": "gasTester", "label": "Competent Gas Tester", "type": "text" },
-      { "key": "validFrom", "label": "Permit Start", "type": "datetime" },
-      { "key": "validTo", "label": "Permit Expiry", "type": "datetime" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text",
+        "placeholder": "Auto or manual reference"
+      },
+      {
+        "key": "site",
+        "label": "Project / Site",
+        "type": "text"
+      },
+      {
+        "key": "spaceId",
+        "label": "Confined Space ID",
+        "type": "text",
+        "placeholder": "Tank / chamber / void ref"
+      },
+      {
+        "key": "location",
+        "label": "Exact Location",
+        "type": "text"
+      },
+      {
+        "key": "description",
+        "label": "Task Description",
+        "type": "textarea"
+      },
+      {
+        "key": "supervisor",
+        "label": "Entry Supervisor",
+        "type": "text"
+      },
+      {
+        "key": "entrantTeam",
+        "label": "Authorised Entrants",
+        "type": "textarea",
+        "placeholder": "List names"
+      },
+      {
+        "key": "attendant",
+        "label": "Top Person / Attendant",
+        "type": "text"
+      },
+      {
+        "key": "gasTester",
+        "label": "Competent Gas Tester",
+        "type": "text"
+      },
+      {
+        "key": "validFrom",
+        "label": "Permit Start",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Permit Expiry",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -39,19 +86,40 @@
           "label": "Isolation Method",
           "type": "select",
           "options": [
-            { "value": "mechanical", "label": "Mechanical lock-off" },
-            { "value": "electrical", "label": "Electrical isolation" },
-            { "value": "blanking", "label": "Blanking/ spading" },
-            { "value": "other", "label": "Other" }
+            {
+              "value": "mechanical",
+              "label": "Mechanical lock-off"
+            },
+            {
+              "value": "electrical",
+              "label": "Electrical isolation"
+            },
+            {
+              "value": "blanking",
+              "label": "Blanking/ spading"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
           ]
         },
         {
           "label": "Permit Space Classification",
           "type": "select",
           "options": [
-            { "value": "low_risk", "label": "Low Risk" },
-            { "value": "medium_risk", "label": "Medium Risk" },
-            { "value": "high_risk", "label": "High Risk" }
+            {
+              "value": "low_risk",
+              "label": "Low Risk"
+            },
+            {
+              "value": "medium_risk",
+              "label": "Medium Risk"
+            },
+            {
+              "value": "high_risk",
+              "label": "High Risk"
+            }
           ]
         },
         {
@@ -63,11 +131,26 @@
           "label": "Rescue Equipment Checked",
           "type": "multiselect",
           "options": [
-            { "value": "tripod", "label": "Tripod / davit" },
-            { "value": "winch", "label": "Rescue winch" },
-            { "value": "ba_set", "label": "Breathing apparatus" },
-            { "value": "first_aid", "label": "First aid kit" },
-            { "value": "defib", "label": "Defibrillator" }
+            {
+              "value": "tripod",
+              "label": "Tripod / davit"
+            },
+            {
+              "value": "winch",
+              "label": "Rescue winch"
+            },
+            {
+              "value": "ba_set",
+              "label": "Breathing apparatus"
+            },
+            {
+              "value": "first_aid",
+              "label": "First aid kit"
+            },
+            {
+              "value": "defib",
+              "label": "Defibrillator"
+            }
           ]
         }
       ]
@@ -134,6 +217,36 @@
         {
           "label": "Lessons Learned / Issues",
           "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
         }
       ]
     }

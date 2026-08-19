@@ -4,17 +4,68 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text" },
-      { "key": "site", "label": "Site / Project", "type": "text" },
-      { "key": "twCategory", "label": "Temporary Works Class", "type": "select", "options": ["Category 0", "Category 1", "Category 2", "Category 3"] },
-      { "key": "twDesignRef", "label": "Design Reference", "type": "text", "placeholder": "TW design number / drawing" },
-      { "key": "location", "label": "Location / Grid", "type": "text" },
-      { "key": "description", "label": "Description of Temporary Works", "type": "textarea" },
-      { "key": "designer", "label": "Temporary Works Designer", "type": "text" },
-      { "key": "coordinator", "label": "TWS / TWC", "type": "text" },
-      { "key": "erectionSupervisor", "label": "Erection Supervisor", "type": "text" },
-      { "key": "validFrom", "label": "Erection Start", "type": "datetime" },
-      { "key": "validTo", "label": "Planned Removal", "type": "datetime" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "site",
+        "label": "Site / Project",
+        "type": "text"
+      },
+      {
+        "key": "twCategory",
+        "label": "Temporary Works Class",
+        "type": "select",
+        "options": [
+          "Category 0",
+          "Category 1",
+          "Category 2",
+          "Category 3"
+        ]
+      },
+      {
+        "key": "twDesignRef",
+        "label": "Design Reference",
+        "type": "text",
+        "placeholder": "TW design number / drawing"
+      },
+      {
+        "key": "location",
+        "label": "Location / Grid",
+        "type": "text"
+      },
+      {
+        "key": "description",
+        "label": "Description of Temporary Works",
+        "type": "textarea"
+      },
+      {
+        "key": "designer",
+        "label": "Temporary Works Designer",
+        "type": "text"
+      },
+      {
+        "key": "coordinator",
+        "label": "TWS / TWC",
+        "type": "text"
+      },
+      {
+        "key": "erectionSupervisor",
+        "label": "Erection Supervisor",
+        "type": "text"
+      },
+      {
+        "key": "validFrom",
+        "label": "Erection Start",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Planned Removal",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -33,7 +84,12 @@
         {
           "label": "Design Check Level",
           "type": "select",
-          "options": ["Check 1", "Check 2", "Independent", "Peer"],
+          "options": [
+            "Check 1",
+            "Check 2",
+            "Independent",
+            "Peer"
+          ],
           "placeholder": "Select design check level"
         },
         {
@@ -115,6 +171,77 @@
         {
           "label": "As-built Documentation Location",
           "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
+        }
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
+      ],
+      "fields": [
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
         }
       ]
     }

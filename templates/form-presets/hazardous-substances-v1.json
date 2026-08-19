@@ -4,17 +4,61 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text" },
-      { "key": "site", "label": "Site / Project", "type": "text" },
-      { "key": "substance", "label": "Substance Name", "type": "text" },
-      { "key": "casNumber", "label": "CAS / UN Number", "type": "text" },
-      { "key": "quantity", "label": "Quantity / Volume", "type": "text" },
-      { "key": "workArea", "label": "Work Area", "type": "text" },
-      { "key": "taskDescription", "label": "Task Description", "type": "textarea" },
-      { "key": "msdsRef", "label": "Safety Data Sheet Ref", "type": "text" },
-      { "key": "supervisor", "label": "Responsible Person", "type": "text" },
-      { "key": "validFrom", "label": "Start", "type": "datetime" },
-      { "key": "validTo", "label": "Expected Finish", "type": "datetime" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "site",
+        "label": "Site / Project",
+        "type": "text"
+      },
+      {
+        "key": "substance",
+        "label": "Substance Name",
+        "type": "text"
+      },
+      {
+        "key": "casNumber",
+        "label": "CAS / UN Number",
+        "type": "text"
+      },
+      {
+        "key": "quantity",
+        "label": "Quantity / Volume",
+        "type": "text"
+      },
+      {
+        "key": "workArea",
+        "label": "Work Area",
+        "type": "text"
+      },
+      {
+        "key": "taskDescription",
+        "label": "Task Description",
+        "type": "textarea"
+      },
+      {
+        "key": "msdsRef",
+        "label": "Safety Data Sheet Ref",
+        "type": "text"
+      },
+      {
+        "key": "supervisor",
+        "label": "Responsible Person",
+        "type": "text"
+      },
+      {
+        "key": "validFrom",
+        "label": "Start",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Expected Finish",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -34,11 +78,26 @@
           "label": "PPE Required",
           "type": "multiselect",
           "options": [
-            { "value": "respirator", "label": "Respirator" },
-            { "value": "eye", "label": "Eye Protection" },
-            { "value": "gloves", "label": "Chemical Gloves" },
-            { "value": "coveralls", "label": "Coveralls" },
-            { "value": "footwear", "label": "Chemical Boots" }
+            {
+              "value": "respirator",
+              "label": "Respirator"
+            },
+            {
+              "value": "eye",
+              "label": "Eye Protection"
+            },
+            {
+              "value": "gloves",
+              "label": "Chemical Gloves"
+            },
+            {
+              "value": "coveralls",
+              "label": "Coveralls"
+            },
+            {
+              "value": "footwear",
+              "label": "Chemical Boots"
+            }
           ]
         },
         {
@@ -54,9 +113,18 @@
           "label": "Health Surveillance Required",
           "type": "select",
           "options": [
-            { "value": "none", "label": "Not required" },
-            { "value": "baseline", "label": "Baseline only" },
-            { "value": "ongoing", "label": "Ongoing" }
+            {
+              "value": "none",
+              "label": "Not required"
+            },
+            {
+              "value": "baseline",
+              "label": "Baseline only"
+            },
+            {
+              "value": "ongoing",
+              "label": "Ongoing"
+            }
           ]
         },
         {
@@ -97,8 +165,14 @@
           "label": "Buddy System In Place",
           "type": "select",
           "options": [
-            { "value": "yes", "label": "Yes" },
-            { "value": "no", "label": "No" }
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
           ]
         }
       ]
@@ -130,6 +204,36 @@
         {
           "label": "Incident Report Number",
           "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
         }
       ]
     }

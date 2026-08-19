@@ -4,16 +4,64 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text" },
-      { "key": "site", "label": "Project / Site", "type": "text" },
-      { "key": "liftLocation", "label": "Lift Location", "type": "text" },
-      { "key": "liftDescription", "label": "Load Description", "type": "textarea" },
-      { "key": "liftDate", "label": "Lift Date", "type": "date" },
-      { "key": "liftTime", "label": "Planned Start Time", "type": "time" },
-      { "key": "craneType", "label": "Crane / Equipment", "type": "select", "options": ["Mobile Crane", "Tower Crane", "Crawler", "MEWP", "Forklift", "Other"] },
-      { "key": "appointee", "label": "Appointed Person", "type": "text" },
-      { "key": "craneSupervisor", "label": "Crane Supervisor", "type": "text" },
-      { "key": "slinger", "label": "Slinger / Signaller", "type": "text" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "site",
+        "label": "Project / Site",
+        "type": "text"
+      },
+      {
+        "key": "liftLocation",
+        "label": "Lift Location",
+        "type": "text"
+      },
+      {
+        "key": "liftDescription",
+        "label": "Load Description",
+        "type": "textarea"
+      },
+      {
+        "key": "liftDate",
+        "label": "Lift Date",
+        "type": "date"
+      },
+      {
+        "key": "liftTime",
+        "label": "Planned Start Time",
+        "type": "time"
+      },
+      {
+        "key": "craneType",
+        "label": "Crane / Equipment",
+        "type": "select",
+        "options": [
+          "Mobile Crane",
+          "Tower Crane",
+          "Crawler",
+          "MEWP",
+          "Forklift",
+          "Other"
+        ]
+      },
+      {
+        "key": "appointee",
+        "label": "Appointed Person",
+        "type": "text"
+      },
+      {
+        "key": "craneSupervisor",
+        "label": "Crane Supervisor",
+        "type": "text"
+      },
+      {
+        "key": "slinger",
+        "label": "Slinger / Signaller",
+        "type": "text"
+      }
     ]
   },
   "sections": [
@@ -44,9 +92,18 @@
           "label": "Lift Category",
           "type": "select",
           "options": [
-            { "value": "routine", "label": "Routine" },
-            { "value": "standard", "label": "Standard" },
-            { "value": "complex", "label": "Complex" }
+            {
+              "value": "routine",
+              "label": "Routine"
+            },
+            {
+              "value": "standard",
+              "label": "Standard"
+            },
+            {
+              "value": "complex",
+              "label": "Complex"
+            }
           ]
         },
         {
@@ -119,13 +176,49 @@
           "label": "Rigging Inspection Result",
           "type": "select",
           "options": [
-            { "value": "satisfactory", "label": "Satisfactory" },
-            { "value": "defect_found", "label": "Defect Found" }
+            {
+              "value": "satisfactory",
+              "label": "Satisfactory"
+            },
+            {
+              "value": "defect_found",
+              "label": "Defect Found"
+            }
           ]
         },
         {
           "label": "Demobilisation Start Time",
           "type": "time"
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
         }
       ]
     }

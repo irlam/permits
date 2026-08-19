@@ -144,6 +144,47 @@
           "placeholder": "hours or days of continued monitoring after completion"
         }
       ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
+      ],
+      "fields": [
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
+        }
+      ]
     }
   ],
   "signatures": [

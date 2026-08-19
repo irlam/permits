@@ -4,15 +4,58 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text" },
-      { "key": "site", "label": "Site / Building", "type": "text" },
-      { "key": "roofArea", "label": "Roof Area / Elevation", "type": "text" },
-      { "key": "accessReason", "label": "Reason for Roof Access", "type": "textarea" },
-      { "key": "accessMethod", "label": "Access Method", "type": "select", "options": ["Fixed Ladder", "Portable Ladder", "MEWP", "Internal Stair", "Other"] },
-      { "key": "supervisor", "label": "Permit Issuer", "type": "text" },
-      { "key": "workingParty", "label": "Persons Accessing Roof", "type": "textarea" },
-      { "key": "validFrom", "label": "Access Start", "type": "datetime" },
-      { "key": "validTo", "label": "Access End", "type": "datetime" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "site",
+        "label": "Site / Building",
+        "type": "text"
+      },
+      {
+        "key": "roofArea",
+        "label": "Roof Area / Elevation",
+        "type": "text"
+      },
+      {
+        "key": "accessReason",
+        "label": "Reason for Roof Access",
+        "type": "textarea"
+      },
+      {
+        "key": "accessMethod",
+        "label": "Access Method",
+        "type": "select",
+        "options": [
+          "Fixed Ladder",
+          "Portable Ladder",
+          "MEWP",
+          "Internal Stair",
+          "Other"
+        ]
+      },
+      {
+        "key": "supervisor",
+        "label": "Permit Issuer",
+        "type": "text"
+      },
+      {
+        "key": "workingParty",
+        "label": "Persons Accessing Roof",
+        "type": "textarea"
+      },
+      {
+        "key": "validFrom",
+        "label": "Access Start",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Access End",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -36,7 +79,13 @@
         {
           "label": "Fall Protection Method",
           "type": "select",
-          "options": ["Guardrails", "Safety Line", "Harness", "Air Bag", "None"]
+          "options": [
+            "Guardrails",
+            "Safety Line",
+            "Harness",
+            "Air Bag",
+            "None"
+          ]
         },
         {
           "label": "Fragile Surface Controls",
@@ -77,17 +126,32 @@
           "label": "Weather Monitoring Source",
           "type": "select",
           "options": [
-            { "value": "onsite", "label": "On-site anemometer" },
-            { "value": "met_office", "label": "Met Office" },
-            { "value": "metar", "label": "METAR feed" }
+            {
+              "value": "onsite",
+              "label": "On-site anemometer"
+            },
+            {
+              "value": "met_office",
+              "label": "Met Office"
+            },
+            {
+              "value": "metar",
+              "label": "METAR feed"
+            }
           ]
         },
         {
           "label": "Tethered Tools Check",
           "type": "select",
           "options": [
-            { "value": "completed", "label": "Completed" },
-            { "value": "not_required", "label": "Not required" }
+            {
+              "value": "completed",
+              "label": "Completed"
+            },
+            {
+              "value": "not_required",
+              "label": "Not required"
+            }
           ]
         },
         {
@@ -119,25 +183,73 @@
           "label": "Anchor Inspection Completed",
           "type": "select",
           "options": [
-            { "value": "yes", "label": "Yes" },
-            { "value": "no", "label": "No" }
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
           ]
         },
         {
           "label": "Waste / Materials Removed",
           "type": "select",
           "options": [
-            { "value": "all_removed", "label": "All removed" },
-            { "value": "left_in_place", "label": "Left in place (detail in notes)" }
+            {
+              "value": "all_removed",
+              "label": "All removed"
+            },
+            {
+              "value": "left_in_place",
+              "label": "Left in place (detail in notes)"
+            }
           ]
         },
         {
           "label": "Photo Record Uploaded",
           "type": "select",
           "options": [
-            { "value": "yes", "label": "Yes" },
-            { "value": "no", "label": "No" }
+            {
+              "value": "yes",
+              "label": "Yes"
+            },
+            {
+              "value": "no",
+              "label": "No"
+            }
           ]
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
         }
       ]
     }
