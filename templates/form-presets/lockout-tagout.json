@@ -2,248 +2,144 @@
   "id": "lockout-tagout-v1",
   "title": "Lockout/Tagout Permit",
   "name": "Lockout/Tagout Permit",
-  "description": "Permit for lockout/tagout procedures to ensure equipment is safely isolated before maintenance or repair.",
+  "version": 2,
+  "description": "Permit for isolating plant and equipment from all hazardous energy sources before maintenance, cleaning, inspection or repair.",
   "meta": {
+    "title": "Permit and Work Details",
     "fields": [
-      {
-        "key": "location",
-        "label": "Location",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "date",
-        "label": "Date",
-        "type": "date",
-        "required": true
-      },
-      {
-        "key": "equipmentDescription",
-        "label": "Equipment Description",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "workDescription",
-        "label": "Work Description",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "isolationPoints",
-        "label": "Isolation Points",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "lockout/TagoutDevicesApplied",
-        "label": "Lockout/Tagout Devices Applied",
-        "type": "checkbox",
-        "required": true
-      },
-      {
-        "key": "personnelInvolved",
-        "label": "Personnel Involved",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "supervisor",
-        "label": "Supervisor",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "signatures",
-        "label": "Signatures",
-        "type": "signature",
-        "required": true
-      }
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"location","label":"Exact Work Location","type":"text","required":true},
+      {"key":"equipmentDescription","label":"Plant / Equipment Description","type":"text","required":true},
+      {"key":"equipmentId","label":"Plant / Equipment ID or Tag Number","type":"text","required":true},
+      {"key":"workDescription","label":"Scope of Work","type":"textarea","required":true},
+      {"key":"contractorCompany","label":"Contractor / Company","type":"text","required":true},
+      {"key":"ramsReference","label":"RAMS / Safe System of Work Reference","type":"text","required":true},
+      {"key":"isolationProcedureReference","label":"Isolation / LOTO Procedure Reference","type":"text","required":true},
+      {"key":"personInCharge","label":"Person in Charge of Work","type":"text","required":true},
+      {"key":"authorisedPerson","label":"Authorised / Competent Person for Isolation","type":"text","required":true},
+      {"key":"personnelInvolved","label":"People Working Under This Isolation","type":"textarea","required":true},
+      {"key":"validFrom","label":"Isolation / Permit Valid From","type":"datetime","required":true},
+      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
     ]
   },
   "sections": [
     {
       "title": "ENERGY SOURCE IDENTIFICATION",
       "items": [
-        "All energy sources identified",
-        "Isolation points located",
-        "Stored energy (pressure, springs) identified",
-        "Secondary/backup systems checked",
-        "Energy control procedures reviewed"
+        "All hazardous energy sources have been identified before isolation",
+        "Electrical supplies including secondary, standby and control supplies have been considered",
+        "Hydraulic and pneumatic pressure sources have been identified",
+        "Mechanical, gravity and stored energy hazards have been identified",
+        "Steam, gas, process, chemical and thermal energy sources have been considered",
+        "Manufacturer information, drawings or isolation procedures have been checked where available"
       ],
       "fields": [
-        {
-          "label": "Energy Sources Identified",
-          "type": "multiselect",
-          "options": [
-            {
-              "value": "electrical",
-              "label": "Electrical"
-            },
-            {
-              "value": "hydraulic",
-              "label": "Hydraulic"
-            },
-            {
-              "value": "pneumatic",
-              "label": "Pneumatic"
-            },
-            {
-              "value": "mechanical",
-              "label": "Mechanical"
-            },
-            {
-              "value": "thermal",
-              "label": "Thermal"
-            },
-            {
-              "value": "chemical",
-              "label": "Chemical"
-            },
-            {
-              "value": "gravitational",
-              "label": "Gravitational / stored"
-            }
-          ]
-        },
-        {
-          "label": "Energy Control Procedure Reference",
-          "type": "text"
-        },
-        {
-          "label": "Total Isolation Points",
-          "type": "text",
-          "placeholder": "Count of all isolators / valves / breakers"
-        },
-        {
-          "label": "Backup / Secondary Systems Confirmed De-energised",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No – not applicable",
-            "N/A – no secondary systems"
-          ]
-        }
+        {"key":"energySources","label":"Energy Sources Present","type":"multiselect","required":true,"options":[{"value":"electrical","label":"Electrical"},{"value":"mechanical","label":"Mechanical / movement"},{"value":"hydraulic","label":"Hydraulic"},{"value":"pneumatic","label":"Pneumatic"},{"value":"gravity","label":"Gravity / suspended load"},{"value":"pressure","label":"Stored pressure"},{"value":"steam","label":"Steam"},{"value":"thermal","label":"Thermal / hot surfaces"},{"value":"chemical","label":"Chemical / process"},{"value":"battery","label":"Battery / capacitor"},{"value":"other","label":"Other"}]},
+        {"key":"energySourceDetails","label":"Energy Source Details / Residual Risks","type":"textarea","required":true},
+        {"key":"secondarySystems","label":"Secondary / Backup Systems and Remote Starts","type":"textarea","required":true}
       ]
     },
     {
-      "title": "ISOLATION & VERIFICATION",
+      "title": "ISOLATION REGISTER",
       "items": [
-        "Equipment shut down properly",
-        "All isolation devices operated",
-        "Personal locks and tags applied",
-        "Isolation verified by test",
-        "Group lockout box used if multiple workers"
+        "Equipment has been stopped using the normal shutdown procedure",
+        "Each isolation device has been positively identified and operated",
+        "Isolation devices have been secured against inadvertent reconnection",
+        "Personal locks and warning tags have been applied where required",
+        "Pressurised systems have been vented, drained or otherwise made safe",
+        "Stored mechanical energy has been released, restrained or securely blocked",
+        "Parts that could fall or move have been mechanically supported",
+        "Hot components have been allowed to cool where necessary",
+        "Group isolation / lockbox arrangements are in place where more than one worker is protected"
       ],
       "fields": [
-        {
-          "label": "Lock / Tag Reference Numbers",
-          "type": "textarea",
-          "placeholder": "List each lock number and worker name"
-        },
-        {
-          "label": "Verification Test Method",
-          "type": "select",
-          "options": [
-            "Voltmeter / test lamp",
-            "Pressure gauge / bleed-down",
-            "Mechanical movement test",
-            "Multiple methods – see notes"
-          ]
-        },
-        {
-          "label": "Group Lockout Box Used",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No – individual locks only"
-          ]
-        },
-        {
-          "label": "Isolation Verified By",
-          "type": "text"
-        },
-        {
-          "label": "Re-energisation Authorised By",
-          "type": "text"
-        }
+        {"key":"isolationPoints","label":"Isolation Points Register","type":"textarea","required":true,"placeholder":"List each isolator, breaker, valve, fuse, blank/spade or other isolation point and its location"},
+        {"key":"lockTagReferences","label":"Lock / Tag Numbers and Owners","type":"textarea","required":true,"placeholder":"Record each personal or system lock/tag number and who applied it"},
+        {"key":"groupLockbox","label":"Group Lockbox / Multi-lock Reference","type":"text","required":false},
+        {"key":"storedEnergyControls","label":"Stored Energy Release / Restraint Details","type":"textarea","required":true},
+        {"key":"isolationAppliedBy","label":"Isolation Applied By","type":"text","required":true},
+        {"key":"isolationAppliedAt","label":"Isolation Applied Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "ZERO-ENERGY VERIFICATION",
+      "items": [
+        "A zero-energy state has been independently verified before work starts",
+        "A start / try test has been completed where safe and appropriate",
+        "Electrical conductors have been proved dead using suitable test equipment where applicable",
+        "Electrical test equipment has been proved before and after the test where applicable",
+        "Pressure gauges, drains or vents confirm pressure has been safely removed where applicable",
+        "Potential movement has been checked and blocked or restrained where applicable",
+        "The work team has been briefed on the isolation boundary and prohibited actions"
+      ],
+      "fields": [
+        {"key":"verificationMethod","label":"Verification Method(s)","type":"textarea","required":true},
+        {"key":"testInstrumentId","label":"Electrical / Test Instrument ID and Calibration Reference","type":"text","required":false},
+        {"key":"verifiedBy","label":"Isolation Verified By","type":"text","required":true},
+        {"key":"verifiedAt","label":"Verification Date / Time","type":"datetime","required":true},
+        {"key":"briefingDetails","label":"Work Team Briefing / Toolbox Talk Reference","type":"text","required":true}
+      ]
+    },
+    {
+      "title": "WORK, HANDOVER AND SUSPENSION",
+      "items": [
+        "Permit and isolation boundaries are understood by everyone working under the permit",
+        "Isolation controls will not be altered without formal authorisation",
+        "Shift handover will include the isolation status, outstanding work and permit conditions",
+        "If work is suspended the plant will remain in a safe isolated state",
+        "Any change in scope, plant condition or isolation arrangement will trigger permit review or cancellation"
+      ],
+      "fields": [
+        {"key":"handoverRequired","label":"Shift Handover Required?","type":"select","required":true,"options":["Yes","No"]},
+        {"key":"handoverDetails","label":"Handover / Suspension Details","type":"textarea","required":false},
+        {"key":"simultaneousOperations","label":"Other Permits / SIMOPS Affecting This Isolation","type":"textarea","required":false}
+      ]
+    },
+    {
+      "title": "REINSTATEMENT AND RETURN TO SERVICE",
+      "items": [
+        "Work is complete and all workers, tools and temporary equipment are clear",
+        "Guards, covers, interlocks and safety devices have been reinstated",
+        "Each personal lock has been removed by the person who applied it, or an authorised exception procedure has been followed",
+        "Affected persons have been informed before energy is restored",
+        "The area has been checked before re-energisation or repressurisation",
+        "Plant has been functionally tested where required and is safe to return to service",
+        "Any defects or restrictions have been recorded and communicated"
+      ],
+      "fields": [
+        {"key":"locksRemovedBy","label":"Locks / Tags Removed By","type":"textarea","required":true},
+        {"key":"reinstatementAuthorisedBy","label":"Reinstatement / Re-energisation Authorised By","type":"text","required":true},
+        {"key":"restoredAt","label":"Energy Restored Date / Time","type":"datetime","required":true},
+        {"key":"functionalTest","label":"Functional Test / Return-to-Service Result","type":"textarea","required":true},
+        {"key":"defectsRestrictions","label":"Outstanding Defects / Restrictions","type":"textarea","required":false}
       ]
     },
     {
       "title": "AUTHORIZATION TO START",
       "fields": [
-        {
-          "key": "issuerName",
-          "label": "Permit Issuer Name",
-          "type": "text"
-        },
-        {
-          "key": "issuerRole",
-          "label": "Permit Issuer Role",
-          "type": "text"
-        },
-        {
-          "key": "holderName",
-          "label": "Permit Holder Name",
-          "type": "text"
-        },
-        {
-          "key": "holderCompany",
-          "label": "Holder Company",
-          "type": "text"
-        },
-        {
-          "key": "authorizationAt",
-          "label": "Authorization Date/Time",
-          "type": "datetime"
-        }
+        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
+        {"key":"issuerRole","label":"Permit Issuer Role","type":"text","required":true},
+        {"key":"holderName","label":"Permit Holder Name","type":"text","required":true},
+        {"key":"holderCompany","label":"Holder Company","type":"text","required":true},
+        {"key":"authorizationAt","label":"Authorization Date/Time","type":"datetime","required":true}
       ]
     },
     {
       "title": "HAND-BACK AND CLOSE-OUT",
       "items": [
-        "Work completed and area inspected",
-        "Plant, tools and temporary controls removed",
-        "Systems reinstated safely",
-        "Area left clean and safe"
+        "Work has been completed or safely stopped",
+        "Plant and work area have been inspected",
+        "Temporary controls have been removed or formally handed over",
+        "Permit holder and issuer agree the equipment / area is ready for hand-back"
       ],
       "fields": [
-        {
-          "key": "workCompletedSummary",
-          "label": "Work Completed Summary",
-          "type": "textarea"
-        },
-        {
-          "key": "areaLeftSafeBy",
-          "label": "Area Left Safe By",
-          "type": "text"
-        },
-        {
-          "key": "handBackTo",
-          "label": "Hand-back To (Name)",
-          "type": "text"
-        },
-        {
-          "key": "closedBy",
-          "label": "Closed By",
-          "type": "text"
-        },
-        {
-          "key": "closedAt",
-          "label": "Closure Date/Time",
-          "type": "datetime"
-        },
-        {
-          "key": "outstandingActions",
-          "label": "Outstanding Actions",
-          "type": "textarea"
-        }
+        {"key":"workCompletedSummary","label":"Work Completed Summary","type":"textarea","required":true},
+        {"key":"handBackTo","label":"Hand-back To","type":"text","required":true},
+        {"key":"closedBy","label":"Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date/Time","type":"datetime","required":true},
+        {"key":"outstandingActions","label":"Outstanding Actions","type":"textarea","required":false}
       ]
     }
   ],
-  "signatures": [
-    "issuer_issue",
-    "holder_accept",
-    "issuer_close"
-  ]
+  "signatures": ["issuer_issue","holder_accept","competent_person","issuer_close"]
 }
