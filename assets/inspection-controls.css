@@ -1,0 +1,152 @@
+/* Mobile-first inspection checklist answer controls.
+ * Scoped to #inspectionForm so permit/admin screens are unaffected.
+ */
+#inspectionForm .choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 10px;
+}
+
+#inspectionForm .choice {
+    position: relative;
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+}
+
+#inspectionForm .choice input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+#inspectionForm .choice span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 58px;
+    padding: 12px 14px;
+    border: 2px solid #334155;
+    border-radius: 14px;
+    background: #0a101a;
+    color: #f8fafc;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    transition: border-color .15s ease, background .15s ease, transform .08s ease, box-shadow .15s ease;
+}
+
+#inspectionForm .choice:hover span {
+    border-color: var(--brand-primary-light);
+    box-shadow: 0 4px 14px rgba(var(--brand-primary-rgb), .2);
+}
+
+#inspectionForm .choice:active span {
+    transform: scale(.98);
+}
+
+#inspectionForm .choice input[type="radio"]:focus-visible + span {
+    outline: 3px solid rgba(var(--brand-primary-light-rgb), .7);
+    outline-offset: 3px;
+}
+
+#inspectionForm .choice input[type="radio"]:checked + span {
+    border-color: var(--brand-primary);
+    background: var(--brand-primary);
+    color: var(--brand-on-primary);
+    box-shadow: 0 7px 18px rgba(0, 0, 0, .25);
+}
+
+#inspectionForm .choice input[value="yes" i]:checked + span {
+    border-color: #16a34a;
+    background: #16a34a;
+    color: #fff;
+}
+
+#inspectionForm .choice input[value="yes" i]:checked + span::before {
+    content: "✓";
+    font-size: 20px;
+    line-height: 1;
+}
+
+#inspectionForm .choice input[value="no" i]:checked + span {
+    border-color: #dc2626;
+    background: #dc2626;
+    color: #fff;
+}
+
+#inspectionForm .choice input[value="no" i]:checked + span::before {
+    content: "✕";
+    font-size: 18px;
+    line-height: 1;
+}
+
+#inspectionForm .choice input[value="n/a" i]:checked + span,
+#inspectionForm .choice input[value="na" i]:checked + span,
+#inspectionForm .choice input[value="not applicable" i]:checked + span {
+    border-color: #0284c7;
+    background: #0284c7;
+    color: #fff;
+}
+
+#inspectionForm .choice input[value="n/a" i]:checked + span::before,
+#inspectionForm .choice input[value="na" i]:checked + span::before,
+#inspectionForm .choice input[value="not applicable" i]:checked + span::before {
+    content: "—";
+    font-size: 20px;
+    line-height: 1;
+}
+
+#inspectionForm .tools {
+    gap: 10px;
+}
+
+#inspectionForm .tools .tool {
+    flex: 1 1 150px;
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 15px;
+    font-weight: 750;
+    touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+    #inspectionForm .choices {
+        grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+        gap: 9px;
+    }
+
+    #inspectionForm .choice span {
+        min-height: 62px;
+        padding: 12px 8px;
+        border-radius: 12px;
+        font-size: 16px;
+    }
+
+    #inspectionForm .tools .tool {
+        flex-basis: calc(50% - 5px);
+        min-height: 48px;
+    }
+}
+
+@media (max-width: 380px) {
+    #inspectionForm .choice span {
+        min-height: 58px;
+        padding-left: 6px;
+        padding-right: 6px;
+        font-size: 15px;
+    }
+}
