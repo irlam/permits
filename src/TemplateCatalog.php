@@ -4,11 +4,12 @@ declare(strict_types=1);
 namespace Permits;
 
 /**
- * Presentation helpers for template pickers.
+ * Presentation and migration helpers for template pickers.
  *
- * Historical template versions remain in the database for existing permits,
- * while public pickers show only the preferred/newest version of each permit.
- * Legacy overlapping names are folded into their stronger canonical template.
+ * Historical template versions remain in the database for existing records,
+ * while new work starts from the preferred/current template. Legacy names are
+ * folded into their stronger canonical replacement and inspection checklists
+ * are identified separately from permit-to-work templates.
  */
 final class TemplateCatalog
 {
@@ -25,6 +26,9 @@ final class TemplateCatalog
         'permit to dig' => 'Permit to Dig / Excavation Permit',
         'working at heights permit' => 'Working at Height Permit',
         'asbestos removal permit' => 'Asbestos Work Permit',
+        'building inspection permit' => 'Building Inspection Checklist',
+        'final inspection permit' => 'Final Inspection Checklist',
+        'site safety inspection permit' => 'Site Safety Inspection Checklist',
     ];
 
     /** @var array<string,string> */
@@ -48,6 +52,53 @@ final class TemplateCatalog
         'restricted area entry permit' => 'restricted-area-entry-v2',
         'vehicle/equipment access permit' => 'vehicle-equipment-access-v2',
         'concrete pouring permit' => 'concrete-pouring-v2',
+        'building inspection checklist' => 'building-inspection-v2',
+        'final inspection checklist' => 'final-inspection-v2',
+        'site safety inspection checklist' => 'site-safety-inspection-v2',
+    ];
+
+    /**
+     * Explicit replacements for old direct-start URLs. Existing records retain
+     * their original template_id; this map is only for starting new work.
+     *
+     * @var array<string,string>
+     */
+    private const SUPERSEDED_IDS = [
+        'general-work-v1' => 'general-ptw-v1',
+        'crane-lifting-v1' => 'lifting-operations-v1',
+        'electrical-work-v1' => 'electrical-isolation-v1',
+        'roof-work-v1' => 'roof-access-v1',
+        'welding-cutting-v1' => 'hot-works-v2',
+        'hazardous-materials-v1' => 'hazardous-substances-v1',
+        'road-traffic-management-v1' => 'traffic-management-v1',
+        'excavation-v1' => 'permit-to-dig-v2',
+        'permit-to-dig-v1' => 'permit-to-dig-v2',
+        'working-at-heights-v1' => 'working-at-height-v2',
+        'asbestos-removal-v1' => 'asbestos-work-v2',
+        'hot-works-v1' => 'hot-works-v2',
+        'lockout-tagout-v1' => 'lockout-tagout-v2',
+        'confined-space-v1' => 'confined-space-entry-v2',
+        'confined-space-entry-v1' => 'confined-space-entry-v2',
+        'temporary-works-v1' => 'temporary-works-v2',
+        'scaffolding-v1' => 'scaffolding-v2',
+        'demolition-v1' => 'demolition-v2',
+        'blasting-explosives-v1' => 'blasting-explosives-v2',
+        'restricted-area-entry-v1' => 'restricted-area-entry-v2',
+        'vehicle-equipment-access-v1' => 'vehicle-equipment-access-v2',
+        'concrete-pouring-v1' => 'concrete-pouring-v2',
+        'building-inspection-v1' => 'building-inspection-v2',
+        'final-inspection-v1' => 'final-inspection-v2',
+        'site-safety-inspection-v1' => 'site-safety-inspection-v2',
+    ];
+
+    /** @var array<int,string> */
+    private const INSPECTION_IDS = [
+        'building-inspection-v1',
+        'building-inspection-v2',
+        'final-inspection-v1',
+        'final-inspection-v2',
+        'site-safety-inspection-v1',
+        'site-safety-inspection-v2',
     ];
 
     /**
@@ -82,6 +133,51 @@ final class TemplateCatalog
         );
 
         return array_values($latest);
+    }
+
+    public static function replacementForId(string $templateId): ?string
+    {
+        $templateId = trim($templateId);
+        if ($templateId === '') {
+            return null;
+        }
+
+        return self::SUPERSEDED_IDS[$templateId] ?? null;
+    }
+
+    /** @param array<string,mixed>|string $template */
+    public static function isInspection($template): bool
+    {
+        $id = is_array($template)
+            ? trim((string)($template['id'] ?? ''))
+            : trim((string)$template);
+
+        if ($id !== '' && in_array($id, self::INSPECTION_IDS, true)) {
+            return true;
+        }
+
+        if (!is_array($template)) {
+            return false;
+        }
+
+        $name = mb_strtolower(self::canonicalName(trim((string)($template['name'] ?? ''))), 'UTF-8');
+        return in_array($name, [
+            'building inspection checklist',
+            'final inspection checklist',
+            'site safety inspection checklist',
+        ], true);
+    }
+
+    /** @param array<string,mixed>|string $template */
+    public static function publicStartPath($template): string
+    {
+        $id = is_array($template)
+            ? trim((string)($template['id'] ?? ''))
+            : trim((string)$template);
+
+        return self::isInspection($template)
+            ? '/create-inspection-public.php?template=' . rawurlencode($id)
+            : '/create-permit-public.php?template=' . rawurlencode($id);
     }
 
     private static function canonicalName(string $name): string
