@@ -1,17 +1,9 @@
 <?php
 /**
  * Close Permit API
- * 
- * File Path: /api/close-permit.php
- * Description: Allow users to close their active permits
- * Created: 24/10/2025
- * Last Modified: 24/10/2025
- * 
- * Features:
- * - Users can close their own permits
- * - Admins/managers can close any permit
- * - Changes status to 'closed'
- * - Records who closed it and when
+ *
+ * Users may close their own active/suspended permits; managers/admins may
+ * close any permit they can access. Closure is final for that permit record.
  */
 
 header('Content-Type: application/json');
@@ -36,7 +28,6 @@ if (!\Permits\Csrf::validateRequest('permit-close')) {
     exit;
 }
 
-// Accept the form request used by the public view and JSON API clients.
 $data = $_POST;
 if (stripos((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json') !== false) {
     $decoded = json_decode((string) file_get_contents('php://input'), true);
@@ -55,27 +46,22 @@ if (empty($permitId)) {
 }
 
 try {
-    // Get permit
     $stmt = $db->pdo->prepare("SELECT * FROM forms WHERE id = ?");
     $stmt->execute([$permitId]);
     $permit = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$permit) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Permit not found']);
         exit;
     }
-    
-    // Check permissions
-    $canClose = \Permits\PermitAccess::canAccessPermit($currentUser, $permit);
-    
-    if (!$canClose) {
+
+    if (!\Permits\PermitAccess::canAccessPermit($currentUser, $permit)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'You do not have permission to close this permit']);
         exit;
     }
-    
-    // Check if permit can be closed
+
     $permitStatus = strtolower((string) ($permit['status'] ?? ''));
     if ($permitStatus === 'closed') {
         echo json_encode([
@@ -86,31 +72,32 @@ try {
         ]);
         exit;
     }
-    
-    if (!in_array($permitStatus, ['active', 'issued', 'approved', 'open'], true)) {
+
+    $closableStatuses = ['active', 'issued', 'approved', 'open', 'suspended'];
+    if (!in_array($permitStatus, $closableStatuses, true)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Only active permits can be closed']);
+        echo json_encode(['success' => false, 'message' => 'Only active or suspended permits can be closed']);
         exit;
     }
-    
+
     if (mb_strlen($reason) > 5000) {
         http_response_code(422);
         echo json_encode(['success' => false, 'message' => 'Reason is too long']);
         exit;
     }
+
     $now = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
     $db->pdo->beginTransaction();
-    // Close the permit atomically
     $stmt = $db->pdo->prepare("
-        UPDATE forms 
+        UPDATE forms
         SET status = 'closed',
             closed_by = ?,
             closed_at = $now,
             closure_reason = ?,
             updated_at = $now
-        WHERE id = ? AND status IN ('active', 'issued', 'approved', 'open')
+        WHERE id = ? AND status IN ('active', 'issued', 'approved', 'open', 'suspended')
     ");
-    
+
     $stmt->execute([
         $currentUser['id'],
         $reason,
@@ -132,8 +119,21 @@ try {
         }
         throw new RuntimeException('Permit state changed during closure');
     }
+
+    try {
+        \Permits\PermitWorkflow::recordEvent(
+            $db->pdo,
+            (string)$permit['id'],
+            'permit_closed',
+            (string)$currentUser['id'],
+            ['reason' => $reason, 'previous_status' => $permitStatus]
+        );
+    } catch (\Throwable $eventError) {
+        error_log('Unable to record permit-close workflow event: ' . $eventError->getMessage());
+    }
+
     $db->pdo->commit();
-    
+
     if (function_exists('logActivity')) {
         try {
             $description = sprintf(
@@ -153,7 +153,7 @@ try {
             error_log('Unable to log permit closure: ' . $logError->getMessage());
         }
     }
-    
+
     $closedAtStmt = $db->pdo->prepare('SELECT closed_at FROM forms WHERE id = ?');
     $closedAtStmt->execute([$permitId]);
     $closedAt = $closedAtStmt->fetchColumn();
@@ -165,7 +165,7 @@ try {
         'closed_by' => $currentUser['name'],
         'closed_at' => $closedAt
     ]);
-    
+
 } catch (Throwable $e) {
     if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
     error_log('Permit close failed: ' . $e->getMessage());
