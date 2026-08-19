@@ -153,6 +153,7 @@ class FormTemplateSeeder
                 }
                 $sectionFields = $section['fields'] ?? [];
                 if (!is_array($sectionFields) || empty($sectionFields)) {
+                    // Even if there are no fields, we may still want to surface checklist items
                     $sectionFields = [];
                 }
 
@@ -162,6 +163,7 @@ class FormTemplateSeeder
                     'fields' => self::mapFieldsForPublicForm($sectionFields, 'section' . ($index + 1)),
                 ];
 
+                // Carry over static checklist items (if present) so public view can render them
                 if (!empty($section['items']) && is_array($section['items'])) {
                     $items = [];
                     $itemFields = [];
@@ -172,6 +174,7 @@ class FormTemplateSeeder
                         $text = trim($text);
                         if ($text !== '') {
                             $items[] = $text;
+                            // Create a tri-state radio field to capture compliance for scoring
                             $itemFields[] = [
                                 'label' => $text,
                                 'name'  => 'section' . ($index + 1) . '_item_' . (count($items)),
@@ -181,6 +184,9 @@ class FormTemplateSeeder
                                     ['value' => 'no',  'label' => 'No'],
                                     ['value' => 'na',  'label' => 'N/A'],
                                 ],
+                                // A safety checklist is useful only when every item has an
+                                // explicit Yes, No or N/A answer. Drafts may still be saved
+                                // incomplete; final submissions are validated server-side.
                                 'required' => true,
                                 'scoreItem' => true,
                             ];
@@ -188,6 +194,7 @@ class FormTemplateSeeder
                     }
                     if (!empty($items)) {
                         $entry['items'] = $items;
+                        // Append item-fields after existing fields for this section
                         if (!isset($entry['fields']) || !is_array($entry['fields'])) {
                             $entry['fields'] = [];
                         }
@@ -318,11 +325,7 @@ class FormTemplateSeeder
 
     private static function buildFormStructurePayload(Db $db, array $schema, string $templateId): string
     {
-        $incomingVersion = (int)($schema['version'] ?? 1);
-        $existingVersion = self::fetchExistingTemplateVersion($db, $templateId);
-        $versionIncreased = $existingVersion !== null && $incomingVersion > $existingVersion;
-
-        if (!self::$forceRebuildFormStructure && !$versionIncreased) {
+        if (!self::$forceRebuildFormStructure) {
             $existing = self::fetchExistingFormStructure($db, $templateId);
             if ($existing !== null) {
                 $decoded = json_decode($existing, true);
@@ -336,23 +339,6 @@ class FormTemplateSeeder
         $json = json_encode($structure, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return $json === false ? '[]' : $json;
-    }
-
-    private static function fetchExistingTemplateVersion(Db $db, string $templateId): ?int
-    {
-        static $stmt = null;
-        if ($stmt === null) {
-            $stmt = $db->pdo->prepare('SELECT version FROM form_templates WHERE id = ? LIMIT 1');
-        }
-
-        try {
-            $stmt->execute([$templateId]);
-            $value = $stmt->fetchColumn();
-        } catch (Throwable $e) {
-            return null;
-        }
-
-        return $value === false || $value === null ? null : (int)$value;
     }
 
     private static function fetchExistingFormStructure(Db $db, string $templateId): ?string

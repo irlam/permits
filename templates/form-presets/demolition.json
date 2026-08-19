@@ -2,141 +2,247 @@
   "id": "demolition-v1",
   "title": "Demolition Permit",
   "name": "Demolition Permit",
-  "version": 2,
-  "description": "Permit for demolition and dismantling activities covering structural surveys, services, asbestos, engineered sequence, stability, exclusion zones and close-out.",
+  "description": "Permit for demolition activities, ensuring all safety, environmental, and regulatory requirements are met.",
   "meta": {
-    "title": "Permit and Demolition Details",
     "fields": [
-      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
-      {"key":"location","label":"Exact Structure / Work Location","type":"text","required":true},
-      {"key":"structureDescription","label":"Structure / Elements to Be Demolished","type":"textarea","required":true},
-      {"key":"workScope","label":"Scope and Limits of Demolition","type":"textarea","required":true},
-      {"key":"contractorCompany","label":"Demolition Contractor / Company","type":"text","required":true},
-      {"key":"demolitionSupervisor","label":"Competent Demolition Supervisor","type":"text","required":true},
-      {"key":"ramsReference","label":"Demolition RAMS / Method Statement Reference","type":"text","required":true},
-      {"key":"validFrom","label":"Permit Valid From","type":"datetime","required":true},
-      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "structureToBeDemolished",
+        "label": "Structure to be Demolished",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "methodOfDemolition",
+        "label": "Method of Demolition",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "hazardousMaterialsPresent",
+        "label": "Hazardous Materials Present",
+        "type": "checkbox",
+        "required": false
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
     {
-      "title": "PRE-DEMOLITION INFORMATION AND SURVEYS",
+      "title": "PRE-DEMOLITION SURVEY",
       "items": [
-        "Available structural drawings, alterations and historic information have been reviewed",
-        "A suitable structural survey / engineering assessment has established the form, condition and load paths",
-        "Adjacent and connected structures have been assessed for stability implications",
-        "Asbestos information is suitable for the planned intrusive demolition work",
-        "Other hazardous materials and contaminated areas have been identified",
-        "Below-ground and overhead services in or near the demolition zone have been identified",
-        "The condition and capacity of floors / slabs proposed for demolition plant have been verified"
+        "Structural survey completed",
+        "Hazardous materials identified",
+        "Services isolated and capped",
+        "Demolition sequence planned",
+        "Neighboring structures assessed"
       ],
       "fields": [
-        {"key":"structuralSurveyReference","label":"Structural Survey / Engineer Report Reference","type":"text","required":true},
-        {"key":"engineer","label":"Demolition / Structural Engineer","type":"text","required":true},
-        {"key":"asbestosSurveyReference","label":"Asbestos Survey / Register Reference","type":"text","required":true},
-        {"key":"hazardousMaterials","label":"Hazardous Materials / Contamination Findings","type":"textarea","required":true},
-        {"key":"adjacentStructures","label":"Adjacent / Connected Structure Assessment","type":"textarea","required":true}
+        {
+          "label": "Structural Survey Report Reference",
+          "type": "text"
+        },
+        {
+          "label": "Hazardous Materials Present",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "asbestos",
+              "label": "Asbestos"
+            },
+            {
+              "value": "lead_paint",
+              "label": "Lead paint"
+            },
+            {
+              "value": "pcbs",
+              "label": "PCBs"
+            },
+            {
+              "value": "contaminated_soil",
+              "label": "Contaminated ground"
+            },
+            {
+              "value": "none",
+              "label": "None identified"
+            }
+          ]
+        },
+        {
+          "label": "Services Isolation Reference",
+          "type": "text",
+          "placeholder": "Isolation certs / LOTO ref."
+        },
+        {
+          "label": "Demolition Sequence Reference",
+          "type": "text"
+        }
       ]
     },
     {
-      "title": "SERVICES AND ISOLATIONS",
+      "title": "DEMOLITION CONTROLS",
       "items": [
-        "Electrical, gas, water, telecoms, process and other services have been identified",
-        "Services requiring isolation or disconnection have been made safe before demolition starts",
-        "Isolation / disconnection has been verified and appropriately labelled or recorded",
-        "Services that must remain live are clearly identified and physically protected",
-        "Underground services are included in the demolition and plant movement plan"
+        "Exclusion zone established",
+        "Dust suppression operating",
+        "Debris management arranged",
+        "Noise monitoring in place",
+        "Emergency procedures briefed"
       ],
       "fields": [
-        {"key":"serviceIsolationReferences","label":"Service Isolation / Disconnection References","type":"textarea","required":true},
-        {"key":"liveServices","label":"Services Remaining Live and Protection Measures","type":"textarea","required":true},
-        {"key":"lotoPermitReferences","label":"Linked LOTO / Electrical Isolation Permit References","type":"text","required":false}
+        {
+          "label": "Demolition Method",
+          "type": "select",
+          "options": [
+            "Hand demolition",
+            "Mechanical – hydraulic breaker",
+            "Mechanical – long-reach excavator",
+            "Explosive demolition",
+            "Combined methods"
+          ]
+        },
+        {
+          "label": "Exclusion Zone Radius (metres)",
+          "type": "text"
+        },
+        {
+          "label": "Dust Suppression Method",
+          "type": "select",
+          "options": [
+            "Water spray / damping down",
+            "Misting system",
+            "Physical enclosure",
+            "Combined"
+          ]
+        },
+        {
+          "label": "Noise / Vibration Monitoring Required",
+          "type": "select",
+          "options": [
+            "Yes – equipment deployed",
+            "No – not required",
+            "Yes – third-party monitoring"
+          ]
+        },
+        {
+          "label": "Adjacent Structure Protection Measures",
+          "type": "textarea",
+          "placeholder": "Describe underpinning, shoring or watching brief"
+        }
       ]
     },
     {
-      "title": "ENGINEERED DEMOLITION METHOD AND STABILITY",
-      "items": [
-        "The demolition method and sequence have been prepared by a competent person and reviewed by an appropriate engineer where required",
-        "The sequence maintains structural stability at every stage",
-        "Temporary supports, propping or restraint required for stability have been designed and controlled as temporary works",
-        "Debris accumulation and plant loading will not overload floors or remaining structure",
-        "Unplanned collapse cannot breach the defined site / exclusion boundary",
-        "Changes to the demolition method or sequence require competent review before work continues"
-      ],
+      "title": "AUTHORIZATION TO START",
       "fields": [
-        {"key":"demolitionMethod","label":"Demolition Method","type":"select","required":true,"options":["Top-down manual / small plant","Mechanical demolition from ground level","High-reach demolition","Dismantling / deconstruction","Combined methods","Other engineered method"]},
-        {"key":"sequenceReference","label":"Demolition Sequence / Drawing Reference","type":"text","required":true},
-        {"key":"temporaryWorksReference","label":"Temporary Support / Temporary Works Reference","type":"text","required":false},
-        {"key":"floorLoadingControls","label":"Plant / Debris Floor Loading Controls","type":"textarea","required":true},
-        {"key":"changeControl","label":"Method / Sequence Change Approval Process","type":"textarea","required":true}
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
+        }
       ]
     },
     {
-      "title": "EXCLUSION, DEBRIS AND PUBLIC PROTECTION",
+      "title": "HAND-BACK AND CLOSE-OUT",
       "items": [
-        "Safe working zones, exclusion zones and debris zones are defined for the current demolition phase",
-        "Barriers and access control prevent unauthorised entry",
-        "The exclusion zone accounts for foreseeable falling / projecting debris and structural collapse",
-        "Plant and pedestrian routes are segregated or controlled",
-        "Adjacent roads, footpaths, occupied premises and neighbours are protected where applicable",
-        "Scaffolding is not being relied upon as structural support unless specifically designed for that purpose"
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
       ],
       "fields": [
-        {"key":"exclusionZone","label":"Exclusion / Debris Zone Description and Dimensions","type":"textarea","required":true},
-        {"key":"publicProtection","label":"Public / Neighbour / Road Protection Measures","type":"textarea","required":true},
-        {"key":"trafficManagementReference","label":"Traffic Management Plan Reference","type":"text","required":false}
-      ]
-    },
-    {
-      "title": "DUST, NOISE, FIRE AND ENVIRONMENTAL CONTROLS",
-      "items": [
-        "Dust suppression is suitable for the demolition method and hazardous material risks",
-        "Noise and vibration controls protect workers, neighbours and sensitive structures where required",
-        "Hot work, fuel, gas cylinders and ignition sources are separately controlled where applicable",
-        "Waste streams are segregated and hazardous waste is handled through authorised routes",
-        "Run-off, contaminated water and debris cannot enter drains or the wider environment uncontrolled",
-        "Emergency arrangements cover collapse, fire, service strike and plant incidents"
-      ],
-      "fields": [
-        {"key":"dustControls","label":"Dust Suppression / Air Monitoring Controls","type":"textarea","required":true},
-        {"key":"noiseVibrationControls","label":"Noise / Vibration Monitoring and Limits","type":"textarea","required":true},
-        {"key":"wastePlan","label":"Waste / Hazardous Waste Plan Reference","type":"text","required":true},
-        {"key":"emergencyPlan","label":"Emergency Plan / Contact Reference","type":"text","required":true}
-      ]
-    },
-    {
-      "title": "PRE-START AUTHORIZATION AND DAILY REVIEW",
-      "items": [
-        "The current demolition phase matches the approved method and sequence",
-        "Structural condition has not changed in a way that invalidates the planned method",
-        "Required temporary supports, barriers and isolations are in place",
-        "Weather conditions are suitable for the method, plant and structure",
-        "The demolition team has been briefed on the current sequence, exclusion zones and emergency arrangements"
-      ],
-      "fields": [
-        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
-        {"key":"holderName","label":"Permit Holder / Demolition Supervisor","type":"text","required":true},
-        {"key":"authorizationAt","label":"Authorised Date / Time","type":"datetime","required":true},
-        {"key":"dailyReview","label":"Daily / Shift Review Record","type":"textarea","required":true}
-      ]
-    },
-    {
-      "title": "COMPLETION AND HAND-BACK",
-      "items": [
-        "Demolition has stopped at a stable and safe condition",
-        "Remaining structures and temporary supports have been inspected",
-        "Debris, protrusions, openings and exposed edges have been made safe",
-        "Services and below-ground hazards are safely terminated or clearly recorded",
-        "The area is secure and suitable for the next work phase"
-      ],
-      "fields": [
-        {"key":"completionSummary","label":"Completion / Remaining Structure Summary","type":"textarea","required":true},
-        {"key":"finalInspectionBy","label":"Final Inspection By","type":"text","required":true},
-        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
-        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true},
-        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false}
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
+        }
       ]
     }
   ],
-  "signatures": ["issuer_issue","demolition_supervisor","holder_accept","issuer_close"]
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

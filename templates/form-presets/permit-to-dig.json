@@ -1,129 +1,253 @@
 {
   "id": "permit-to-dig-v1",
-  "title": "Permit to Dig / Excavation Permit",
-  "name": "Permit to Dig / Excavation Permit",
-  "version": 2,
-  "description": "Permit for breaking ground, excavation and trenching, covering service location, safe digging, excavation stability and reinstatement.",
+  "title": "Permit to Dig",
+  "name": "Permit to Dig",
+  "description": "Permit for digging or breaking ground, ensuring all underground services and hazards are identified.",
   "meta": {
-    "title": "Permit and Excavation Details",
     "fields": [
-      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
-      {"key":"location","label":"Exact Dig Location / Grid Reference","type":"text","required":true},
-      {"key":"workScope","label":"Purpose and Scope of Excavation","type":"textarea","required":true},
-      {"key":"excavationLength","label":"Planned Length (m)","type":"number","required":true,"min":0,"step":0.1},
-      {"key":"excavationWidth","label":"Planned Width (m)","type":"number","required":true,"min":0,"step":0.1},
-      {"key":"excavationDepth","label":"Maximum Planned Depth (m)","type":"number","required":true,"min":0,"step":0.1},
-      {"key":"contractorCompany","label":"Contractor / Company","type":"text","required":true},
-      {"key":"ramsReference","label":"RAMS / Safe Digging Method Reference","type":"text","required":true},
-      {"key":"personInCharge","label":"Person in Charge","type":"text","required":true},
-      {"key":"machineOperator","label":"Excavator / Plant Operator","type":"text","required":false},
-      {"key":"validFrom","label":"Permit Valid From","type":"datetime","required":true},
-      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "purposeOfDigging",
+        "label": "Purpose of Digging",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "undergroundServicesChecked",
+        "label": "Underground Services Checked",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
     {
-      "title": "PLANNING AND SERVICE INFORMATION",
+      "title": "SERVICE LOCATION",
       "items": [
-        "Current utility / service information has been obtained and reviewed before work starts",
-        "The work area and excavation limits have been physically identified",
-        "Known underground electrical, gas, water, drainage, telecoms and other services have been considered",
-        "Overhead services and plant access hazards have been considered",
-        "Service owners have been contacted where required and any restrictions understood",
-        "The excavation method and sequence are suitable for the known ground and service conditions"
+        "Utility drawings obtained",
+        "Cable/pipe locator used",
+        "Trial holes dug to confirm location",
+        "Services marked on ground",
+        "Utility companies notified"
       ],
       "fields": [
-        {"key":"serviceDrawingRefs","label":"Utility / Service Drawing References and Dates","type":"textarea","required":true},
-        {"key":"servicesExpected","label":"Services Expected / Identified","type":"multiselect","required":true,"options":[{"value":"electric","label":"Electric"},{"value":"gas","label":"Gas"},{"value":"water","label":"Water"},{"value":"drainage","label":"Drainage / sewer"},{"value":"telecom","label":"Telecoms / data"},{"value":"district_heat","label":"District heating / steam"},{"value":"fuel","label":"Fuel / process pipe"},{"value":"other","label":"Other"},{"value":"none","label":"None shown or expected"}]},
-        {"key":"overheadServices","label":"Overhead Services / Clearance Controls","type":"textarea","required":false}
+        {
+          "label": "Service Reference Drawing No.",
+          "type": "text"
+        },
+        {
+          "label": "CAT Scan / Locator Used",
+          "type": "select",
+          "options": [
+            "Yes – results recorded",
+            "No – drawings only",
+            "N/A – no services expected"
+          ]
+        },
+        {
+          "label": "Services Found",
+          "type": "multiselect",
+          "options": [
+            {
+              "value": "electric",
+              "label": "Electric"
+            },
+            {
+              "value": "gas",
+              "label": "Gas"
+            },
+            {
+              "value": "water",
+              "label": "Water"
+            },
+            {
+              "value": "telecom",
+              "label": "Telecoms"
+            },
+            {
+              "value": "drainage",
+              "label": "Drainage"
+            },
+            {
+              "value": "district_heat",
+              "label": "District Heating"
+            },
+            {
+              "value": "none",
+              "label": "None found"
+            }
+          ]
+        },
+        {
+          "label": "Locator Equipment ID",
+          "type": "text"
+        }
       ]
     },
     {
-      "title": "LOCATING AND MARKING UNDERGROUND SERVICES",
+      "title": "EXCAVATION SAFETY",
       "items": [
-        "A suitable locating device has been used by a competent person before excavation",
-        "The locator has been function checked and is suitable for the services being sought",
-        "The full proposed excavation area has been scanned, including parallel and crossing services",
-        "Detected services have been clearly marked on the ground and the marks will be maintained",
-        "Trial holes / hand digging will be used to positively identify service position and depth where necessary",
-        "Absence of a locator signal has not been treated as proof that no service exists"
+        "Hand dig zone within 0.5m of services",
+        "Excavation supported if required",
+        "Services protected/diverted",
+        "Emergency contacts available",
+        "Backfill and reinstatement planned"
       ],
       "fields": [
-        {"key":"locatorType","label":"Locator / CAT & Genny Type","type":"text","required":true},
-        {"key":"locatorId","label":"Locator Equipment ID / Serial Number","type":"text","required":true},
-        {"key":"locatorOperator","label":"Scanner / Locator Operator","type":"text","required":true},
-        {"key":"scanDateTime","label":"Scan Completed Date / Time","type":"datetime","required":true},
-        {"key":"scanResults","label":"Scan Results / Service Positions and Depths","type":"textarea","required":true},
-        {"key":"trialHoles","label":"Trial Hole / Positive Identification Details","type":"textarea","required":false},
-        {"key":"markedAreaPhotoRef","label":"Marked Excavation / Service Photo Reference","type":"text","required":true}
-      ]
-    },
-    {
-      "title": "SAFE EXCAVATION CONTROLS",
-      "items": [
-        "Mechanical excavation limits and hand-dig requirements have been defined from the risk assessment and service information",
-        "Safe digging tools and techniques will be used near suspected or confirmed services",
-        "Exposed services will be supported and protected from damage",
-        "Spoil, materials and plant will be kept far enough from excavation edges to avoid surcharge and collapse",
-        "Suitable barriers / edge protection and warning signs are in place",
-        "Safe access and egress are provided",
-        "Vehicle and plant movements are segregated or controlled by a banksman where necessary",
-        "Water ingress, contaminated ground and hazardous atmospheres have been considered",
-        "Emergency arrangements for service strikes, collapse, flooding or other foreseeable events have been briefed"
-      ],
-      "fields": [
-        {"key":"digMethod","label":"Excavation Method and Sequence","type":"textarea","required":true},
-        {"key":"handDigControls","label":"Hand-Dig / Exclusion Controls Around Services","type":"textarea","required":true},
-        {"key":"serviceProtection","label":"Exposed Service Support / Protection","type":"textarea","required":false},
-        {"key":"emergencyContacts","label":"Emergency Service-Strike Contacts / Procedure Reference","type":"textarea","required":true}
-      ]
-    },
-    {
-      "title": "EXCAVATION STABILITY AND INSPECTION",
-      "items": [
-        "Ground conditions and risk of collapse have been assessed by a competent person",
-        "Battering, benching, shoring, trench box or other support is provided where required",
-        "Adjacent structures, roads, foundations and temporary works have been considered",
-        "Excavation support has been installed in accordance with its design / manufacturer instructions",
-        "A competent person will inspect the excavation before work starts and after events likely to affect stability",
-        "Inspection findings and defects will be recorded and unsafe excavations taken out of use"
-      ],
-      "fields": [
-        {"key":"groundConditions","label":"Ground Conditions / Stability Assessment","type":"textarea","required":true},
-        {"key":"supportMethod","label":"Excavation Support / Battering Method","type":"select","required":true,"options":["Not required - justified by assessment","Battered / benched sides","Trench box / drag box","Sheeting / shoring","Designed temporary works","Other"]},
-        {"key":"temporaryWorksRef","label":"Temporary Works / Support Design Reference","type":"text","required":false},
-        {"key":"competentInspector","label":"Competent Excavation Inspector","type":"text","required":true},
-        {"key":"inspectionDateTime","label":"Pre-start Inspection Date / Time","type":"datetime","required":true}
-      ]
-    },
-    {
-      "title": "REINSTATEMENT AND CLOSE-OUT",
-      "items": [
-        "Services have been inspected and protected before backfilling",
-        "Backfill and compaction method will not damage services",
-        "Required marker tape, tiles, ducts or protection have been reinstated",
-        "Surface finish has been restored or temporary protection clearly identified",
-        "Service drawings / as-built information will be updated where required",
-        "The work area is safe for normal access and the permit can be closed"
-      ],
-      "fields": [
-        {"key":"backfillMethod","label":"Backfill / Compaction Method","type":"textarea","required":true},
-        {"key":"serviceCondition","label":"Condition of Exposed Services Before Backfill","type":"textarea","required":true},
-        {"key":"asBuiltUpdates","label":"As-built / Survey Update Reference","type":"text","required":false},
-        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
-        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true},
-        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false}
+        {
+          "label": "Hand-dig Zone Width from Service",
+          "type": "text",
+          "placeholder": "metres (min. 0.5m required)"
+        },
+        {
+          "label": "Trench Support Method",
+          "type": "select",
+          "options": [
+            "Not required – shallow / safe ground",
+            "Drag/trench box",
+            "Sheet piling",
+            "Timber shoring"
+          ]
+        },
+        {
+          "label": "Service Protection / Diversion Reference",
+          "type": "text",
+          "placeholder": "Diversion design ref. or 'none'"
+        },
+        {
+          "label": "Emergency Contacts Posted",
+          "type": "select",
+          "options": [
+            "Yes",
+            "No – detail reason"
+          ]
+        },
+        {
+          "label": "Backfill Compaction Method",
+          "type": "select",
+          "options": [
+            "Imported fill – hand compact",
+            "Imported fill – plate compact",
+            "Concrete encasement",
+            "Excavated material – layer compact"
+          ]
+        }
       ]
     },
     {
       "title": "AUTHORIZATION TO START",
       "fields": [
-        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
-        {"key":"holderName","label":"Permit Holder Name","type":"text","required":true},
-        {"key":"holderCompany","label":"Holder Company","type":"text","required":true},
-        {"key":"authorizationAt","label":"Authorization Date / Time","type":"datetime","required":true}
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
+        }
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
+      ],
+      "fields": [
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
+        }
       ]
     }
   ],
-  "signatures": ["issuer_issue","holder_accept","competent_person","issuer_close"]
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }

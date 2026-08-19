@@ -1,133 +1,250 @@
 {
   "id": "asbestos-removal-v1",
-  "title": "Asbestos Work Permit",
-  "name": "Asbestos Work Permit",
-  "version": 2,
-  "description": "Permit control for planned work involving known asbestos-containing materials, including licensing / notification status, plan of work, enclosure, RPE, waste and clearance controls.",
+  "title": "Asbestos Removal Permit",
+  "name": "Asbestos Removal Permit",
+  "description": "Permit for asbestos removal activities, ensuring compliance with all safety and environmental regulations.",
   "meta": {
-    "title": "Permit and Asbestos Work Details",
     "fields": [
-      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
-      {"key":"location","label":"Exact ACM Location / Work Area","type":"text","required":true},
-      {"key":"workDescription","label":"Scope of Asbestos Work","type":"textarea","required":true},
-      {"key":"surveyReference","label":"Asbestos Survey / Register Reference and Revision","type":"text","required":true},
-      {"key":"acmDescription","label":"ACM Type, Condition and Extent","type":"textarea","required":true},
-      {"key":"contractorCompany","label":"Asbestos Contractor / Company","type":"text","required":true},
-      {"key":"supervisor","label":"Asbestos Work Supervisor","type":"text","required":true},
-      {"key":"planOfWorkReference","label":"Plan of Work / Method Statement Reference","type":"text","required":true},
-      {"key":"validFrom","label":"Permit Valid From","type":"datetime","required":true},
-      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "key": "areaMaterialToBeRemoved",
+        "label": "Area/Material to be Removed",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "removalMethod",
+        "label": "Removal Method",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "key": "personnelInvolved",
+        "label": "Personnel Involved",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "supervisor",
+        "label": "Supervisor",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "signatures",
+        "label": "Signatures",
+        "type": "signature",
+        "required": true
+      },
+      {
+        "key": "validFrom",
+        "label": "Valid From",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Valid To",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
     {
-      "title": "WORK CLASSIFICATION, LICENSING AND NOTIFICATION",
+      "title": "SITE PREPARATION",
       "items": [
-        "The asbestos survey / register information is sufficient for the planned intrusive work",
-        "The ACM type, condition and likely fibre-release potential have been assessed",
-        "The employer / contractor has determined whether the work is licensable, notifiable non-licensed work or non-licensed work",
-        "Where licensed work is required, a current HSE asbestos licence has been verified",
-        "Where notification is required, the appropriate enforcing authority has been notified and the required notification period / conditions are satisfied",
-        "The plan of work covers asbestos risks and other health and safety risks arising from the task",
-        "Work will stop and be reassessed if unexpected or additional suspect material is encountered"
+        "Asbestos survey completed and reviewed",
+        "Work area sealed and isolated",
+        "Negative air pressure system installed",
+        "Decontamination unit set up",
+        "Warning signs posted"
       ],
       "fields": [
-        {"key":"workClassification","label":"Work Classification","type":"select","required":true,"options":["Licensable asbestos work","Notifiable non-licensed work (NNLW)","Non-licensed asbestos work"]},
-        {"key":"licenceNumber","label":"HSE Asbestos Licence Number / Expiry (if licensable)","type":"text","required":false},
-        {"key":"notificationReference","label":"ASB5 / NNLW Notification Reference (if applicable)","type":"text","required":false},
-        {"key":"notificationDate","label":"Notification Date (if applicable)","type":"date","required":false},
-        {"key":"riskAssessmentReference","label":"Asbestos Risk Assessment Reference","type":"text","required":true}
+        {
+          "label": "Asbestos Survey Reference / Report No.",
+          "type": "text"
+        },
+        {
+          "label": "ACM Type",
+          "type": "select",
+          "options": [
+            "Chrysotile (white)",
+            "Amosite (brown)",
+            "Crocidolite (blue)",
+            "Mixed / unknown – treat as worst case"
+          ]
+        },
+        {
+          "label": "Licensed Contractor Registration No.",
+          "type": "text"
+        },
+        {
+          "label": "Negative Pressure Reading (Pa)",
+          "type": "text",
+          "placeholder": "Minimum -5 Pa required"
+        },
+        {
+          "label": "Enclosure Integrity Test Confirmed",
+          "type": "select",
+          "options": [
+            "Yes – smoke test passed",
+            "Yes – physical check only",
+            "Not required – notifiable non-licensed (NNLW)"
+          ]
+        }
       ]
     },
     {
-      "title": "WORK AREA, ENCLOSURE AND EXPOSURE CONTROLS",
+      "title": "RESPIRATORY PROTECTION",
       "items": [
-        "The work area is segregated from other workers and the public with suitable warning signs and access control",
-        "Enclosure, local extraction, wetting or other dust-control methods match the plan of work",
-        "Negative-pressure / extraction equipment is correctly installed and checked where an enclosure is required",
-        "Air movement will not spread asbestos fibres to clean areas",
-        "Tools and work methods are selected to minimise breakage and fibre release",
-        "Contaminated surfaces and equipment can be cleaned before leaving the controlled area",
-        "Emergency arrangements cover enclosure failure, loss of extraction, accidental damage and personnel emergencies"
+        "RPE fit-tested and assigned",
+        "Face-fit records current",
+        "Spare filters/cartridges available",
+        "Emergency escape RPE provided"
       ],
       "fields": [
-        {"key":"controlMethod","label":"Primary Fibre-Control Method(s)","type":"textarea","required":true},
-        {"key":"enclosureDetails","label":"Enclosure / Air Management Details and Equipment IDs","type":"textarea","required":false},
-        {"key":"smokeIntegrityTest","label":"Enclosure Integrity / Smoke Test Reference (if applicable)","type":"text","required":false},
-        {"key":"emergencyProcedure","label":"Asbestos Emergency Procedure Reference","type":"text","required":true}
+        {
+          "label": "RPE Type Assigned",
+          "type": "select",
+          "options": [
+            "FFP3 disposable half mask",
+            "Full-face RPE with P3 filter",
+            "PAPR (powered air-purifying)",
+            "Air-line / SCBA"
+          ]
+        },
+        {
+          "label": "RPE Fit-test Certificate Reference",
+          "type": "text"
+        },
+        {
+          "label": "Decontamination Unit Location",
+          "type": "text"
+        },
+        {
+          "label": "Decon Unit Stages Confirmed Operational",
+          "type": "select",
+          "options": [
+            "3-stage (dirty / shower / clean)",
+            "2-stage (dirty / clean – low risk)",
+            "N/A – NNLW"
+          ]
+        }
       ]
     },
     {
-      "title": "COMPETENCE, RPE, PPE AND DECONTAMINATION",
+      "title": "WASTE DISPOSAL",
       "items": [
-        "Workers and supervisors have training appropriate to the class of asbestos work",
-        "RPE selection is based on the risk assessment and expected exposure",
-        "Tight-fitting RPE users have a current face-fit test for the exact make / model used",
-        "RPE is inspected, maintained and used correctly",
-        "Protective clothing and footwear controls prevent spread of contamination",
-        "Suitable decontamination arrangements are available before work starts",
-        "Medical surveillance requirements have been checked where applicable"
+        "Licensed waste contractor engaged",
+        "Double-bagged in marked bags",
+        "Waste consignment notes prepared",
+        "Transfer station notified"
       ],
       "fields": [
-        {"key":"trainingEvidence","label":"Worker / Supervisor Training Evidence","type":"textarea","required":true},
-        {"key":"rpeType","label":"RPE Type / Make / Model","type":"text","required":true},
-        {"key":"faceFitReferences","label":"Face-fit Test References / Dates","type":"textarea","required":true},
-        {"key":"decontamination","label":"Decontamination Unit / Procedure Details","type":"textarea","required":true},
-        {"key":"medicalSurveillance","label":"Medical Surveillance Confirmation / Reference (where required)","type":"text","required":false}
+        {
+          "label": "Waste Carrier Licence No.",
+          "type": "text"
+        },
+        {
+          "label": "Consignment Note Reference",
+          "type": "text"
+        },
+        {
+          "label": "Disposal Site / Transfer Station",
+          "type": "text"
+        },
+        {
+          "label": "Clearance Air Test Reference",
+          "type": "text",
+          "placeholder": "4-stage clearance or visual inspection ref."
+        }
       ]
     },
     {
-      "title": "AIR MONITORING, ANALYST AND CLEARANCE",
-      "items": [
-        "Air monitoring requirements have been determined from the risk assessment / plan of work",
-        "Where required, a competent UKAS-accredited analytical organisation has been appointed",
-        "The analyst is sufficiently independent of the removal contractor for the required clearance activity",
-        "For licensed enclosure work, four-stage clearance / certification for reoccupation will be completed where required",
-        "The area will not be released for normal occupation until the required clearance criteria are met"
-      ],
+      "title": "AUTHORIZATION TO START",
       "fields": [
-        {"key":"analystOrganisation","label":"Analytical Organisation / Analyst","type":"text","required":false},
-        {"key":"airMonitoringPlan","label":"Air Monitoring Plan / Reference","type":"textarea","required":false},
-        {"key":"clearanceRequirement","label":"Clearance Requirement","type":"select","required":true,"options":["Four-stage clearance / Certificate for Reoccupation required","Visual / task-specific clearance required","Other clearance defined in plan of work"]},
-        {"key":"clearanceCertificate","label":"Clearance / Reoccupation Certificate Reference","type":"text","required":false}
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
+        }
       ]
     },
     {
-      "title": "ASBESTOS WASTE",
+      "title": "HAND-BACK AND CLOSE-OUT",
       "items": [
-        "Asbestos waste will be suitably contained, sealed and labelled",
-        "Waste will move through a controlled route that prevents contamination of clean areas",
-        "The waste carrier and receiving facility are authorised for the waste being transported",
-        "Required hazardous waste / consignment documentation will be completed and retained",
-        "Temporary waste storage is secure and protected from damage or unauthorised access"
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
       ],
       "fields": [
-        {"key":"wasteCarrier","label":"Waste Carrier / Registration Reference","type":"text","required":true},
-        {"key":"disposalFacility","label":"Authorised Disposal / Transfer Facility","type":"text","required":true},
-        {"key":"consignmentReference","label":"Waste Consignment / Tracking Reference","type":"text","required":true},
-        {"key":"wasteRoute","label":"Waste Route / Temporary Storage Details","type":"textarea","required":true}
-      ]
-    },
-    {
-      "title": "AUTHORIZATION AND CLOSE-OUT",
-      "items": [
-        "Permit issuer has verified the work classification, plan of work and key controls before start",
-        "Work is complete and all asbestos waste and contaminated consumables are controlled",
-        "Required clearance / reoccupation evidence has been received before barriers are removed",
-        "The asbestos register / records will be updated to show removed, remaining or encapsulated ACMs",
-        "The area is safe for hand-back subject to any recorded restrictions"
-      ],
-      "fields": [
-        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
-        {"key":"holderName","label":"Permit Holder / Contractor Supervisor","type":"text","required":true},
-        {"key":"authorizationAt","label":"Authorised Date / Time","type":"datetime","required":true},
-        {"key":"workCompletedSummary","label":"Completion / Clearance Summary","type":"textarea","required":true},
-        {"key":"registerUpdateReference","label":"Asbestos Register Update Reference","type":"text","required":true},
-        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
-        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true},
-        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false}
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
+        }
       ]
     }
   ],
-  "signatures": ["issuer_issue","holder_accept","asbestos_supervisor","issuer_close"]
+  "signatures": [
+    "issuer_issue",
+    "holder_accept",
+    "issuer_close"
+  ]
 }
