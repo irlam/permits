@@ -10,15 +10,15 @@ final class ConstructionPermitPresetTest extends TestCase
     {
         $root = dirname(__DIR__) . '/templates/form-presets';
         $files = [
-            'lockout' => 'lockout-tagout.json',
-            'confined' => 'confined-space-entry.json',
-            'dig' => 'permit-to-dig.json',
-            'height' => 'working-at-heights.json',
-            'temporary' => 'temporary-works.json',
-            'asbestos' => 'asbestos-removal.json',
-            'scaffold' => 'scaffolding.json',
-            'demolition' => 'demolition.json',
-            'hotworks' => 'hot-works.json',
+            'lockout' => 'lockout-tagout-v2.json',
+            'confined' => 'confined-space-entry-v2.json',
+            'dig' => 'permit-to-dig-v2.json',
+            'height' => 'working-at-height-v2.json',
+            'temporary' => 'temporary-works-v2.json',
+            'asbestos' => 'asbestos-work-v2.json',
+            'scaffold' => 'scaffolding-v2.json',
+            'demolition' => 'demolition-v2.json',
+            'hotworks' => 'hot-works-v2.json',
         ];
 
         $presets = [];
@@ -27,6 +27,8 @@ final class ConstructionPermitPresetTest extends TestCase
             self::assertIsString($raw, $file . ' must be readable');
             $decoded = json_decode($raw, true);
             self::assertIsArray($decoded, $file . ' must contain valid JSON');
+            self::assertSame(2, (int)($decoded['version'] ?? 0), $file . ' must be version 2');
+            self::assertStringEndsWith('-v2', (string)($decoded['id'] ?? ''), $file . ' must use an immutable v2 template ID');
             $presets[$key] = $decoded;
         }
 
@@ -45,13 +47,11 @@ final class ConstructionPermitPresetTest extends TestCase
         return $labels;
     }
 
-    public function testCriticalConstructionPresetsAreVersionTwoAndStructured(): void
+    public function testCriticalConstructionPresetsAreSubstantive(): void
     {
         foreach ($this->presets() as $name => $preset) {
-            self::assertGreaterThanOrEqual(2, (int)($preset['version'] ?? 0), $name . ' must be a versioned safety upgrade');
             self::assertNotEmpty($preset['meta']['fields'] ?? [], $name . ' must include permit details');
             self::assertGreaterThanOrEqual(5, count($preset['sections'] ?? []), $name . ' must include substantive control sections');
-
             $checkItems = 0;
             foreach (($preset['sections'] ?? []) as $section) {
                 $checkItems += count($section['items'] ?? []);
