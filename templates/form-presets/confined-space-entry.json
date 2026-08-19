@@ -2,274 +2,131 @@
   "id": "confined-space-entry-v1",
   "title": "Confined Space Entry Permit",
   "name": "Confined Space Entry Permit",
-  "description": "Permit for entry into confined spaces, ensuring all safety protocols are met.",
+  "version": 2,
+  "description": "Permit for controlled entry into confined spaces with atmosphere, isolation, communication and rescue controls.",
   "meta": {
+    "title": "Permit and Entry Details",
     "fields": [
-      {
-        "key": "location",
-        "label": "Location",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "date",
-        "label": "Date",
-        "type": "date",
-        "required": true
-      },
-      {
-        "key": "timeIn",
-        "label": "Time In",
-        "type": "time",
-        "required": true
-      },
-      {
-        "key": "timeOut",
-        "label": "Time Out",
-        "type": "time",
-        "required": false
-      },
-      {
-        "key": "entrant(s)",
-        "label": "Entrant(s)",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "attendant(s)",
-        "label": "Attendant(s)",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "supervisor",
-        "label": "Supervisor",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "atmosphericTestingResults",
-        "label": "Atmospheric Testing Results",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "pPERequired",
-        "label": "PPE Required",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "rescuePlan",
-        "label": "Rescue Plan",
-        "type": "textarea",
-        "required": true
-      },
-      {
-        "key": "signatures",
-        "label": "Signatures",
-        "type": "signature",
-        "required": true
-      }
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"spaceId","label":"Confined Space ID / Description","type":"text","required":true},
+      {"key":"location","label":"Exact Location / Access Point","type":"text","required":true},
+      {"key":"workScope","label":"Purpose and Scope of Entry","type":"textarea","required":true},
+      {"key":"contractorCompany","label":"Contractor / Company","type":"text","required":true},
+      {"key":"ramsReference","label":"RAMS / Safe System of Work Reference","type":"text","required":true},
+      {"key":"entrySupervisor","label":"Entry Supervisor / Permit Controller","type":"text","required":true},
+      {"key":"entrants","label":"Authorised Entrants","type":"textarea","required":true},
+      {"key":"attendant","label":"Top Person / Attendant","type":"text","required":true},
+      {"key":"validFrom","label":"Permit Valid From","type":"datetime","required":true},
+      {"key":"validTo","label":"Permit Expires","type":"datetime","required":true}
     ]
   },
   "sections": [
     {
-      "title": "ATMOSPHERIC TESTING",
+      "title": "CONFINED SPACE HAZARDS AND ISOLATION",
       "items": [
-        "Oxygen level 19.5-23.5%",
-        "Flammable gas <10% LEL",
-        "Toxic gas within safe limits",
-        "Continuous monitoring equipment in use",
-        "Test results recorded and signed"
+        "Entry is necessary and the work cannot reasonably be completed without entering the space",
+        "Hazards arising from the space, process and proposed work have been assessed",
+        "Mechanical, electrical, hydraulic and pneumatic equipment has been isolated where required",
+        "Pipelines and process connections have been isolated, blanked or otherwise secured where required",
+        "Potential for flooding, engulfment or material ingress has been controlled",
+        "Heat, residues, biological hazards and hazardous substances have been considered",
+        "Safe access and egress have been established and will remain available"
       ],
       "fields": [
-        {
-          "label": "Oxygen Level (%)",
-          "type": "text",
-          "placeholder": "Safe range 19.5–23.5%"
-        },
-        {
-          "label": "Flammable Gas Level (% LEL)",
-          "type": "text",
-          "placeholder": "Safe <10% LEL"
-        },
-        {
-          "label": "H2S / CO Level (ppm)",
-          "type": "text",
-          "placeholder": "Record both if applicable"
-        },
-        {
-          "label": "Testing Equipment Serial No.",
-          "type": "text"
-        },
-        {
-          "label": "Monitoring Frequency",
-          "type": "select",
-          "options": [
-            "Continuous",
-            "Every 15 minutes",
-            "Every 30 minutes",
-            "Every 60 minutes"
-          ]
-        }
+        {"key":"identifiedHazards","label":"Identified Confined Space Hazards","type":"multiselect","required":true,"options":[{"value":"oxygen","label":"Oxygen deficiency / enrichment"},{"value":"flammable","label":"Flammable atmosphere"},{"value":"toxic","label":"Toxic gas / vapour"},{"value":"engulfment","label":"Flooding / engulfment"},{"value":"mechanical","label":"Mechanical movement"},{"value":"electrical","label":"Electrical"},{"value":"heat","label":"Heat / cold"},{"value":"biological","label":"Biological"},{"value":"access","label":"Restricted access / egress"},{"value":"other","label":"Other"}]},
+        {"key":"isolationReferences","label":"Isolation / LOTO References","type":"textarea","required":true},
+        {"key":"lineIsolationDetails","label":"Pipework / Process Isolation Details","type":"textarea","required":false}
       ]
     },
     {
-      "title": "VENTILATION & ISOLATION",
+      "title": "ATMOSPHERIC TESTING AND VENTILATION",
       "items": [
-        "Forced ventilation operating",
-        "All energy sources isolated",
-        "Mechanical equipment locked out",
-        "Pipelines blanked or disconnected",
-        "Entry/exit routes clear and safe"
+        "Atmosphere has been tested before entry at representative levels and locations",
+        "Oxygen concentration is within the safe range specified by the risk assessment",
+        "Flammable gases or vapours are below the specified entry limit",
+        "Toxic contaminants are below the applicable exposure / entry limits",
+        "Gas detector has a current calibration / function check and is suitable for expected contaminants",
+        "Ventilation is sufficient and positioned so that it does not introduce contaminants",
+        "Continuous or periodic monitoring arrangements are defined for the duration of entry"
       ],
       "fields": [
-        {
-          "label": "Ventilation Type",
-          "type": "select",
-          "options": [
-            "Natural ventilation",
-            "Forced supply",
-            "Forced exhaust",
-            "Both forced supply and exhaust"
-          ]
-        },
-        {
-          "label": "Ventilation Flow Rate / Equipment ID",
-          "type": "text"
-        },
-        {
-          "label": "Isolation Lock / Tag References",
-          "type": "text",
-          "placeholder": "List all lock numbers applied"
-        },
-        {
-          "label": "Blanked / Disconnected Lines",
-          "type": "textarea",
-          "placeholder": "List pipelines or services made safe"
-        }
+        {"key":"initialTestTime","label":"Initial Atmospheric Test Date / Time","type":"datetime","required":true},
+        {"key":"testerName","label":"Atmosphere Tested By","type":"text","required":true},
+        {"key":"gasDetectorId","label":"Gas Detector ID / Serial Number","type":"text","required":true},
+        {"key":"bumpCalibration","label":"Calibration / Bump Test Reference or Date","type":"text","required":true},
+        {"key":"oxygen","label":"Oxygen Reading (%)","type":"number","required":true,"min":0,"max":100,"step":0.1},
+        {"key":"lel","label":"Flammable Reading (% LEL)","type":"number","required":true,"min":0,"max":100,"step":0.1},
+        {"key":"h2s","label":"H2S Reading (ppm)","type":"number","required":false,"min":0},
+        {"key":"co","label":"CO Reading (ppm)","type":"number","required":false,"min":0},
+        {"key":"otherGas","label":"Other Gas / Vapour and Reading","type":"text","required":false},
+        {"key":"monitoringFrequency","label":"Ongoing Monitoring","type":"select","required":true,"options":["Continuous","Every 15 minutes","Every 30 minutes","Before re-entry after any break","Other - detail in notes"]},
+        {"key":"ventilation","label":"Ventilation Method / Equipment ID","type":"textarea","required":true},
+        {"key":"furtherReadings","label":"Subsequent Atmospheric Readings / Times","type":"textarea","required":false}
       ]
     },
     {
-      "title": "EMERGENCY PREPAREDNESS",
+      "title": "ENTRY CONTROLS, PPE AND COMMUNICATION",
       "items": [
-        "Rescue equipment in place",
-        "Attendant posted at entry point",
-        "Communication system tested",
-        "Emergency services notified",
-        "Rescue plan briefed to all personnel"
+        "All entrants are trained, competent and medically fit where required",
+        "The attendant will remain at the entry point and will not undertake conflicting duties",
+        "Reliable communication between entrants and the attendant has been tested",
+        "Entry / exit arrangements suit the number of entrants and potential casualty recovery",
+        "Required PPE and respiratory protective equipment have been checked before entry",
+        "Lighting and electrical equipment are suitable for the environment",
+        "Entry and exit of each person will be recorded and everyone accounted for"
       ],
       "fields": [
-        {
-          "label": "Rescue Plan Reference",
-          "type": "text"
-        },
-        {
-          "label": "Emergency Services Pre-notified",
-          "type": "select",
-          "options": [
-            "Yes",
-            "No – rescue team on site",
-            "No – not required for this space"
-          ]
-        },
-        {
-          "label": "Attendant Name & Contact",
-          "type": "text"
-        },
-        {
-          "label": "Communication Device",
-          "type": "select",
-          "options": [
-            "Radio",
-            "Mobile phone",
-            "Intercom",
-            "Lifeline",
-            "Other"
-          ]
-        },
-        {
-          "label": "Rescue Equipment Location",
-          "type": "text"
-        }
+        {"key":"communicationMethod","label":"Communication Method","type":"select","required":true,"options":["Radio","Hard-wired intercom","Voice / visual contact","Lifeline signals","Other"]},
+        {"key":"ppeRpe","label":"PPE / RPE Required","type":"textarea","required":true},
+        {"key":"entryLog","label":"Entrant Sign-in / Sign-out Record","type":"textarea","required":true},
+        {"key":"lightingEquipment","label":"Lighting / Electrical Equipment Controls","type":"textarea","required":false}
       ]
     },
     {
-      "title": "AUTHORIZATION TO START",
+      "title": "EMERGENCY AND RESCUE ARRANGEMENTS",
+      "items": [
+        "A site-specific rescue plan has been prepared before entry",
+        "Rescue arrangements do not rely solely on the emergency services",
+        "Rescue personnel are available, trained and briefed",
+        "Required rescue equipment is immediately available and has been checked",
+        "Casualty retrieval has been considered for the actual access route and space geometry",
+        "Alarm and emergency communication methods have been tested",
+        "First-aid and resuscitation arrangements are available where required"
+      ],
       "fields": [
-        {
-          "key": "issuerName",
-          "label": "Permit Issuer Name",
-          "type": "text"
-        },
-        {
-          "key": "issuerRole",
-          "label": "Permit Issuer Role",
-          "type": "text"
-        },
-        {
-          "key": "holderName",
-          "label": "Permit Holder Name",
-          "type": "text"
-        },
-        {
-          "key": "holderCompany",
-          "label": "Holder Company",
-          "type": "text"
-        },
-        {
-          "key": "authorizationAt",
-          "label": "Authorization Date/Time",
-          "type": "datetime"
-        }
+        {"key":"rescuePlanReference","label":"Rescue Plan Reference","type":"text","required":true},
+        {"key":"rescueTeam","label":"Rescue Team / Named Rescuers","type":"textarea","required":true},
+        {"key":"rescueEquipment","label":"Rescue Equipment Available","type":"textarea","required":true},
+        {"key":"retrievalMethod","label":"Casualty Retrieval Method","type":"textarea","required":true},
+        {"key":"emergencyContact","label":"Emergency Contact / Alarm Method","type":"text","required":true}
       ]
     },
     {
-      "title": "HAND-BACK AND CLOSE-OUT",
+      "title": "AUTHORIZATION TO ENTER",
+      "fields": [
+        {"key":"issuerName","label":"Permit Issuer Name","type":"text","required":true},
+        {"key":"issuerRole","label":"Permit Issuer Role","type":"text","required":true},
+        {"key":"holderName","label":"Permit Holder / Entry Supervisor","type":"text","required":true},
+        {"key":"authorizationAt","label":"Entry Authorised Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "EXIT, HAND-BACK AND CLOSE-OUT",
       "items": [
-        "Work completed and area inspected",
-        "Plant, tools and temporary controls removed",
-        "Systems reinstated safely",
-        "Area left clean and safe"
+        "All entrants have exited and are accounted for",
+        "Tools, materials and temporary equipment have been removed or safely handed over",
+        "The space has been secured against unauthorised re-entry",
+        "Isolations will only be removed under the appropriate isolation / reinstatement procedure",
+        "Any defects, contamination or changed conditions have been recorded and communicated"
       ],
       "fields": [
-        {
-          "key": "workCompletedSummary",
-          "label": "Work Completed Summary",
-          "type": "textarea"
-        },
-        {
-          "key": "areaLeftSafeBy",
-          "label": "Area Left Safe By",
-          "type": "text"
-        },
-        {
-          "key": "handBackTo",
-          "label": "Hand-back To (Name)",
-          "type": "text"
-        },
-        {
-          "key": "closedBy",
-          "label": "Closed By",
-          "type": "text"
-        },
-        {
-          "key": "closedAt",
-          "label": "Closure Date/Time",
-          "type": "datetime"
-        },
-        {
-          "key": "outstandingActions",
-          "label": "Outstanding Actions",
-          "type": "textarea"
-        }
+        {"key":"finalHeadcount","label":"Final Entrant Headcount / Confirmation","type":"text","required":true},
+        {"key":"workCompletedSummary","label":"Work Completed Summary","type":"textarea","required":true},
+        {"key":"closedBy","label":"Permit Closed By","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true},
+        {"key":"outstandingActions","label":"Outstanding Actions / Restrictions","type":"textarea","required":false}
       ]
     }
   ],
-  "signatures": [
-    "issuer_issue",
-    "holder_accept",
-    "issuer_close"
-  ]
+  "signatures": ["issuer_issue","holder_accept","attendant","issuer_close"]
 }
