@@ -22,6 +22,9 @@
     width: 1px;
     height: 1px;
     margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     opacity: 0;
     overflow: hidden;
     pointer-events: none;
