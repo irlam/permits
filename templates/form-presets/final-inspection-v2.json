@@ -1,0 +1,82 @@
+{
+  "id": "final-inspection-v2",
+  "title": "Final Inspection Checklist",
+  "name": "Final Inspection Checklist",
+  "version": 2,
+  "workflow": "inspection",
+  "description": "Final completion and handover inspection record for documenting readiness, outstanding items, commissioning records and acceptance status. It is an inspection record rather than a permit to work.",
+  "meta": {
+    "title": "Final Inspection Details",
+    "fields": [
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"propertyArea","label":"Building / Area / Package","type":"text","required":true},
+      {"key":"inspectionScope","label":"Completion / Handover Scope","type":"textarea","required":true},
+      {"key":"inspectorName","label":"Inspector Name","type":"text","required":true},
+      {"key":"inspectorCompany","label":"Inspector Company / Organisation","type":"text","required":true},
+      {"key":"clientRepresentative","label":"Client / Receiving Representative","type":"text","required":false},
+      {"key":"inspectionAt","label":"Inspection Date / Time","type":"datetime","required":true},
+      {"key":"completionReference","label":"Completion / Handover Reference","type":"text","required":true}
+    ]
+  },
+  "sections": [
+    {
+      "title": "COMPLETION VERIFICATION",
+      "items": [
+        "The agreed scope of works is complete for the area being inspected",
+        "Outstanding defects and snagging items have been reviewed",
+        "Required testing and commissioning records are available",
+        "Life-safety and protective systems relevant to the area are operational or formally handed over",
+        "Temporary works, temporary services and protection have been removed or formally retained",
+        "The area is safe, clean and suitable for the intended handover stage"
+      ],
+      "fields": [
+        {"key":"defectsListReference","label":"Defects / Snagging List Reference","type":"text","required":false},
+        {"key":"outstandingDefects","label":"Outstanding Defects / Items","type":"textarea","required":false},
+        {"key":"testingCommissioningRefs","label":"Testing & Commissioning References","type":"textarea","required":true},
+        {"key":"completionStatus","label":"Completion Status","type":"select","required":true,"options":["Complete","Complete with minor outstanding items","Major items outstanding","Not ready for handover"]}
+      ]
+    },
+    {
+      "title": "DOCUMENTATION AND HANDOVER",
+      "items": [
+        "Required as-built information has been provided or its outstanding status recorded",
+        "O&M / maintenance information relevant to the handover has been provided or tracked",
+        "Required certificates, test results and commissioning records have been handed over or tracked",
+        "Keys, access controls, isolations and operational restrictions have been communicated",
+        "Outstanding actions have an owner and target date"
+      ],
+      "fields": [
+        {"key":"asBuiltReference","label":"As-built Drawing / Model Reference","type":"text","required":false},
+        {"key":"omReference","label":"O&M / Handover Document Reference","type":"text","required":false},
+        {"key":"certificateReferences","label":"Certificate / Test Record References","type":"textarea","required":false},
+        {"key":"restrictions","label":"Handover Restrictions / Operational Limitations","type":"textarea","required":false},
+        {"key":"outstandingOwner","label":"Outstanding Action Owner","type":"text","required":false},
+        {"key":"outstandingDue","label":"Outstanding Action Due Date","type":"date","required":false}
+      ]
+    },
+    {
+      "title": "FINAL ACCEPTANCE",
+      "items": [
+        "The final inspection outcome has been communicated to the responsible team",
+        "Any item preventing handover is clearly identified",
+        "Any conditional acceptance is documented with its conditions",
+        "A re-inspection date is identified where the area is not fully accepted",
+        "The final inspection record will be retained with project handover records"
+      ],
+      "fields": [
+        {"key":"acceptanceStatus","label":"Final Acceptance Status","type":"select","required":true,"options":["Accepted","Accepted with agreed outstanding items","Conditional acceptance","Not accepted - re-inspection required"]},
+        {"key":"acceptanceComments","label":"Acceptance / Rejection Comments","type":"textarea","required":true},
+        {"key":"reinspectionDate","label":"Re-inspection Date (if required)","type":"date","required":false}
+      ]
+    },
+    {
+      "title": "INSPECTION SIGN-OFF",
+      "fields": [
+        {"key":"inspectorSignoff","label":"Inspector Sign-off Name","type":"text","required":true},
+        {"key":"receivingSignoff","label":"Client / Receiving Representative Acknowledgement","type":"text","required":false},
+        {"key":"signoffAt","label":"Sign-off Date / Time","type":"datetime","required":true}
+      ]
+    }
+  ],
+  "signatures": ["inspector_signoff"]
+}
