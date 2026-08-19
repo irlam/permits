@@ -1,22 +1,15 @@
 <?php
 /**
  * Approve Permit API
- * 
- * File Path: /api/approve-permit.php
- * Description: API endpoint to approve pending permits
- * Created: 23/10/2025
- * Last Modified: 23/10/2025
- * 
- * Features:
- * - Approves permit (changes status to active)
- * - Sends email notification
- * - Sends push notification (if subscribed)
- * - Manager/Admin only
+ *
+ * Phase 4 separates management authorisation from holder/receiver acceptance.
+ * Approval therefore moves a permit to awaiting_acceptance; the validity clock
+ * starts only when the holder accepts the permit conditions.
  */
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 
-// Load bootstrap
 [$app, $db, $root] = require __DIR__ . '/../src/bootstrap.php';
 require_once __DIR__ . '/../src/approval-notifications.php';
 require_once __DIR__ . '/../src/permit-durations.php';
@@ -38,7 +31,6 @@ if (!\Permits\Csrf::validateRequest('permit-approve')) {
     exit;
 }
 
-// Get request data
 $input = json_decode(file_get_contents('php://input'), true);
 $permit_id = is_array($input) && is_scalar($input['permit_id'] ?? null)
     ? trim((string) $input['permit_id'])
@@ -51,7 +43,6 @@ if (!$permit_id) {
 }
 
 try {
-    // Get permit details
     $stmt = $db->pdo->prepare("
         SELECT f.*, ft.form_structure, ft.json_schema
         FROM forms f
@@ -61,13 +52,13 @@ try {
     ");
     $stmt->execute([$permit_id]);
     $permit = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$permit) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Permit not found']);
         exit;
     }
-    
+
     if ($permit['status'] !== 'pending_approval') {
         http_response_code(409);
         echo json_encode(['success' => false, 'message' => 'Permit is not awaiting approval']);
@@ -140,39 +131,40 @@ try {
 
     $driver = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
     $now = $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
-    $validTo = $driver === 'sqlite'
-        ? "datetime('now', '+{$durationMinutes} minutes')"
-        : "DATE_ADD(NOW(), INTERVAL {$durationMinutes} MINUTE)";
     $db->pdo->beginTransaction();
-    // Update permit status atomically
+
     $updateStmt = $db->pdo->prepare("
-        UPDATE forms 
-        SET status = 'active',
+        UPDATE forms
+        SET status = 'awaiting_acceptance',
             approval_status = 'approved',
             approved_by = ?,
             approved_at = $now,
-            valid_from = $now,
-            valid_to = $validTo,
-            expires_at = $validTo,
+            valid_from = NULL,
+            valid_to = NULL,
+            expires_at = NULL,
             expiry_duration = ?,
             updated_at = $now
         WHERE id = ? AND status = 'pending_approval'
     ");
     $updateStmt->execute([$user['id'], $durationLabel, $permit_id]);
-    if ($updateStmt->rowCount() !== 1) { throw new RuntimeException('Permit state changed during approval'); }
-    $db->pdo->commit();
+    if ($updateStmt->rowCount() !== 1) {
+        throw new RuntimeException('Permit state changed during approval');
+    }
 
-    $validityStmt = $db->pdo->prepare('SELECT valid_from, valid_to FROM forms WHERE id = ?');
-    $validityStmt->execute([$permit_id]);
-    $validity = $validityStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    \Permits\PermitWorkflow::recordEvent($db->pdo, $permit_id, 'permit_approved', (string)$user['id'], [
+        'approved_by_name' => (string)($user['name'] ?? ''),
+        'duration_minutes' => (int)$durationMinutes,
+        'duration_label' => (string)$durationLabel,
+        'holder_acceptance_required' => true,
+    ]);
+    $db->pdo->commit();
 
     try {
         clearPendingApprovalNotificationFlag($db, $permit_id);
     } catch (\Throwable $e) {
         error_log('Failed to clear approval notification flag after approval: ' . $e->getMessage());
     }
-    
-    // Log activity
+
     if (function_exists('logActivity')) {
         try {
             logActivity(
@@ -180,23 +172,23 @@ try {
                 'approval',
                 'form',
                 $permit_id,
-                "Permit " . ($permit['ref_number'] ?? $permit['ref'] ?? $permit_id) . " approved by {$user['name']}"
+                "Permit " . ($permit['ref_number'] ?? $permit['ref'] ?? $permit_id) . " approved by {$user['name']}; holder acceptance required"
             );
         } catch (Throwable $logError) {
             error_log('Unable to log permit approval: ' . $logError->getMessage());
         }
     }
-    
-    // Queue the holder notification after the permit transaction has committed.
+
     if (!empty($permit['holder_email'])) {
         try {
             $ref = $permit['ref_number'] ?? $permit['ref'] ?? $permit_id;
             $notificationPermit = array_merge($permit, [
                 'ref' => (string) $ref,
                 'ref_number' => (string) $ref,
-                'valid_from' => $validity['valid_from'] ?? null,
-                'valid_to' => $validity['valid_to'] ?? null,
+                'valid_from' => null,
+                'valid_to' => null,
                 'duration_label' => $durationLabel,
+                'status' => 'awaiting_acceptance',
             ]);
             $mailer = new \Permits\Email($db, $root);
             $mailer->sendApprovalNotification($notificationPermit, (string) $permit['holder_email']);
@@ -204,22 +196,19 @@ try {
             error_log('Unable to queue permit approval email: ' . $emailError->getMessage());
         }
     }
-    
-    // Send push notification (if subscribed)
-    // This would integrate with your push notification system
-    
+
     echo json_encode([
         'success' => true,
-        'message' => 'Permit approved successfully',
+        'message' => 'Permit approved. The holder must now accept the permit before work can start.',
+        'status' => 'awaiting_acceptance',
         'duration_label' => $durationLabel,
-        'valid_from' => $validity['valid_from'] ?? null,
-        'valid_to' => $validity['valid_to'] ?? null,
+        'duration_minutes' => $durationMinutes,
     ]);
-    
+
 } catch (Throwable $e) {
     if ($db->pdo->inTransaction()) { $db->pdo->rollBack(); }
     http_response_code(500);
-    error_log("Error approving permit: " . $e->getMessage());
+    error_log('Error approving permit: ' . $e->getMessage());
     echo json_encode([
         'success' => false,
         'message' => 'Server error'

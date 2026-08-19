@@ -6,19 +6,20 @@ use Ramsey\Uuid\Uuid;
 
 /**
  * Locate permits whose validity window has elapsed and update them to expired.
+ * Suspended permits and revalidated permits awaiting holder re-acceptance still
+ * retain their original validity deadline and must expire at that deadline.
+ * Initial approvals awaiting first acceptance have valid_to = NULL and are not
+ * expired here because their validity clock has not started yet.
  *
  * @param object{pdo: \PDO} $db Database wrapper with a public PDO instance
  * @param bool $throwOnFailure Let the CLI worker surface database failures.
- * @return int Number of permits transitioned to the expired state.
  */
 function check_and_expire_permits(object $db, bool $throwOnFailure = false): int
 {
     try {
         $driver = $db->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) ?: 'mysql';
     } catch (\Throwable $e) {
-        if ($throwOnFailure) {
-            throw $e;
-        }
+        if ($throwOnFailure) throw $e;
         return 0;
     }
 
@@ -26,33 +27,30 @@ function check_and_expire_permits(object $db, bool $throwOnFailure = false): int
     $validToCheck = $driver === 'sqlite'
         ? "valid_to IS NOT NULL AND TRIM(valid_to) <> '' AND TRIM(valid_to) NOT LIKE '0000%' AND datetime(valid_to) <= $nowExpression"
         : "valid_to IS NOT NULL AND valid_to NOT LIKE '0000%' AND valid_to <= $nowExpression";
+    $expirableStatuses = "'issued', 'active', 'approved', 'open', 'suspended', 'awaiting_acceptance'";
 
     $sql = <<<SQL
         SELECT id, status, valid_to, ref, ref_number
         FROM forms
-        WHERE status IN ('issued', 'active', 'approved', 'open')
+        WHERE status IN ($expirableStatuses)
           AND $validToCheck
     SQL;
 
     try {
         $expiredPermits = $db->pdo->query($sql, \PDO::FETCH_ASSOC) ?: [];
     } catch (\Throwable $e) {
-        if ($throwOnFailure) {
-            throw $e;
-        }
+        if ($throwOnFailure) throw $e;
         return 0;
     }
 
-    if (!is_iterable($expiredPermits)) {
-        return 0;
-    }
+    if (!is_iterable($expiredPermits)) return 0;
 
     $updatedCount = 0;
     $updateStatement = $db->pdo->prepare(
         "UPDATE forms
          SET status = 'expired', updated_at = $nowExpression
          WHERE id = ?
-           AND status IN ('issued', 'active', 'approved', 'open')
+           AND status IN ($expirableStatuses)
            AND $validToCheck"
     );
     try {
@@ -64,26 +62,16 @@ function check_and_expire_permits(object $db, bool $throwOnFailure = false): int
     }
 
     foreach ($expiredPermits as $permit) {
-        if (empty($permit['id'])) {
-            continue;
-        }
+        if (empty($permit['id'])) continue;
 
         try {
             $updateStatement->execute([$permit['id']]);
         } catch (\Throwable $e) {
-            if ($throwOnFailure) {
-                throw $e;
-            }
+            if ($throwOnFailure) throw $e;
             continue;
         }
 
-        // Another lifecycle action or expiry worker may have changed this row
-        // after the SELECT. Only the process that wins the constrained UPDATE
-        // records events or activity.
-        if ($updateStatement->rowCount() !== 1) {
-            continue;
-        }
-
+        if ($updateStatement->rowCount() !== 1) continue;
         $updatedCount++;
 
         try {
@@ -105,8 +93,7 @@ function check_and_expire_permits(object $db, bool $throwOnFailure = false): int
                 ]);
             }
         } catch (\Throwable $e) {
-            // Expiry remains authoritative even if the audit table is temporarily
-            // unavailable; a later run must not duplicate the status transition.
+            // Expiry remains authoritative even if audit storage is unavailable.
         }
 
         if (function_exists('logActivity')) {
@@ -119,7 +106,6 @@ function check_and_expire_permits(object $db, bool $throwOnFailure = false): int
                 "Permit {$ref} automatically expired after exceeding its valid window."
             );
         }
-
     }
 
     return $updatedCount;

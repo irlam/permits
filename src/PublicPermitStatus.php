@@ -20,6 +20,7 @@ final class PublicPermitStatus
         'pending_approval',
         'awaiting',
         'awaiting_approval',
+        'awaiting_acceptance',
     ];
 
     /** @var array<int,string> */
@@ -42,9 +43,7 @@ final class PublicPermitStatus
         'siteProject',
     ];
 
-    /**
-     * @return array<int,array<string,mixed>>
-     */
+    /** @return array<int,array<string,mixed>> */
     public static function current(PDO $pdo, int $limit = 50): array
     {
         $limit = max(1, min(100, $limit));
@@ -69,14 +68,20 @@ final class PublicPermitStatus
                 COALESCE(ft.name, 'Permit') AS template_name
             FROM forms f
             LEFT JOIN form_templates ft ON ft.id = f.template_id
-            WHERE
+            WHERE f.requires_approval = 1
+              AND (
                 LOWER(f.status) IN ('{$pending}')
                 OR (
-                    LOWER(f.status) IN ('{$active}')
+                    LOWER(f.status) IN ('{$active}', 'suspended')
                     AND (f.valid_to IS NULL OR f.valid_to >= {$now})
                 )
+              )
             ORDER BY
-                CASE WHEN LOWER(f.status) IN ('{$pending}') THEN 0 ELSE 1 END,
+                CASE
+                    WHEN LOWER(f.status) = 'suspended' THEN 0
+                    WHEN LOWER(f.status) IN ('{$pending}') THEN 1
+                    ELSE 2
+                END,
                 COALESCE(f.valid_from, f.created_at) DESC
             LIMIT {$limit}
         ";
@@ -86,14 +91,26 @@ final class PublicPermitStatus
 
         foreach ($rows as $row) {
             $rawStatus = strtolower(trim((string)($row['status'] ?? '')));
-            $category = in_array($rawStatus, self::PENDING_STATUSES, true) ? 'pending' : 'active';
+            if ($rawStatus === 'suspended') {
+                $category = 'suspended';
+                $statusLabel = 'Suspended — Do Not Work';
+            } elseif ($rawStatus === 'awaiting_acceptance') {
+                $category = 'pending';
+                $statusLabel = 'Awaiting Holder Acceptance';
+            } elseif (in_array($rawStatus, self::PENDING_STATUSES, true)) {
+                $category = 'pending';
+                $statusLabel = 'Pending Approval';
+            } else {
+                $category = 'active';
+                $statusLabel = 'Active';
+            }
 
             $result[] = [
                 'reference' => trim((string)($row['ref_number'] ?? '')),
                 'permit_type' => trim((string)($row['template_name'] ?? 'Permit')) ?: 'Permit',
                 'location' => self::publicLocation($row),
                 'status' => $category,
-                'status_label' => $category === 'pending' ? 'Pending Approval' : 'Active',
+                'status_label' => $statusLabel,
                 'submitted_at' => $row['created_at'] ?? null,
                 'valid_from' => $row['valid_from'] ?? null,
                 'valid_to' => $row['valid_to'] ?? null,
@@ -103,9 +120,7 @@ final class PublicPermitStatus
         return $result;
     }
 
-    /**
-     * @param array<string,mixed> $row
-     */
+    /** @param array<string,mixed> $row */
     private static function publicLocation(array $row): string
     {
         $siteBlock = trim((string)($row['site_block'] ?? ''));
@@ -134,24 +149,28 @@ final class PublicPermitStatus
 
     /**
      * @param array<int,array<string,mixed>> $permits
-     * @return array{pending:int,active:int,total:int}
+     * @return array{pending:int,active:int,suspended:int,total:int}
      */
     public static function counts(array $permits): array
     {
         $pending = 0;
         $active = 0;
+        $suspended = 0;
 
         foreach ($permits as $permit) {
             if (($permit['status'] ?? '') === 'pending') {
                 $pending++;
             } elseif (($permit['status'] ?? '') === 'active') {
                 $active++;
+            } elseif (($permit['status'] ?? '') === 'suspended') {
+                $suspended++;
             }
         }
 
         return [
             'pending' => $pending,
             'active' => $active,
+            'suspended' => $suspended,
             'total' => count($permits),
         ];
     }

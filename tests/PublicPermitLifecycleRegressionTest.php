@@ -5,19 +5,24 @@ use PHPUnit\Framework\TestCase;
 
 final class PublicPermitLifecycleRegressionTest extends TestCase
 {
-    public function testPublicViewDefensivelyTreatsElapsedActivePermitsAsExpired(): void
-    {
-        $source = (string)file_get_contents(dirname(__DIR__) . '/view-permit-public.php');
-
-        self::assertStringContainsString('$validToTimestamp <= time()', $source);
-        self::assertStringContainsString("\$permitStatus = 'expired'", $source);
-    }
-
     private string $root;
 
     protected function setUp(): void
     {
         $this->root = dirname(__DIR__);
+    }
+
+    public function testPublicViewPreservesDefensiveExpiryAndAddsPhase4StopWorkLayer(): void
+    {
+        $legacy = (string)file_get_contents($this->root . '/view-permit-public-legacy.php');
+        $wrapper = (string)file_get_contents($this->root . '/view-permit-public.php');
+
+        self::assertStringContainsString('$validToTimestamp <= time()', $legacy);
+        self::assertStringContainsString("\$permitStatus = 'expired'", $legacy);
+        self::assertStringContainsString("require __DIR__ . '/view-permit-public-legacy.php'", $wrapper);
+        self::assertStringContainsString('SUSPENDED — DO NOT WORK', $wrapper);
+        self::assertStringContainsString('PermitLinks::forPermit', $wrapper);
+        self::assertStringContainsString('Workflow / Handover', $wrapper);
     }
 
     public function testEmailLookupUsesExecutableSqlAndNormalisedAddress(): void
@@ -75,27 +80,29 @@ final class PublicPermitLifecycleRegressionTest extends TestCase
 
     public function testPublicQrUsesUnguessableLinkAndDownloadHeaders(): void
     {
-        $view = file_get_contents($this->root . '/view-permit-public.php');
+        $view = file_get_contents($this->root . '/view-permit-public-legacy.php');
         $qr = file_get_contents($this->root . '/qr-code.php');
 
         self::assertStringContainsString("qr-code.php'))?>?link=", $view);
         self::assertStringNotContainsString("qr-code.php'))?>?id=", $view);
-        self::assertStringContainsString("Content-Disposition: attachment", $qr);
+        self::assertStringContainsString('Content-Disposition: attachment', $qr);
         self::assertStringContainsString("$" . "app->url('/view-permit-public.php?link='", $qr);
     }
 
-    public function testApprovalSetsAValidatedExpiryWindow(): void
+    public function testApprovalRequiresHolderAcceptanceBeforeValidityBegins(): void
     {
         $source = file_get_contents($this->root . '/api/approve-permit.php');
 
         self::assertStringContainsString('getPermitDurationPresets', $source);
-        self::assertStringContainsString('valid_from =', $source);
-        self::assertStringContainsString('valid_to =', $source);
+        self::assertStringContainsString("status = 'awaiting_acceptance'", $source);
+        self::assertStringContainsString('valid_from = NULL', $source);
+        self::assertStringContainsString('valid_to = NULL', $source);
         self::assertStringContainsString('PermitFormValidator::validate', $source);
         self::assertStringContainsString("validateRequest('permit-approve')", $source);
         self::assertStringContainsString("approval_status = 'approved'", $source);
+        self::assertStringContainsString('holder_acceptance_required', $source);
         self::assertStringContainsString('sendApprovalNotification', $source);
-        self::assertStringNotContainsString("function_exists('sendEmail')", $source);
+        self::assertStringNotContainsString("SET status = 'active'", $source);
     }
 
     public function testLifecycleMutationEndpointsUseActionScopedCsrfTokens(): void
@@ -113,10 +120,14 @@ final class PublicPermitLifecycleRegressionTest extends TestCase
             self::assertStringContainsString('http_response_code(419)', $source, $path);
         }
 
-        foreach (['api/approve-permit.php', 'api/reject-permit.php', 'api/start-work.php', 'api/close-permit.php'] as $path) {
+        foreach (array_keys($actions) as $path) {
             $source = file_get_contents($this->root . '/' . $path);
             self::assertStringContainsString('$auth->requireJson(', $source, $path);
         }
+
+        $workflow = file_get_contents($this->root . '/permit-workflow-legacy.php');
+        self::assertStringContainsString("Csrf::validateRequest('permit-workflow'", $workflow);
+        self::assertStringContainsString("Csrf::getFormField('permit-workflow')", $workflow);
 
         $reject = file_get_contents($this->root . '/api/reject-permit.php');
         self::assertStringContainsString('sendRejectionNotification', $reject);
@@ -124,6 +135,7 @@ final class PublicPermitLifecycleRegressionTest extends TestCase
 
         $close = file_get_contents($this->root . '/api/close-permit.php');
         self::assertStringContainsString('PermitAccess::canAccessPermit', $close);
+        self::assertStringContainsString("'suspended'", $close);
     }
 
     public function testAnonymousBearerViewerCannotStartWork(): void
@@ -132,12 +144,13 @@ final class PublicPermitLifecycleRegressionTest extends TestCase
         self::assertStringContainsString('$auth->requireJson()', $api);
         self::assertStringContainsString('PermitAccess::canAccessPermit($currentUser, $permit)', $api);
         self::assertStringContainsString('http_response_code(403)', $api);
+        self::assertStringContainsString('PermitLinks::blockingConflicts', $api);
 
         $auth = file_get_contents($this->root . '/src/Auth.php');
         self::assertStringContainsString("['status'] ?? ''", $auth);
         self::assertStringContainsString("$" . "this->jsonError(401, 'Authentication required')", $auth);
 
-        $view = file_get_contents($this->root . '/view-permit-public.php');
+        $view = file_get_contents($this->root . '/view-permit-public-legacy.php');
         self::assertStringContainsString('$canStartWork = $isActive && ($canApprove || $ownsPermit)', $view);
         self::assertStringContainsString('$startWorkCsrfToken = $canStartWork ?', $view);
         self::assertStringContainsString('if ($canStartWork && !$hasWorkStarted)', $view);
@@ -145,16 +158,16 @@ final class PublicPermitLifecycleRegressionTest extends TestCase
         self::assertStringNotContainsString('DatabaseMaintenance::', $api);
     }
 
-    public function testExpiryIsCliOwnedAndUsesAtomicDatabaseTimeGuard(): void
+    public function testExpiryIsCliOwnedAndIncludesPhase4OperationalStates(): void
     {
-        foreach (['index.php', 'view-permit-public.php', 'manager-approvals.php', 'admin.php', 'dashboard.php'] as $path) {
+        foreach (['index.php', 'view-permit-public-legacy.php', 'manager-approvals.php', 'admin.php', 'dashboard.php'] as $path) {
             $source = file_get_contents($this->root . '/' . $path);
             self::assertStringNotContainsString('check_and_expire_permits', $source, $path);
             self::assertStringNotContainsString('maybe_check_and_expire_permits', $source, $path);
         }
 
         $expiry = file_get_contents($this->root . '/src/check-expiry.php');
-        self::assertStringContainsString("AND status IN ('issued', 'active', 'approved', 'open')", $expiry);
+        self::assertStringContainsString("'suspended', 'awaiting_acceptance'", $expiry);
         self::assertStringContainsString('valid_to <= $nowExpression', $expiry);
         self::assertStringContainsString('$updateStatement->rowCount() !== 1', $expiry);
 

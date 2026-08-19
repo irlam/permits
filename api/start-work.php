@@ -13,7 +13,6 @@ header('Content-Type: application/json');
 header('Cache-Control: no-store');
 
 try {
-    // Only POST
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
@@ -29,14 +28,12 @@ try {
         exit;
     }
 
-    // Parse input
     $raw = file_get_contents('php://input');
     $data = [];
     if ($raw) {
         $decoded = json_decode($raw, true);
         if (is_array($decoded)) { $data = $decoded; }
     }
-    // Also accept form-encoded
     if (empty($data)) { $data = $_POST; }
 
     $unique_link = is_scalar($data['link'] ?? null) ? trim((string) $data['link']) : '';
@@ -46,7 +43,6 @@ try {
         exit;
     }
 
-    // Load permit
     $stmt = $db->pdo->prepare("
         SELECT f.*, ft.form_structure, ft.json_schema
         FROM forms f
@@ -95,7 +91,6 @@ try {
         exit;
     }
 
-    // Do not allow direct API calls to start incomplete or unsafe permits.
     $structure = json_decode((string) ($permit['form_structure'] ?? ''), true);
     if (!is_array($structure) || $structure === []) {
         $schema = json_decode((string) ($permit['json_schema'] ?? ''), true);
@@ -157,7 +152,24 @@ try {
         exit;
     }
 
-    // Update
+    // Explicit conflict relationships are a hard start-work interlock. Related
+    // and SIMOPS links remain advisory/coordination records; only a manager-set
+    // conflict prevents the two permits from being active at the same time.
+    $blockingConflicts = \Permits\PermitLinks::blockingConflicts($db->pdo, (string)$permit['id']);
+    if ($blockingConflicts !== []) {
+        $references = array_values(array_filter(array_map(
+            static fn(array $row): string => trim((string)($row['ref_number'] ?? '')),
+            $blockingConflicts
+        )));
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Work cannot start while a conflicting linked permit is active' . ($references !== [] ? ': #' . implode(', #', array_slice($references, 0, 5)) : '.'),
+            'conflicting_permits' => $references,
+        ]);
+        exit;
+    }
+
     $nowExpr = $db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? "datetime('now')" : 'NOW()';
     $upd = $db->pdo->prepare("
         UPDATE forms
@@ -170,7 +182,6 @@ try {
     ");
     $upd->execute([$permit['id']]);
 
-    // Reload timestamp
     $get = $db->pdo->prepare("SELECT work_started_at FROM forms WHERE id = ?");
     $get->execute([$permit['id']]);
     $ts = $get->fetchColumn();
@@ -181,11 +192,25 @@ try {
         exit;
     }
 
-    if ($upd->rowCount() === 1 && function_exists('logActivity')) {
+    if ($upd->rowCount() === 1) {
         try {
-            logActivity('work_started', 'permit', 'form', $permit['id'], 'Work started recorded via public view');
-        } catch (\Throwable $logError) {
-            error_log('Unable to log work start: ' . $logError->getMessage());
+            \Permits\PermitWorkflow::recordEvent(
+                $db->pdo,
+                (string)$permit['id'],
+                'work_started',
+                (string)($currentUser['id'] ?? ''),
+                ['score' => $score]
+            );
+        } catch (\Throwable $eventError) {
+            error_log('Unable to record work-start workflow event: ' . $eventError->getMessage());
+        }
+
+        if (function_exists('logActivity')) {
+            try {
+                logActivity('work_started', 'permit', 'form', $permit['id'], 'Work started recorded via public view');
+            } catch (\Throwable $logError) {
+                error_log('Unable to log work start: ' . $logError->getMessage());
+            }
         }
     }
 

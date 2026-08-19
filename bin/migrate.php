@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Permits\DatabaseMaintenance;
+use Permits\Phase4DatabaseMaintenance;
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -19,6 +20,8 @@ $results = [
     'form_identifiers' => DatabaseMaintenance::ensureFormsUniqueIndexes($db),
     'templates' => DatabaseMaintenance::ensureFormTemplateColumns($db),
     'activity_log' => DatabaseMaintenance::ensureActivityLogColumns($db),
+    'form_events' => Phase4DatabaseMaintenance::ensureFormEventsTable($db),
+    'permit_links' => Phase4DatabaseMaintenance::ensurePermitLinksTable($db),
 ];
 
 $errors = [];

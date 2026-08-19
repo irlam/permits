@@ -14,7 +14,7 @@ final class AdminWorkflowUxRegressionTest extends TestCase
 
     public function testDashboardLoadsChartLibraryBeforeCreatingCharts(): void
     {
-        $source = file_get_contents($this->root . '/dashboard.php');
+        $source = file_get_contents($this->root . '/dashboard-legacy.php');
         self::assertIsString($source);
 
         self::assertMatchesRegularExpression('/^\s*<script[^\r\n]*chart\.umd\.min\.js[^\r\n]*<\/script>\s*$/m', $source);
@@ -22,6 +22,11 @@ final class AdminWorkflowUxRegressionTest extends TestCase
 
         self::assertStringNotContainsString('defer', $scriptTag[0]);
         self::assertLessThan(strpos($source, 'new Chart('), strpos($source, 'chart.umd.min.js'));
+
+        $wrapper = file_get_contents($this->root . '/dashboard.php');
+        self::assertStringContainsString('dashboard-legacy.php', (string)$wrapper);
+        self::assertStringContainsString('permit-board.php', (string)$wrapper);
+        self::assertStringContainsString('🪧 Permit Board', (string)$wrapper);
     }
 
     public function testAllQrPrintLayoutKeepsTheQrContainerVisible(): void
@@ -54,15 +59,18 @@ final class AdminWorkflowUxRegressionTest extends TestCase
 
     public function testLoggedOutPermitViewerGetsAContextPreservingTeamLogin(): void
     {
-        $view = file_get_contents($this->root . '/view-permit-public.php');
+        $view = file_get_contents($this->root . '/view-permit-public-legacy.php');
+        $wrapper = file_get_contents($this->root . '/view-permit-public.php');
         $home = file_get_contents($this->root . '/index.php');
         self::assertIsString($view);
+        self::assertIsString($wrapper);
         self::assertIsString($home);
 
         self::assertStringContainsString("$" . "permitReturnPath = '/view-permit-public.php?link='", $view);
         self::assertStringContainsString("urlencode($" . "permitReturnPath)", $view);
         self::assertStringContainsString('if ($isActive && !$currentUserIsActive)', $view);
         self::assertStringContainsString('Team sign in', $view);
+        self::assertStringContainsString('Workflow / Handover', $wrapper);
         self::assertStringContainsString('>Team sign in</a>', $home);
     }
 

@@ -93,7 +93,8 @@ final class BrandingAndTemplateCatalogTest extends TestCase
     {
         $root = dirname(__DIR__);
         $create = file_get_contents($root . '/create-permit-public.php');
-        $view = file_get_contents($root . '/view-permit-public.php');
+        $view = file_get_contents($root . '/view-permit-public-legacy.php');
+        $wrapper = file_get_contents($root . '/view-permit-public.php');
 
         foreach ([$create, $view] as $source) {
             self::assertIsString($source);
@@ -106,5 +107,6 @@ final class BrandingAndTemplateCatalogTest extends TestCase
 
         self::assertStringContainsString('class="public-brand-header"', $create);
         self::assertStringContainsString('class="customer-brand"', $view);
+        self::assertStringContainsString("view-permit-public-legacy.php", (string)$wrapper);
     }
 }

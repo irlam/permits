@@ -81,9 +81,13 @@ final class AccessControlTest extends TestCase
     public function testDashboardAndAdminSurfacesApplyAccessRules(): void
     {
         $root = dirname(__DIR__);
-        $dashboard = (string)file_get_contents($root . '/dashboard.php');
+        $dashboard = (string)file_get_contents($root . '/dashboard-legacy.php');
         self::assertStringContainsString('PermitAccess::sqlScope', $dashboard);
         self::assertStringContainsString('activity_user_id', $dashboard);
+
+        $dashboardWrapper = (string)file_get_contents($root . '/dashboard.php');
+        self::assertStringContainsString('dashboard-legacy.php', $dashboardWrapper);
+        self::assertStringContainsString('permit-board.php', $dashboardWrapper);
 
         $userManagement = (string)file_get_contents($root . '/admin/users.php');
         self::assertStringContainsString('UserAccountPolicy::validateProfile', $userManagement);
@@ -119,7 +123,7 @@ final class AccessControlTest extends TestCase
         $managerApprovals = (string)file_get_contents($root . '/manager-approvals.php');
         self::assertStringContainsString("requireRoles(['manager', 'admin'])", $managerApprovals);
 
-        foreach (['account.php', 'dashboard.php'] as $relativePath) {
+        foreach (['account.php', 'dashboard-legacy.php'] as $relativePath) {
             $source = (string)file_get_contents($root . '/' . $relativePath);
             self::assertStringContainsString(
                 '$auth->requireLogin()',

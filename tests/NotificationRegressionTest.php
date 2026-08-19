@@ -5,12 +5,13 @@ use PHPUnit\Framework\TestCase;
 
 final class NotificationRegressionTest extends TestCase
 {
-    public function testExpiryWorkersUseTheCanonicalActiveStatusSet(): void
+    public function testExpiryWorkersCoverTheRelevantOperationalStatusSets(): void
     {
-        $expected = "status IN ('issued', 'active', 'approved', 'open')";
+        $notificationStatuses = "status IN ('issued', 'active', 'approved', 'open')";
+        self::assertStringContainsString($notificationStatuses, (string)file_get_contents(dirname(__DIR__) . '/bin/send-notifications.php'));
 
-        self::assertStringContainsString($expected, (string)file_get_contents(dirname(__DIR__) . '/bin/send-notifications.php'));
-        self::assertStringContainsString($expected, (string)file_get_contents(dirname(__DIR__) . '/src/check-expiry.php'));
+        $expiry = (string)file_get_contents(dirname(__DIR__) . '/src/check-expiry.php');
+        self::assertStringContainsString("'issued', 'active', 'approved', 'open', 'suspended', 'awaiting_acceptance'", $expiry);
     }
 
     private string $root;
@@ -35,11 +36,16 @@ final class NotificationRegressionTest extends TestCase
         self::assertStringNotContainsString("'/form/'", $mailer);
         self::assertStringContainsString('view-permit-public.php?link=', $mailer);
 
-        foreach (['permit-approved.php', 'permit-rejected.php', 'permit-expiring.php', 'permit-created.php'] as $template) {
+        foreach (['permit-rejected.php', 'permit-expiring.php', 'permit-created.php'] as $template) {
             $source = (string)file_get_contents($this->root . '/templates/emails/' . $template);
             self::assertStringNotContainsString("'/form/'", $source, $template);
             self::assertStringContainsString('view-permit-public.php?link=', $source, $template);
         }
+
+        $approved = (string)file_get_contents($this->root . '/templates/emails/permit-approved.php');
+        self::assertStringNotContainsString("'/form/'", $approved);
+        self::assertStringContainsString('permit-workflow.php?link=', $approved);
+        self::assertStringContainsString('Do not start work yet', $approved);
     }
 
     public function testPushRemindersAreScopedAndDeduplicated(): void
