@@ -9,8 +9,8 @@ use RuntimeException;
 /**
  * Privacy-safe projection of permits that are useful to people on site.
  *
- * This deliberately exposes no holder details, form answers, approval notes,
- * private links or internal IDs.
+ * This deliberately exposes no holder details, arbitrary form answers,
+ * approval notes, private links or internal IDs.
  */
 final class PublicPermitStatus
 {
@@ -28,6 +28,18 @@ final class PublicPermitStatus
         'approved',
         'issued',
         'open',
+    ];
+
+    /** @var array<int,string> */
+    private const SAFE_LOCATION_KEYS = [
+        'location',
+        'exactWorkLocation',
+        'workLocation',
+        'exactLocation',
+        'siteLocation',
+        'siteBlock',
+        'area',
+        'siteProject',
     ];
 
     /**
@@ -50,6 +62,7 @@ final class PublicPermitStatus
                 f.ref_number,
                 f.status,
                 f.site_block,
+                f.form_data,
                 f.created_at,
                 f.valid_from,
                 f.valid_to,
@@ -78,7 +91,7 @@ final class PublicPermitStatus
             $result[] = [
                 'reference' => trim((string)($row['ref_number'] ?? '')),
                 'permit_type' => trim((string)($row['template_name'] ?? 'Permit')) ?: 'Permit',
-                'location' => trim((string)($row['site_block'] ?? '')),
+                'location' => self::publicLocation($row),
                 'status' => $category,
                 'status_label' => $category === 'pending' ? 'Pending Approval' : 'Active',
                 'submitted_at' => $row['created_at'] ?? null,
@@ -88,6 +101,35 @@ final class PublicPermitStatus
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string,mixed> $row
+     */
+    private static function publicLocation(array $row): string
+    {
+        $siteBlock = trim((string)($row['site_block'] ?? ''));
+        if ($siteBlock !== '') {
+            return mb_substr($siteBlock, 0, 160, 'UTF-8');
+        }
+
+        $answers = json_decode((string)($row['form_data'] ?? ''), true);
+        if (!is_array($answers)) {
+            return '';
+        }
+
+        foreach (self::SAFE_LOCATION_KEYS as $key) {
+            $value = $answers[$key] ?? null;
+            if (!is_scalar($value)) {
+                continue;
+            }
+            $location = trim((string)$value);
+            if ($location !== '') {
+                return mb_substr($location, 0, 160, 'UTF-8');
+            }
+        }
+
+        return '';
     }
 
     /**
