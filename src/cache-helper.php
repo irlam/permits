@@ -130,12 +130,16 @@ function asset_timestamp(string $path): string
     return asset($path);
 }
 
-// Generate meta tags to prevent caching
+// Generate shared head tags for cache control and site identity.
 function cache_meta_tags(): void
 {
     echo '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">';
     echo '<meta http-equiv="Pragma" content="no-cache">';
     echo '<meta http-equiv="Expires" content="0">';
+
+    $faviconUrl = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    echo '<link rel="icon" type="image/svg+xml" href="' . $faviconUrl . '">';
+    echo '<link rel="shortcut icon" href="' . $faviconUrl . '">';
 }
 
 // Call headers automatically when file is included
