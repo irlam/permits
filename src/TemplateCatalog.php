@@ -8,9 +8,35 @@ namespace Permits;
  *
  * Historical template versions remain in the database for existing permits,
  * while public pickers show only the newest version of each named template.
+ * Legacy overlapping permit names are folded into their preferred specialist
+ * template so users cannot accidentally choose a weaker duplicate form.
  */
 final class TemplateCatalog
 {
+    /** @var array<string,string> */
+    private const NAME_ALIASES = [
+        'general work permit' => 'General Permit to Work',
+        'crane/lifting operations permit' => 'Lifting Operations Permit',
+        'electrical work permit' => 'Electrical Isolation & Energisation Permit',
+        'roof work permit' => 'Roof Access Permit',
+        'welding/cutting permit' => 'Hot Works Permit',
+        'hazardous materials handling permit' => 'Hazardous Substances Handling Permit',
+        'road/traffic management permit' => 'Traffic Management Interface Permit',
+        'excavation permit' => 'Permit to Dig / Excavation Permit',
+    ];
+
+    /** @var array<string,string> */
+    private const PREFERRED_IDS = [
+        'general permit to work' => 'general-ptw-v1',
+        'lifting operations permit' => 'lifting-operations-v1',
+        'electrical isolation & energisation permit' => 'electrical-isolation-v1',
+        'roof access permit' => 'roof-access-v1',
+        'hot works permit' => 'hot-works-v1',
+        'hazardous substances handling permit' => 'hazardous-substances-v1',
+        'traffic management interface permit' => 'traffic-management-v1',
+        'permit to dig / excavation permit' => 'permit-to-dig-v1',
+    ];
+
     /**
      * @param array<int,array<string,mixed>> $templates
      * @return array<int,array<string,mixed>>
@@ -25,10 +51,11 @@ final class TemplateCatalog
                 continue;
             }
 
+            $name = self::canonicalName($name);
             $key = mb_strtolower($name, 'UTF-8');
             $template['name'] = $name;
 
-            if (!isset($latest[$key]) || self::isNewer($template, $latest[$key])) {
+            if (!isset($latest[$key]) || self::isNewer($template, $latest[$key], $key)) {
                 $latest[$key] = $template;
             }
         }
@@ -44,9 +71,24 @@ final class TemplateCatalog
         return array_values($latest);
     }
 
-    /** @param array<string,mixed> $candidate @param array<string,mixed> $current */
-    private static function isNewer(array $candidate, array $current): bool
+    private static function canonicalName(string $name): string
     {
+        $key = mb_strtolower($name, 'UTF-8');
+        return self::NAME_ALIASES[$key] ?? $name;
+    }
+
+    /** @param array<string,mixed> $candidate @param array<string,mixed> $current */
+    private static function isNewer(array $candidate, array $current, string $canonicalKey): bool
+    {
+        $preferredId = self::PREFERRED_IDS[$canonicalKey] ?? null;
+        if ($preferredId !== null) {
+            $candidatePreferred = hash_equals($preferredId, (string)($candidate['id'] ?? ''));
+            $currentPreferred = hash_equals($preferredId, (string)($current['id'] ?? ''));
+            if ($candidatePreferred !== $currentPreferred) {
+                return $candidatePreferred;
+            }
+        }
+
         $candidateVersion = (int)($candidate['version'] ?? 0);
         $currentVersion = (int)($current['version'] ?? 0);
         if ($candidateVersion !== $currentVersion) {
