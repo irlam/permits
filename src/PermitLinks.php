@@ -120,9 +120,10 @@ final class PermitLinks
     }
 
     /**
-     * A conflict link is an explicit management decision that the two permits
-     * must not operate simultaneously. Starting work is therefore blocked while
-     * the linked permit remains in a current operational state.
+     * A conflict link is an explicit management decision that two permits must
+     * not operate at the same time. Pending, awaiting-acceptance and suspended
+     * permits are visible for coordination but do not themselves represent work
+     * in operation, so only a currently active conflicting permit blocks start.
      *
      * @return array<int,array<string,mixed>>
      */
@@ -143,7 +144,7 @@ final class PermitLinks
             LEFT JOIN form_templates ft ON ft.id = f.template_id
             WHERE (pl.form_a_id = :permit_a OR pl.form_b_id = :permit_b)
               AND pl.relation_type = 'conflict'
-              AND LOWER(f.status) IN ('pending_approval', 'awaiting_acceptance', 'active', 'issued', 'approved', 'open', 'suspended')
+              AND LOWER(f.status) IN ('active', 'issued', 'approved', 'open')
               AND (f.valid_to IS NULL OR f.valid_to > {$now})
         ";
         $stmt = $pdo->prepare($sql);
