@@ -4,16 +4,61 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text" },
-      { "key": "site", "label": "Site / Project", "type": "text" },
-      { "key": "plantRef", "label": "Plant / Circuit Reference", "type": "text" },
-      { "key": "location", "label": "Location", "type": "text" },
-      { "key": "workScope", "label": "Scope of Work", "type": "textarea" },
-      { "key": "voltageLevel", "label": "Voltage Level", "type": "select", "options": ["LV", "HV", "ELV"] },
-      { "key": "competentPerson", "label": "Senior Authorised / Competent Person", "type": "text" },
-      { "key": "responsiblePerson", "label": "Person in Charge of Work", "type": "text" },
-      { "key": "validFrom", "label": "Isolation Start", "type": "datetime" },
-      { "key": "validTo", "label": "Expected Completion", "type": "datetime" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "site",
+        "label": "Site / Project",
+        "type": "text"
+      },
+      {
+        "key": "plantRef",
+        "label": "Plant / Circuit Reference",
+        "type": "text"
+      },
+      {
+        "key": "location",
+        "label": "Location",
+        "type": "text"
+      },
+      {
+        "key": "workScope",
+        "label": "Scope of Work",
+        "type": "textarea"
+      },
+      {
+        "key": "voltageLevel",
+        "label": "Voltage Level",
+        "type": "select",
+        "options": [
+          "LV",
+          "HV",
+          "ELV"
+        ]
+      },
+      {
+        "key": "competentPerson",
+        "label": "Senior Authorised / Competent Person",
+        "type": "text"
+      },
+      {
+        "key": "responsiblePerson",
+        "label": "Person in Charge of Work",
+        "type": "text"
+      },
+      {
+        "key": "validFrom",
+        "label": "Isolation Start",
+        "type": "datetime"
+      },
+      {
+        "key": "validTo",
+        "label": "Expected Completion",
+        "type": "datetime"
+      }
     ]
   },
   "sections": [
@@ -48,11 +93,26 @@
           "label": "Additional Energy Sources",
           "type": "multiselect",
           "options": [
-            { "value": "mechanical", "label": "Mechanical" },
-            { "value": "hydraulic", "label": "Hydraulic" },
-            { "value": "pneumatic", "label": "Pneumatic" },
-            { "value": "stored_energy", "label": "Stored Energy" },
-            { "value": "other", "label": "Other" }
+            {
+              "value": "mechanical",
+              "label": "Mechanical"
+            },
+            {
+              "value": "hydraulic",
+              "label": "Hydraulic"
+            },
+            {
+              "value": "pneumatic",
+              "label": "Pneumatic"
+            },
+            {
+              "value": "stored_energy",
+              "label": "Stored Energy"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
           ]
         },
         {
@@ -86,10 +146,22 @@
           "label": "Access Control Method",
           "type": "select",
           "options": [
-            { "value": "barriers", "label": "Barriers" },
-            { "value": "banksman", "label": "Banksman" },
-            { "value": "permit_only", "label": "Permit-only access" },
-            { "value": "locked_panel", "label": "Locked panel" }
+            {
+              "value": "barriers",
+              "label": "Barriers"
+            },
+            {
+              "value": "banksman",
+              "label": "Banksman"
+            },
+            {
+              "value": "permit_only",
+              "label": "Permit-only access"
+            },
+            {
+              "value": "locked_panel",
+              "label": "Locked panel"
+            }
           ]
         },
         {
@@ -126,6 +198,77 @@
         {
           "label": "Permit Close-out Reference",
           "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
+        }
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
+      ],
+      "fields": [
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
         }
       ]
     }

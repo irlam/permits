@@ -4,17 +4,67 @@
   "version": 1,
   "meta": {
     "fields": [
-      { "key": "permitNo", "label": "Permit Number", "type": "text" },
-      { "key": "site", "label": "Site / Project", "type": "text" },
-      { "key": "location", "label": "Location / Road Reference", "type": "text" },
-      { "key": "workDescription", "label": "Works Description", "type": "textarea" },
-      { "key": "trafficManagementPlan", "label": "Traffic Management Plan Ref", "type": "text" },
-      { "key": "permitAuthority", "label": "Permit Authority", "type": "select", "options": ["Local Highway Authority", "National Highways", "Private Estate", "Other"] },
-      { "key": "noticeNumber", "label": "Permit / Notice Number", "type": "text" },
-      { "key": "startDate", "label": "Start Date", "type": "date" },
-      { "key": "startTime", "label": "Start Time", "type": "time" },
-      { "key": "endDate", "label": "End Date", "type": "date" },
-      { "key": "endTime", "label": "End Time", "type": "time" }
+      {
+        "key": "permitNo",
+        "label": "Permit Number",
+        "type": "text"
+      },
+      {
+        "key": "site",
+        "label": "Site / Project",
+        "type": "text"
+      },
+      {
+        "key": "location",
+        "label": "Location / Road Reference",
+        "type": "text"
+      },
+      {
+        "key": "workDescription",
+        "label": "Works Description",
+        "type": "textarea"
+      },
+      {
+        "key": "trafficManagementPlan",
+        "label": "Traffic Management Plan Ref",
+        "type": "text"
+      },
+      {
+        "key": "permitAuthority",
+        "label": "Permit Authority",
+        "type": "select",
+        "options": [
+          "Local Highway Authority",
+          "National Highways",
+          "Private Estate",
+          "Other"
+        ]
+      },
+      {
+        "key": "noticeNumber",
+        "label": "Permit / Notice Number",
+        "type": "text"
+      },
+      {
+        "key": "startDate",
+        "label": "Start Date",
+        "type": "date"
+      },
+      {
+        "key": "startTime",
+        "label": "Start Time",
+        "type": "time"
+      },
+      {
+        "key": "endDate",
+        "label": "End Date",
+        "type": "date"
+      },
+      {
+        "key": "endTime",
+        "label": "End Time",
+        "type": "time"
+      }
     ]
   },
   "sections": [
@@ -46,19 +96,40 @@
           "label": "Pedestrian Management Plan",
           "type": "select",
           "options": [
-            { "value": "segregated", "label": "Segregated route" },
-            { "value": "banksman", "label": "Controlled crossing" },
-            { "value": "closure", "label": "Closure with diversion" }
+            {
+              "value": "segregated",
+              "label": "Segregated route"
+            },
+            {
+              "value": "banksman",
+              "label": "Controlled crossing"
+            },
+            {
+              "value": "closure",
+              "label": "Closure with diversion"
+            }
           ]
         },
         {
           "label": "Public Notification Issued",
           "type": "select",
           "options": [
-            { "value": "letterdrop", "label": "Letter drop" },
-            { "value": "social_media", "label": "Social media" },
-            { "value": "press", "label": "Press notice" },
-            { "value": "not_required", "label": "Not required" }
+            {
+              "value": "letterdrop",
+              "label": "Letter drop"
+            },
+            {
+              "value": "social_media",
+              "label": "Social media"
+            },
+            {
+              "value": "press",
+              "label": "Press notice"
+            },
+            {
+              "value": "not_required",
+              "label": "Not required"
+            }
           ]
         }
       ]
@@ -101,9 +172,18 @@
           "label": "Remote Monitoring",
           "type": "select",
           "options": [
-            { "value": "cctv", "label": "CCTV" },
-            { "value": "drive_through", "label": "Drive-through" },
-            { "value": "none", "label": "None" }
+            {
+              "value": "cctv",
+              "label": "CCTV"
+            },
+            {
+              "value": "drive_through",
+              "label": "Drive-through"
+            },
+            {
+              "value": "none",
+              "label": "None"
+            }
           ]
         }
       ]
@@ -134,6 +214,77 @@
         {
           "label": "Final Inspection By",
           "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "AUTHORIZATION TO START",
+      "fields": [
+        {
+          "key": "issuerName",
+          "label": "Permit Issuer Name",
+          "type": "text"
+        },
+        {
+          "key": "issuerRole",
+          "label": "Permit Issuer Role",
+          "type": "text"
+        },
+        {
+          "key": "holderName",
+          "label": "Permit Holder Name",
+          "type": "text"
+        },
+        {
+          "key": "holderCompany",
+          "label": "Holder Company",
+          "type": "text"
+        },
+        {
+          "key": "authorizationAt",
+          "label": "Authorization Date/Time",
+          "type": "datetime"
+        }
+      ]
+    },
+    {
+      "title": "HAND-BACK AND CLOSE-OUT",
+      "items": [
+        "Work completed and area inspected",
+        "Plant, tools and temporary controls removed",
+        "Systems reinstated safely",
+        "Area left clean and safe"
+      ],
+      "fields": [
+        {
+          "key": "workCompletedSummary",
+          "label": "Work Completed Summary",
+          "type": "textarea"
+        },
+        {
+          "key": "areaLeftSafeBy",
+          "label": "Area Left Safe By",
+          "type": "text"
+        },
+        {
+          "key": "handBackTo",
+          "label": "Hand-back To (Name)",
+          "type": "text"
+        },
+        {
+          "key": "closedBy",
+          "label": "Closed By",
+          "type": "text"
+        },
+        {
+          "key": "closedAt",
+          "label": "Closure Date/Time",
+          "type": "datetime"
+        },
+        {
+          "key": "outstandingActions",
+          "label": "Outstanding Actions",
+          "type": "textarea"
         }
       ]
     }
