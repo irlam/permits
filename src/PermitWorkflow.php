@@ -32,6 +32,36 @@ final class PermitWorkflow
     }
 
     /**
+     * Return the exact duration authorised by the manager at approval time.
+     * This is read from the immutable approval event rather than today's admin
+     * presets, so changing duration presets later cannot silently alter a permit
+     * that is waiting for holder acceptance.
+     */
+    public static function approvedDurationMinutes(PDO $pdo, string $permitId): ?int
+    {
+        try {
+            $stmt = $pdo->prepare("SELECT payload FROM form_events WHERE form_id = ? AND type = 'permit_approved' ORDER BY at DESC LIMIT 1");
+            $stmt->execute([$permitId]);
+            $payload = $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (!is_string($payload) || $payload === '') {
+            return null;
+        }
+        $decoded = json_decode($payload, true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+        $minutes = filter_var($decoded['duration_minutes'] ?? null, FILTER_VALIDATE_INT);
+        if ($minutes === false || $minutes < 1 || $minutes > 525600) {
+            return null;
+        }
+        return (int)$minutes;
+    }
+
+    /**
      * Holder/receiver acceptance is required for permits approved after Phase 4
      * and after every formal revalidation. Existing already-active permits are
      * deliberately grandfathered and are not interrupted by deployment.
@@ -73,8 +103,14 @@ final class PermitWorkflow
         $driver = (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
         $now = $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
         $setValidity = empty($permit['valid_from']) || empty($permit['valid_to']);
-        if ($setValidity && ($initialDurationMinutes === null || $initialDurationMinutes < 1)) {
-            throw new RuntimeException('The approved permit duration could not be resolved.');
+        if ($setValidity) {
+            $recordedDuration = self::approvedDurationMinutes($pdo, $permitId);
+            if ($recordedDuration !== null) {
+                $initialDurationMinutes = $recordedDuration;
+            }
+            if ($initialDurationMinutes === null || $initialDurationMinutes < 1) {
+                throw new RuntimeException('The approved permit duration could not be resolved.');
+            }
         }
 
         $pdo->beginTransaction();
