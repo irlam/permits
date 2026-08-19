@@ -2,215 +2,127 @@
   "id": "temporary-works-v1",
   "title": "Temporary Works Permit",
   "name": "Temporary Works Permit",
-  "description": "Permit for temporary works such as shoring, formwork, or falsework, ensuring design and safety compliance.",
+  "version": 2,
+  "description": "Permit and hold-point record for temporary works from design brief through installation, loading/use, monitoring and striking/removal.",
   "meta": {
+    "title": "Temporary Works Details",
     "fields": [
-      {
-        "key": "locationArea",
-        "label": "Location/Area",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "date",
-        "label": "Date",
-        "type": "date",
-        "required": true
-      },
-      {
-        "key": "typeOfTemporaryWorks",
-        "label": "Type of Temporary Works",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "designReference",
-        "label": "Design Reference",
-        "type": "text",
-        "required": false
-      },
-      {
-        "key": "personnelInvolved",
-        "label": "Personnel Involved",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "supervisor",
-        "label": "Supervisor",
-        "type": "text",
-        "required": true
-      },
-      {
-        "key": "signatures",
-        "label": "Signatures",
-        "type": "signature",
-        "required": true
-      },
-      {
-        "key": "validFrom",
-        "label": "Valid From",
-        "type": "datetime"
-      },
-      {
-        "key": "validTo",
-        "label": "Valid To",
-        "type": "datetime"
-      }
+      {"key":"siteProject","label":"Site / Project","type":"text","required":true},
+      {"key":"twReference","label":"Temporary Works Register Reference","type":"text","required":true},
+      {"key":"locationArea","label":"Exact Location / Area","type":"text","required":true},
+      {"key":"temporaryWorksDescription","label":"Temporary Works Description and Purpose","type":"textarea","required":true},
+      {"key":"temporaryWorksType","label":"Temporary Works Type","type":"select","required":true,"options":["Excavation support / shoring","Formwork / falsework","Propping / needling","Scaffold / access structure","Crane / plant platform","Working platform / haul road","Facade / structural restraint","Temporary edge protection","Other"]},
+      {"key":"twc","label":"Temporary Works Coordinator (TWC)","type":"text","required":true},
+      {"key":"tws","label":"Temporary Works Supervisor (TWS)","type":"text","required":false},
+      {"key":"contractorCompany","label":"Installing Contractor / Company","type":"text","required":true},
+      {"key":"validFrom","label":"Permit / Hold Point Valid From","type":"datetime","required":true},
+      {"key":"validTo","label":"Permit / Hold Point Expires","type":"datetime","required":true}
     ]
   },
   "sections": [
     {
-      "title": "DESIGN & APPROVAL",
+      "title": "DESIGN BRIEF, DESIGN AND CHECK",
       "items": [
-        "Temporary works design completed",
-        "Design checked and approved",
-        "Loading calculations verified",
-        "Materials specification confirmed",
-        "Construction sequence planned"
+        "The temporary works requirement is recorded on the project temporary works register",
+        "A design brief defines the purpose, loads, constraints, interfaces and sequence",
+        "The designer has suitable competence and has received the current design brief",
+        "The design has been checked to the project / BS 5975 checking procedure and assigned check category",
+        "Design assumptions, permissible loads and hold points are clearly stated",
+        "The latest approved drawings and calculations are available to the installation team",
+        "Interfaces with permanent works, adjacent structures and other temporary works have been coordinated"
       ],
       "fields": [
-        {
-          "label": "Design / Unique Reference (TWUR)",
-          "type": "text"
-        },
-        {
-          "label": "Temporary Works Coordinator (TWC) Name",
-          "type": "text"
-        },
-        {
-          "label": "Temporary Works Designer Name",
-          "type": "text"
-        },
-        {
-          "label": "Design Check Certificate Reference",
-          "type": "text"
-        },
-        {
-          "label": "Category",
-          "type": "select",
-          "options": [
-            "Category 1 – simple, low risk",
-            "Category 2 – significant risk, third-party check",
-            "Category 3 – complex, independent check"
-          ]
-        }
+        {"key":"designBriefReference","label":"Design Brief Reference / Revision","type":"text","required":true},
+        {"key":"designer","label":"Temporary Works Designer","type":"text","required":true},
+        {"key":"designDrawingReferences","label":"Design Drawing / Calculation References and Revisions","type":"textarea","required":true},
+        {"key":"designCheckCategory","label":"Design Check Category","type":"select","required":true,"options":["Category 0","Category 1","Category 2","Category 3","Project procedure uses different categorisation"]},
+        {"key":"designChecker","label":"Design Checker / Independent Checker","type":"text","required":true},
+        {"key":"designCheckCertificate","label":"Design Check Certificate / Approval Reference","type":"text","required":true},
+        {"key":"designLoads","label":"Design Loads / Key Limitations","type":"textarea","required":true}
       ]
     },
     {
-      "title": "INSTALLATION & MONITORING",
+      "title": "INSTALLATION AND PRE-LOAD INSPECTION",
       "items": [
-        "Installation supervised",
-        "Erected per design",
-        "Inspection regime established",
-        "Load restrictions posted",
-        "Dismantling procedure prepared"
+        "Temporary works have been installed to the latest approved design and sequence",
+        "Materials and proprietary components are correct, compatible and free from significant defects",
+        "Foundations, bearings, supports and connections are suitable for the design loads",
+        "Bracing, ties, restraints and stability measures are complete",
+        "No unapproved site changes or deviations have been made",
+        "The completed installation has been inspected by a competent person before loading or use",
+        "Any defects or departures have been resolved or formally accepted by the designer / TWC"
       ],
       "fields": [
-        {
-          "label": "Installation Supervisor Name",
-          "type": "text"
-        },
-        {
-          "label": "Monitoring Frequency",
-          "type": "select",
-          "options": [
-            "Daily visual check",
-            "Weekly formal inspection",
-            "After each pour / loading event",
-            "After adverse weather",
-            "Continuous instrumented"
-          ]
-        },
-        {
-          "label": "Maximum Permitted Load (kN/m²)",
-          "type": "text"
-        },
-        {
-          "label": "Dismantling Procedure Reference",
-          "type": "text"
-        },
-        {
-          "label": "Removal Authorised By (TWC sign-off required)",
-          "type": "text"
-        }
+        {"key":"installationSupervisor","label":"Installation Supervisor","type":"text","required":true},
+        {"key":"installedDrawingRevision","label":"Drawing Revision Used for Installation","type":"text","required":true},
+        {"key":"preLoadInspector","label":"Pre-load / Pre-use Inspector","type":"text","required":true},
+        {"key":"inspectionDateTime","label":"Inspection Date / Time","type":"datetime","required":true},
+        {"key":"deviations","label":"Deviations / Non-conformances and Designer Acceptance","type":"textarea","required":false}
       ]
     },
     {
-      "title": "AUTHORIZATION TO START",
+      "title": "PERMIT TO LOAD / USE",
+      "items": [
+        "All design and inspection hold points required before loading / use have been released",
+        "The TWC has confirmed the temporary works are ready for the intended load / use",
+        "Permitted loads, sequence and restrictions have been communicated to those using the temporary works",
+        "Load signage / physical restrictions are in place where required",
+        "Monitoring and inspection requirements during use are defined"
+      ],
       "fields": [
-        {
-          "key": "issuerName",
-          "label": "Permit Issuer Name",
-          "type": "text"
-        },
-        {
-          "key": "issuerRole",
-          "label": "Permit Issuer Role",
-          "type": "text"
-        },
-        {
-          "key": "holderName",
-          "label": "Permit Holder Name",
-          "type": "text"
-        },
-        {
-          "key": "holderCompany",
-          "label": "Holder Company",
-          "type": "text"
-        },
-        {
-          "key": "authorizationAt",
-          "label": "Authorization Date/Time",
-          "type": "datetime"
-        }
+        {"key":"loadUseDescription","label":"Load / Use Being Authorised","type":"textarea","required":true},
+        {"key":"maximumPermittedLoad","label":"Maximum Permitted Load / Key Restriction","type":"textarea","required":true},
+        {"key":"permitToLoadBy","label":"Permit to Load / Use Authorised By (TWC or delegated competent person)","type":"text","required":true},
+        {"key":"permitToLoadAt","label":"Permit to Load / Use Date / Time","type":"datetime","required":true}
       ]
     },
     {
-      "title": "HAND-BACK AND CLOSE-OUT",
+      "title": "MONITORING, CHANGE CONTROL AND HOLD POINTS",
       "items": [
-        "Work completed and area inspected",
-        "Plant, tools and temporary controls removed",
-        "Systems reinstated safely",
-        "Area left clean and safe"
+        "Inspection and monitoring frequencies are suitable for the temporary works and loading sequence",
+        "Temporary works will be re-inspected after events that could affect stability or capacity",
+        "No change to the design, loading, sequence or support conditions will be made without approval",
+        "Design changes are issued, checked and communicated using controlled revisions",
+        "Defects or unexpected movement will trigger stop-work, unloading / exclusion and TWC review where necessary"
       ],
       "fields": [
-        {
-          "key": "workCompletedSummary",
-          "label": "Work Completed Summary",
-          "type": "textarea"
-        },
-        {
-          "key": "areaLeftSafeBy",
-          "label": "Area Left Safe By",
-          "type": "text"
-        },
-        {
-          "key": "handBackTo",
-          "label": "Hand-back To (Name)",
-          "type": "text"
-        },
-        {
-          "key": "closedBy",
-          "label": "Closed By",
-          "type": "text"
-        },
-        {
-          "key": "closedAt",
-          "label": "Closure Date/Time",
-          "type": "datetime"
-        },
-        {
-          "key": "outstandingActions",
-          "label": "Outstanding Actions",
-          "type": "textarea"
-        }
+        {"key":"monitoringRequirements","label":"Monitoring / Inspection Requirements and Frequency","type":"textarea","required":true},
+        {"key":"instrumentation","label":"Survey / Instrumentation / Trigger Levels","type":"textarea","required":false},
+        {"key":"changeControl","label":"Approved Design Changes / Revision History","type":"textarea","required":false},
+        {"key":"nextInspection","label":"Next Inspection / Hold Point","type":"datetime","required":false}
+      ]
+    },
+    {
+      "title": "PERMIT TO STRIKE / DISMANTLE",
+      "items": [
+        "Permanent works or other supports have achieved the condition required before temporary works are removed",
+        "The designer / TWC has confirmed the striking or dismantling sequence and any residual support requirements",
+        "Loads have been removed or transferred in the approved sequence",
+        "The dismantling team has been briefed on stability, exclusion and access controls",
+        "Temporary works will not be removed prematurely or in an unapproved sequence"
+      ],
+      "fields": [
+        {"key":"strikePrerequisites","label":"Evidence Prerequisites for Striking Are Met","type":"textarea","required":true},
+        {"key":"dismantlingReference","label":"Striking / Dismantling Procedure Reference","type":"text","required":true},
+        {"key":"permitToStrikeBy","label":"Permit to Strike / Remove Authorised By","type":"text","required":true},
+        {"key":"permitToStrikeAt","label":"Permit to Strike Date / Time","type":"datetime","required":true}
+      ]
+    },
+    {
+      "title": "CLOSE-OUT",
+      "items": [
+        "Temporary works have been removed or formally transferred to another controlled status",
+        "Permanent works and surrounding area have been inspected for damage or residual risk",
+        "Temporary works register and design records have been updated",
+        "Outstanding actions and lessons learned have been recorded"
+      ],
+      "fields": [
+        {"key":"closeoutSummary","label":"Close-out Summary","type":"textarea","required":true},
+        {"key":"closedBy","label":"Closed By / TWC Review","type":"text","required":true},
+        {"key":"closedAt","label":"Closure Date / Time","type":"datetime","required":true},
+        {"key":"outstandingActions","label":"Outstanding Actions / Lessons Learned","type":"textarea","required":false}
       ]
     }
   ],
-  "signatures": [
-    "issuer_issue",
-    "holder_accept",
-    "issuer_close"
-  ]
+  "signatures": ["issuer_issue","twc","holder_accept","issuer_close"]
 }
