@@ -30,6 +30,10 @@ if (!in_array($scope, ['all', 'permits', 'inspections'], true)) {
 }
 $printSlug = isset($_GET['print']) && is_scalar($_GET['print']) ? strtolower(trim((string)$_GET['print'])) : '';
 $autoPrint = $printSlug !== '';
+$showChooser = $scope !== 'inspections' && ($printSlug === '' || hash_equals('choose', $printSlug));
+$chooserStartUrl = $app->url('/start');
+$chooserQrUrl = $app->url('/start-qr.php?slug=choose&size=760');
+$chooserDownloadUrl = $app->url('/start-qr.php?slug=choose&size=1000&download=1');
 
 $cards = [];
 foreach ($templates as $template) {
@@ -83,6 +87,7 @@ usort($cards, static function (array $a, array $b): int {
         .how-link a { color:#fff; font-weight:800; }
         .qr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
         .qr-card { background:linear-gradient(145deg,#0b1220,#111827); border:1px solid rgba(148,163,184,.2); border-radius:22px; padding:22px; display:grid; gap:14px; text-align:center; box-shadow:0 18px 40px rgba(2,6,23,.22); }
+        .qr-card--chooser { border-color:rgba(var(--brand-primary-light-rgb),.55); background:linear-gradient(145deg,rgba(var(--brand-primary-rgb),.16),#111827); }
         .qr-card__kind { display:inline-flex; justify-self:center; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; background:rgba(var(--brand-primary-rgb),.14); color:#dbeafe; }
         .qr-card__icon { font-size:34px; }
         .qr-card h2 { margin:0; font-size:21px; color:#f8fafc; line-height:1.2; }
@@ -146,7 +151,25 @@ usort($cards, static function (array $a, array $b): int {
     <div class="how-link">Need something to show new users? Open the public <a href="<?= htmlspecialchars($app->url('/how-it-works.php'), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">How the Permit System Works</a> showcase.</div>
 
     <section class="qr-grid" aria-label="Permanent permit start QR codes">
-        <?php if (!$cards): ?>
+        <?php if ($showChooser): ?>
+            <article class="qr-card qr-card--chooser">
+                <img src="<?= htmlspecialchars($companyLogoUrl, ENT_QUOTES, 'UTF-8') ?>" alt="" aria-hidden="true" style="width:44px;height:44px;justify-self:center;border-radius:10px;">
+                <div class="qr-card__kind">Any permit or inspection</div>
+                <div class="qr-card__icon" aria-hidden="true">📱</div>
+                <h2>Choose a Permit or Inspection</h2>
+                <div class="qr-card__qr"><img src="<?= htmlspecialchars($chooserQrUrl, ENT_QUOTES, 'UTF-8') ?>" alt="QR code to choose a permit or inspection"></div>
+                <p class="qr-card__scan">Scan to choose a form</p>
+                <p class="qr-card__url"><?= htmlspecialchars($chooserStartUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+                <div class="qr-card__actions">
+                    <a class="btn btn-accent" href="?print=choose">Print A4</a>
+                    <a class="btn btn-secondary" href="<?= htmlspecialchars($chooserDownloadUrl, ENT_QUOTES, 'UTF-8') ?>">Download QR</a>
+                    <a class="btn btn-secondary" href="<?= htmlspecialchars($chooserStartUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Test Link</a>
+                </div>
+                <div class="print-footer">Choose the correct form for the task. Submitting a permit does not authorise work; it must be approved, accepted and shown as ACTIVE before work starts.</div>
+            </article>
+        <?php endif; ?>
+
+        <?php if (!$cards && !$showChooser): ?>
             <div class="empty">No active current templates are available for this filter.</div>
         <?php endif; ?>
         <?php foreach ($cards as $card): ?>
