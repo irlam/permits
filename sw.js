@@ -19,12 +19,6 @@ const PRECACHE_URLS = [
   '/assets/phase3-status.js',
   '/assets/phase3c-picker.js',
   '/favicon.svg',
-  '/favicon.ico',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/assets/pwa/icon-192.png',
-  '/assets/pwa/icon-512.png',
-  '/assets/pwa/icon-32.png',
 ];
 
 // Immediately take control on install
@@ -63,10 +57,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   const isStaticAsset = url.pathname.startsWith('/assets/')
     || url.pathname === '/manifest.webmanifest'
-    || url.pathname === '/favicon.svg'
-    || url.pathname === '/favicon.ico'
-    || url.pathname === '/icon-192.png'
-    || url.pathname === '/icon-512.png';
+    || url.pathname === '/favicon.svg';
 
   // Never cache API responses, permit/QR URLs, downloads or other dynamic data.
   if (!isStaticAsset) {
@@ -124,24 +115,24 @@ function parsePushData(event) {
   }
 }
 
-// Default Permit System hard-hat/check artwork.
-const DEFAULT_ICON  = '/assets/pwa/icon-192.png';
-const DEFAULT_BADGE = '/assets/pwa/icon-32.png';
+// The hard-hat/check SVG is the single default notification identity.
+const DEFAULT_ICON = '/favicon.svg';
+const DEFAULT_BADGE = '/favicon.svg';
 
 // Handle incoming push
 self.addEventListener('push', (event) => {
   const data = parsePushData(event) || {};
 
   const title = data.title || 'Notification';
-  const body  = data.body  || '';
-  const url   = data.url   || '/'; // default to home if not provided
+  const body = data.body || '';
+  const url = data.url || '/'; // default to home if not provided
 
   const options = {
     body,
-    icon:  data.icon  || DEFAULT_ICON,
+    icon: data.icon || DEFAULT_ICON,
     badge: data.badge || DEFAULT_BADGE,
-    tag:   data.tag   || 'permits-push',
-    data:  { url },
+    tag: data.tag || 'permits-push',
+    data: { url },
     renotify: false,
     requireInteraction: false,
   };
@@ -170,7 +161,7 @@ self.addEventListener('notificationclick', (event) => {
     for (const client of allClients) {
       try {
         const clientUrl = new URL(client.url);
-        const destUrl   = new URL(targetUrl, self.location.origin);
+        const destUrl = new URL(targetUrl, self.location.origin);
         if (clientUrl.origin === destUrl.origin) {
           await client.focus();
           // Only navigate if different path/query/hash
