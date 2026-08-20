@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 final class Phase3TemplateCatalogTest extends TestCase
 {
-    public function testPickerPrefersPhase3SpecialistV2TemplatesOverLegacyRows(): void
+    public function testPickerPrefersCurrentSpecialistTemplatesAndOmitsRetiredBlasting(): void
     {
         $templates = TemplateCatalog::latestByName([
             ['id' => 'blasting-explosives-v1', 'name' => 'Blasting/Explosives Permit', 'version' => 9],
@@ -24,7 +24,7 @@ final class Phase3TemplateCatalogTest extends TestCase
             $byName[$template['name']] = $template['id'];
         }
 
-        self::assertSame('blasting-explosives-v2', $byName['Blasting/Explosives Permit']);
+        self::assertArrayNotHasKey('Blasting/Explosives Permit', $byName);
         self::assertSame('restricted-area-entry-v2', $byName['Restricted Area Entry Permit']);
         self::assertSame('vehicle-equipment-access-v2', $byName['Vehicle/Equipment Access Permit']);
         self::assertSame('concrete-pouring-v2', $byName['Concrete Pouring Permit']);
