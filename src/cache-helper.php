@@ -132,26 +132,24 @@ function asset_timestamp(string $path): string
 
 /**
  * Return the shared site identity tags used by both modern and legacy pages.
+ * The hard-hat/check SVG is the single canonical default identity asset.
  */
 function shared_site_identity_tags(): string
 {
     $faviconSvg = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $faviconIco = htmlspecialchars(asset('/favicon.ico'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    $touchIcon = htmlspecialchars(asset('/icon-192.png'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     $brandScript = htmlspecialchars(asset('/assets/default-brand.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
     return '<link rel="icon" type="image/svg+xml" href="' . $faviconSvg . '">'
-        . '<link rel="icon" type="image/x-icon" href="' . $faviconIco . '">'
-        . '<link rel="shortcut icon" href="' . $faviconIco . '">'
-        . '<link rel="apple-touch-icon" sizes="192x192" href="' . $touchIcon . '">'
+        . '<link rel="shortcut icon" type="image/svg+xml" href="' . $faviconSvg . '">'
         . '<script src="' . $brandScript . '" data-default-logo="' . $faviconSvg . '" defer></script>';
 }
 
 /**
  * Legacy PHP pages do not all call cache_meta_tags(). Inject the same favicon
- * and default-logo helper into any normal HTML document that passes through the
- * shared bootstrap. JSON/API/download responses do not contain </head> and are
- * therefore left byte-for-byte unchanged.
+ * and default-logo helper into normal browser HTML responses that pass through
+ * the shared bootstrap. Requests that do not accept HTML are not buffered, so
+ * QR images, JSON APIs, CSV exports and other downloads keep their streaming
+ * behaviour.
  */
 function inject_shared_site_identity(string $output): string
 {
@@ -160,7 +158,7 @@ function inject_shared_site_identity(string $output): string
     }
 
     $tags = '';
-    if (stripos($output, '/favicon.svg') === false && stripos($output, '/favicon.ico') === false) {
+    if (stripos($output, '/favicon.svg') === false) {
         $tags .= shared_site_identity_tags();
     } elseif (stripos($output, '/assets/default-brand.js') === false) {
         $faviconSvg = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -208,7 +206,9 @@ function cache_meta_tags(): void
     }
 }
 
-if (PHP_SAPI !== 'cli' && !defined('PERMITS_SITE_IDENTITY_BUFFER')) {
+$acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+$browserWantsHtml = $acceptHeader === '' || strpos($acceptHeader, 'text/html') !== false;
+if (PHP_SAPI !== 'cli' && $browserWantsHtml && !defined('PERMITS_SITE_IDENTITY_BUFFER')) {
     define('PERMITS_SITE_IDENTITY_BUFFER', true);
     ob_start('inject_shared_site_identity');
 }
