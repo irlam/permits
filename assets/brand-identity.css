@@ -1,0 +1,62 @@
+/*
+ * Shared default brand identity.
+ *
+ * A customer-uploaded .brand-mark__logo always wins. When no custom logo has
+ * been configured, use the same hard-hat/check artwork as the site favicon so
+ * dashboards, public pages and print views still have a consistent identity.
+ */
+.brand-mark:not(:has(.brand-mark__logo))::before {
+  content: '';
+  display: block;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #0f172a url('../favicon.svg') center / contain no-repeat;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, .18);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.hero__brand.brand-mark:not(:has(.brand-mark__logo))::before {
+  flex-basis: 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+
+.brand-mark__logo {
+  object-fit: contain;
+}
+
+/*
+ * Admin → Settings normally renders a Current Logo preview only when a custom
+ * raster logo exists. Give an unbranded installation a visible default preview
+ * next to the upload control without pretending it is a removable custom file.
+ */
+form:has(input[name='company_logo']):not(:has(.logo-preview)) .field:has(input[name='company_logo'])::before {
+  content: 'Default logo';
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 160px;
+  height: 120px;
+  margin: 0 0 16px;
+  padding: 10px;
+  border: 2px solid #334155;
+  border-radius: 16px;
+  background: #0f172a url('../favicon.svg') center 14px / 72px 72px no-repeat;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@media print {
+  .brand-mark:not(:has(.brand-mark__logo))::before {
+    box-shadow: none;
+  }
+}
