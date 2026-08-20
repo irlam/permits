@@ -52,17 +52,28 @@ final class TemplateCatalog
         'restricted area entry permit' => 'restricted-area-entry-v2',
         'vehicle/equipment access permit' => 'vehicle-equipment-access-v2',
         'concrete pouring permit' => 'concrete-pouring-v2',
+        'fire alarm / sprinkler isolation permit' => 'fire-system-isolation-v1',
+        'permit to core / drill / cut' => 'core-drill-cut-v1',
+        'breaking into existing services permit' => 'breaking-into-services-v1',
+        'live electrical work permit' => 'live-electrical-work-v1',
+        'pressure testing permit' => 'pressure-testing-v1',
+        'testing & commissioning permit' => 'testing-commissioning-v1',
+        'mewp use permit' => 'mewp-use-v1',
+        'excavation entry permit' => 'excavation-entry-v1',
+        'structural alteration permit' => 'structural-alteration-v1',
+        'out-of-hours working permit' => 'out-of-hours-working-v1',
         'building inspection checklist' => 'building-inspection-v2',
         'final inspection checklist' => 'final-inspection-v2',
         'site safety inspection checklist' => 'site-safety-inspection-v2',
+        'ladder / stepladder pre-use inspection' => 'ladder-stepladder-pre-use-v1',
+        'mewp daily / pre-use inspection' => 'mewp-daily-inspection-v1',
+        'harness / lanyard inspection' => 'harness-inspection-v1',
+        'excavation daily inspection' => 'excavation-daily-inspection-v1',
+        'scaffold weekly inspection' => 'scaffold-weekly-inspection-v1',
+        'plant pre-start inspection' => 'plant-pre-start-inspection-v1',
     ];
 
-    /**
-     * Explicit replacements for old direct-start URLs. Existing records retain
-     * their original template_id; this map is only for starting new work.
-     *
-     * @var array<string,string>
-     */
+    /** @var array<string,string> */
     private const SUPERSEDED_IDS = [
         'general-work-v1' => 'general-ptw-v1',
         'crane-lifting-v1' => 'lifting-operations-v1',
@@ -93,12 +104,34 @@ final class TemplateCatalog
 
     /** @var array<int,string> */
     private const INSPECTION_IDS = [
-        'building-inspection-v1',
-        'building-inspection-v2',
-        'final-inspection-v1',
-        'final-inspection-v2',
-        'site-safety-inspection-v1',
-        'site-safety-inspection-v2',
+        'building-inspection-v1', 'building-inspection-v2',
+        'final-inspection-v1', 'final-inspection-v2',
+        'site-safety-inspection-v1', 'site-safety-inspection-v2',
+        'ladder-stepladder-pre-use-v1',
+        'mewp-daily-inspection-v1',
+        'harness-inspection-v1',
+        'excavation-daily-inspection-v1',
+        'scaffold-weekly-inspection-v1',
+        'plant-pre-start-inspection-v1',
+    ];
+
+    /** @var array<int,string> */
+    private const RETIRED_NEW_START_IDS = [
+        'blasting-explosives-v1',
+        'blasting-explosives-v2',
+    ];
+
+    /** @var array<int,string> */
+    private const INSPECTION_NAMES = [
+        'building inspection checklist',
+        'final inspection checklist',
+        'site safety inspection checklist',
+        'ladder / stepladder pre-use inspection',
+        'mewp daily / pre-use inspection',
+        'harness / lanyard inspection',
+        'excavation daily inspection',
+        'scaffold weekly inspection',
+        'plant pre-start inspection',
     ];
 
     /**
@@ -110,6 +143,10 @@ final class TemplateCatalog
         $latest = [];
 
         foreach ($templates as $template) {
+            if (self::isRetiredForNewStart($template)) {
+                continue;
+            }
+
             $name = preg_replace('/\s+/u', ' ', trim((string)($template['name'] ?? '')));
             if ($name === null || $name === '') {
                 continue;
@@ -124,13 +161,10 @@ final class TemplateCatalog
             }
         }
 
-        uasort(
-            $latest,
-            static fn (array $left, array $right): int => strnatcasecmp(
-                (string)($left['name'] ?? ''),
-                (string)($right['name'] ?? '')
-            )
-        );
+        uasort($latest, static fn (array $left, array $right): int => strnatcasecmp(
+            (string)($left['name'] ?? ''),
+            (string)($right['name'] ?? '')
+        ));
 
         return array_values($latest);
     }
@@ -138,21 +172,14 @@ final class TemplateCatalog
     public static function replacementForId(string $templateId): ?string
     {
         $templateId = trim($templateId);
-        if ($templateId === '') {
-            return null;
-        }
-
-        return self::SUPERSEDED_IDS[$templateId] ?? null;
+        return $templateId === '' ? null : (self::SUPERSEDED_IDS[$templateId] ?? null);
     }
 
     /** @param array<string,mixed>|string $template */
-    public static function isInspection($template): bool
+    public static function isRetiredForNewStart($template): bool
     {
-        $id = is_array($template)
-            ? trim((string)($template['id'] ?? ''))
-            : trim((string)$template);
-
-        if ($id !== '' && in_array($id, self::INSPECTION_IDS, true)) {
+        $id = is_array($template) ? trim((string)($template['id'] ?? '')) : trim((string)$template);
+        if ($id !== '' && in_array($id, self::RETIRED_NEW_START_IDS, true)) {
             return true;
         }
 
@@ -161,20 +188,27 @@ final class TemplateCatalog
         }
 
         $name = mb_strtolower(self::canonicalName(trim((string)($template['name'] ?? ''))), 'UTF-8');
-        return in_array($name, [
-            'building inspection checklist',
-            'final inspection checklist',
-            'site safety inspection checklist',
-        ], true);
+        return $name === 'blasting/explosives permit';
+    }
+
+    /** @param array<string,mixed>|string $template */
+    public static function isInspection($template): bool
+    {
+        $id = is_array($template) ? trim((string)($template['id'] ?? '')) : trim((string)$template);
+        if ($id !== '' && in_array($id, self::INSPECTION_IDS, true)) {
+            return true;
+        }
+        if (!is_array($template)) {
+            return false;
+        }
+        $name = mb_strtolower(self::canonicalName(trim((string)($template['name'] ?? ''))), 'UTF-8');
+        return in_array($name, self::INSPECTION_NAMES, true);
     }
 
     /** @param array<string,mixed>|string $template */
     public static function publicStartPath($template): string
     {
-        $id = is_array($template)
-            ? trim((string)($template['id'] ?? ''))
-            : trim((string)$template);
-
+        $id = is_array($template) ? trim((string)($template['id'] ?? '')) : trim((string)$template);
         return self::isInspection($template)
             ? '/create-inspection-public.php?template=' . rawurlencode($id)
             : '/create-permit-public.php?template=' . rawurlencode($id);
