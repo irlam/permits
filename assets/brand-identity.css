@@ -1,9 +1,10 @@
 /*
  * Shared default brand identity.
  *
- * A customer-uploaded .brand-mark__logo always wins. When no custom logo has
- * been configured, use the same hard-hat/check artwork as the site favicon so
- * dashboards, public pages and print views still have a consistent identity.
+ * Customer-uploaded logo <img> elements always win. Where an installation has
+ * no custom company logo, use the same hard-hat/check artwork as favicon.svg so
+ * dashboards, public forms, permit/inspection records and printed output share
+ * one recognisable identity.
  */
 .brand-mark:not(:has(.brand-mark__logo))::before {
   content: '';
@@ -25,34 +26,49 @@
   border-radius: 16px;
 }
 
-.brand-mark__logo {
+.brand-mark__logo,
+.public-brand-logo,
+.brand-logo,
+.customer-brand__logo {
   object-fit: contain;
 }
 
-/*
- * Admin → Settings normally renders a Current Logo preview only when a custom
- * raster logo exists. Give an unbranded installation a visible default preview
- * next to the upload control without pretending it is a removable custom file.
- */
-form:has(input[name='company_logo']):not(:has(.logo-preview)) .field:has(input[name='company_logo'])::before {
-  content: 'Default logo';
-  box-sizing: border-box;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  width: 160px;
-  height: 120px;
-  margin: 0 0 16px;
-  padding: 10px;
-  border: 2px solid #334155;
-  border-radius: 16px;
-  background: #0f172a url('../favicon.svg') center 14px / 72px 72px no-repeat;
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .02em;
+/* Legacy public pages used the first letter of the company name as a coloured
+ * fallback symbol. Preserve their dimensions/layout but replace the letter with
+ * the canonical favicon artwork. */
+.public-brand-symbol,
+.brand-symbol,
+.customer-brand__symbol {
+  color: transparent !important;
+  font-size: 0 !important;
+  background-color: #0f172a !important;
+  background-image: url('../favicon.svg') !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+}
+
+.default-company-logo-preview img {
+  display: block;
+  width: 112px;
+  height: 112px;
+  padding: 10px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: #0f172a;
+  border: 2px solid #334155;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.default-company-logo-preview small {
+  display: block;
+  max-width: 440px;
+  margin-top: 8px;
+  color: #94a3b8;
+  line-height: 1.45;
 }
 
 @media print {
