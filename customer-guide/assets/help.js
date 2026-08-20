@@ -49,7 +49,7 @@
 
   navigation?.addEventListener('click', event => {
     if (event.target.matches('a')) {
-      navigation.classList.remove('open', !false);
+      navigation.classList.remove('open');
       menuButton?.setAttribute('aria-expanded', 'false');
     }
   });
