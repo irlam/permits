@@ -18,7 +18,7 @@ $steps = [
     ['✍️', '5', 'Holder accepts', 'The permit holder confirms the conditions and accepts responsibility. The authorised validity clock starts and the permit becomes Active.'],
     ['🔎', '6', 'Verify on site', 'The live permit board and permit QR show the current status. Suspended or expired permits display a clear DO NOT WORK warning.'],
     ['🔄', '7', 'Control changes', 'Use shift handover, linked permits/SIMOPS, suspension and revalidation when site conditions or responsibility change.'],
-    ['🏁', '8', 'Hand back and close', 'When the work is complete, the permit is handed back and formally closed so the audit trail records the full lifecycle.'],
+    ['🏁', '8', 'Complete and close', 'When the work is complete, the permit is closed so it no longer appears live and the audit trail records the outcome and lifecycle history.'],
 ];
 ?>
 <!doctype html>
@@ -78,7 +78,7 @@ $steps = [
     <header class="showcase-hero">
         <span class="eyebrow">Simple on site · controlled in the background</span>
         <h1>From QR scan to safe, auditable work.</h1>
-        <p class="hero-copy">The system is designed so an operative can start on a phone in seconds while managers retain control of approval, acceptance, live status, suspension, handover and closeout.</p>
+        <p class="hero-copy">The system is designed so an operative can start on a phone in seconds while managers retain control of approval, acceptance, live status, suspension, handover and closure.</p>
         <div class="hero-actions">
             <a class="btn btn-accent" href="<?= htmlspecialchars($app->url('/#permit-templates'), ENT_QUOTES, 'UTF-8') ?>">Start a Permit</a>
             <a class="btn btn-secondary" href="<?= htmlspecialchars($app->url('/#status-checker'), ENT_QUOTES, 'UTF-8') ?>">Check Permit Status</a>
