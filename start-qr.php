@@ -8,8 +8,9 @@ use Permits\PublicStartCatalog;
 [$app, $db] = require __DIR__ . '/src/bootstrap.php';
 
 $slug = isset($_GET['slug']) && is_scalar($_GET['slug']) ? strtolower(trim((string)$_GET['slug'])) : '';
-$template = $slug !== '' ? PublicStartCatalog::findBySlug($db->pdo, $slug) : null;
-if ($template === null) {
+$isChooser = hash_equals('choose', $slug);
+$template = (!$isChooser && $slug !== '') ? PublicStartCatalog::findBySlug($db->pdo, $slug) : null;
+if (!$isChooser && $template === null) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
     echo 'QR code unavailable';
@@ -19,7 +20,9 @@ if ($template === null) {
 $size = isset($_GET['size']) ? (int)$_GET['size'] : 640;
 $size = max(180, min(1600, $size));
 $scale = max(4, min(40, (int)round($size / 45)));
-$url = $app->url('/start/' . rawurlencode($slug));
+$url = $isChooser
+    ? $app->url('/start')
+    : $app->url('/start/' . rawurlencode($slug));
 
 try {
     $options = new QROptions([
