@@ -1,0 +1,65 @@
+/* Homepage hero feature-card alignment polish.
+ * Keeps the four summary cards visually balanced on laptop/desktop while
+ * retaining large, readable typography and touch-friendly spacing on mobile.
+ */
+
+body.landing-body .hero .stats-grid .stat-card {
+    min-height: 230px;
+    grid-template-rows: auto 84px 1fr;
+    justify-items: center;
+    align-items: start;
+    text-align: center;
+    padding: 20px 18px 22px;
+    gap: 10px;
+}
+
+body.landing-body .hero .stats-grid .stat-card .stat-card__label {
+    width: 100%;
+    text-align: center;
+}
+
+body.landing-body .hero .stats-grid .stat-card .stat-card__value {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: clamp(30px, 2.55vw, 38px);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    overflow-wrap: normal;
+    word-break: normal;
+}
+
+/* "Controlled" is the widest heading. Give it a little extra breathing room
+ * on laptop/desktop so it stays optically centred instead of crowding the card.
+ */
+body.landing-body .hero .stats-grid .stat-card:nth-child(2) .stat-card__value {
+    font-size: clamp(28px, 2.2vw, 34px);
+    letter-spacing: -0.03em;
+}
+
+body.landing-body .hero .stats-grid .stat-card .stat-card__meta {
+    max-width: 25ch;
+    margin-inline: auto;
+    align-self: center;
+    text-align: center;
+    line-height: 1.45;
+}
+
+@media (max-width: 700px) {
+    body.landing-body .hero .stats-grid .stat-card {
+        min-height: 0;
+        grid-template-rows: auto minmax(68px, auto) auto;
+        padding: 20px 18px;
+    }
+
+    body.landing-body .hero .stats-grid .stat-card .stat-card__value {
+        font-size: clamp(30px, 8vw, 38px);
+    }
+
+    body.landing-body .hero .stats-grid .stat-card:nth-child(2) .stat-card__value {
+        font-size: clamp(29px, 7.5vw, 36px);
+    }
+}
