@@ -95,6 +95,13 @@ function asset_version(string $path): string
  */
 function asset(string $path): string
 {
+    if (!preg_match('#^https?://#i', $path) && '/' . ltrim($path, '/') === '/assets/app.css') {
+        // All application pages that ask for the shared stylesheet also receive
+        // the default brand/fallback-logo rules without having to duplicate the
+        // extra <link> tag across every legacy entry point.
+        $path = '/assets/app-shell.css';
+    }
+
     $version = asset_version($path);
 
     if (preg_match('#^https?://#i', $path)) {
@@ -138,8 +145,12 @@ function cache_meta_tags(): void
     echo '<meta http-equiv="Expires" content="0">';
 
     $faviconUrl = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $faviconIco = htmlspecialchars(asset('/favicon.ico'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $touchIcon = htmlspecialchars(asset('/icon-192.png'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     echo '<link rel="icon" type="image/svg+xml" href="' . $faviconUrl . '">';
-    echo '<link rel="shortcut icon" href="' . $faviconUrl . '">';
+    echo '<link rel="icon" type="image/x-icon" href="' . $faviconIco . '">';
+    echo '<link rel="shortcut icon" href="' . $faviconIco . '">';
+    echo '<link rel="apple-touch-icon" sizes="192x192" href="' . $touchIcon . '">';
 
     // User-facing dates are stored in database/HTML-safe ISO formats but are
     // displayed consistently as UK dates (DD/MM/YYYY HH:MM). The script only
