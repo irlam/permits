@@ -23,7 +23,7 @@ final class UkDateAndExpiryDisplayTest extends TestCase
     {
         $view = file_get_contents(__DIR__ . '/../view-permit-public.php');
         self::assertIsString($view);
-        self::assertStringContainsString("$status === 'expired'", $view);
+        self::assertStringContainsString("elseif (\$status === 'expired')", $view);
         self::assertStringContainsString('EXPIRED — DO NOT WORK', $view);
         self::assertStringContainsString('Work is no longer authorised under this permit', $view);
     }
