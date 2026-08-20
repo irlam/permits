@@ -93,7 +93,7 @@ final class PopularPermitsAndInspectionsTest extends TestCase
     {
         $raw = file_get_contents(dirname(__DIR__) . '/templates/form-presets/ladder-stepladder-pre-use-v1.json');
         self::assertIsString($raw);
-        foreach (['Stiles', 'Feet', 'Rungs / steps', 'Locking mechanisms', 'firm, level', 'overhead electrical'] as $phrase) {
+        foreach (['Stiles', 'Feet', 'Rungs / steps', 'Locking mechanisms', 'firm, level', 'Overhead electrical'] as $phrase) {
             self::assertStringContainsString($phrase, $raw);
         }
     }
