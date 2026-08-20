@@ -10,7 +10,10 @@ final class HomeFeatureCardPolishTest extends TestCase
         $helper = (string)file_get_contents(__DIR__ . '/../src/cache-helper.php');
 
         self::assertStringContainsString("asset('/assets/home-feature-card-polish.css')", $helper);
-        self::assertStringContainsString("$scriptName === '' || $scriptName === 'index.php'", $helper);
+        self::assertStringContainsString(
+            "$" . "scriptName === '' || $" . "scriptName === 'index.php'",
+            $helper
+        );
     }
 
     public function testControlledCardHasDesktopSpecificOpticalSizing(): void
