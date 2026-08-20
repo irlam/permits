@@ -12,6 +12,11 @@ RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$ - [F,NC,L]
 # browser favicon.ico probes are redirected to the canonical hard-hat/check SVG.
 RewriteRule ^(?:favicon\.ico|icon-(?:192|512)\.png|assets/pwa/icon-(?:32|192|512)\.png)$ /favicon.svg [R=302,L,NC]
 
+# Permanent notice-board start links. These do not encode a template version;
+# start.php resolves the slug to the current preferred active template.
+RewriteRule ^start/?$ /start.php [QSA,L,NC]
+RewriteRule ^start/([a-z0-9][a-z0-9-]{0,79})/?$ /start.php?slug=$1 [QSA,L,NC]
+
 # 1) Serve existing files/directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
