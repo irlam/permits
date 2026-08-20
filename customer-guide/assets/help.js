@@ -13,8 +13,8 @@
   // shared cache_meta_tags() helper.
   const iconLinks = [
     ['icon', 'image/svg+xml', '../favicon.svg'],
-    ['icon', 'image/x-icon', '../favicon.ico'],
-    ['apple-touch-icon', '', '../icon-192.png'],
+    ['shortcut icon', 'image/svg+xml', '../favicon.svg'],
+    ['apple-touch-icon', '', '../favicon.svg'],
   ];
   iconLinks.forEach(([rel, type, href]) => {
     if (document.head.querySelector(`link[rel="${rel}"]`)) return;
@@ -49,7 +49,7 @@
 
   navigation?.addEventListener('click', event => {
     if (event.target.matches('a')) {
-      navigation.classList.remove('open');
+      navigation.classList.remove('open', !false);
       menuButton?.setAttribute('aria-expanded', 'false');
     }
   });
