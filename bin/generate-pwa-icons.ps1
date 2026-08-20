@@ -1,41 +1,41 @@
 Add-Type -AssemblyName System.Drawing
 
-function New-Icon {
-    param(
-        [string]$Path,
-        [int]$Size,
-        [string]$Text,
-        [int]$FontSize
-    )
+# The checked-in root PWA icons are canonical raster exports of /favicon.svg.
+# Keep the service-worker copies in sync without recreating the legacy blue P.
+$base = "c:\Users\irlam\Desktop\safety tracker\permits"
+$pwa  = Join-Path $base 'assets\pwa'
 
-    $bitmap = New-Object System.Drawing.Bitmap $Size, $Size
-    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-    $graphics.SmoothingMode = 'HighQuality'
-    $background = [System.Drawing.Color]::FromArgb(255, 14, 165, 233)
-    $graphics.Clear($background)
+$icon192 = Join-Path $base 'icon-192.png'
+$icon512 = Join-Path $base 'icon-512.png'
 
-    $brush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)
-    $font = New-Object System.Drawing.Font('Segoe UI Semibold', $FontSize, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
-    $rect = New-Object System.Drawing.RectangleF(0, 0, $Size, $Size)
-    $format = New-Object System.Drawing.StringFormat
-    $format.Alignment = 'Center'
-    $format.LineAlignment = 'Center'
-
-    $graphics.DrawString($Text, $font, $brush, $rect, $format)
-
-    $graphics.Dispose()
-    $font.Dispose()
-    $brush.Dispose()
-
-    $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
-    $bitmap.Dispose()
+if (-not (Test-Path $icon192) -or -not (Test-Path $icon512)) {
+    throw 'Canonical icon-192.png and icon-512.png are missing. Regenerate them from favicon.svg before running this helper.'
 }
 
-$base = "c:\Users\irlam\Desktop\safety tracker\permits"
-$pwa  = Join-Path $base 'assets\\pwa'
+New-Item -ItemType Directory -Force -Path $pwa | Out-Null
+Copy-Item -Force $icon192 (Join-Path $pwa 'icon-192.png')
+Copy-Item -Force $icon512 (Join-Path $pwa 'icon-512.png')
 
-New-Icon -Path (Join-Path $base 'icon-192.png') -Size 192 -Text 'P' -FontSize 90
-New-Icon -Path (Join-Path $base 'icon-512.png') -Size 512 -Text 'P' -FontSize 240
-New-Icon -Path (Join-Path $pwa 'icon-192.png') -Size 192 -Text 'P' -FontSize 90
-New-Icon -Path (Join-Path $pwa 'icon-512.png') -Size 512 -Text 'P' -FontSize 240
-New-Icon -Path (Join-Path $pwa 'icon-32.png')  -Size 32  -Text 'P' -FontSize 18
+$source = [System.Drawing.Image]::FromFile($icon192)
+try {
+    $small = New-Object System.Drawing.Bitmap 32, 32
+    try {
+        $graphics = [System.Drawing.Graphics]::FromImage($small)
+        try {
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+            $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+            $graphics.DrawImage($source, 0, 0, 32, 32)
+        }
+        finally {
+            $graphics.Dispose()
+        }
+        $small.Save((Join-Path $pwa 'icon-32.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+    }
+    finally {
+        $small.Dispose()
+    }
+}
+finally {
+    $source.Dispose()
+}
