@@ -8,6 +8,37 @@
   const sections = [...document.querySelectorAll('.guide-section')];
   const searchable = [...document.querySelectorAll('[data-search]')];
 
+  // The help centre is static HTML, so it does not pass through the PHP shared
+  // head helper. Add the same browser-tab identity here and replace its legacy P.
+  [
+    ['icon', 'image/svg+xml', '../favicon.svg'],
+    ['shortcut icon', 'image/svg+xml', '../favicon.svg'],
+    ['apple-touch-icon', '', '../icon-192.png'],
+  ].forEach(([rel, type, href]) => {
+    if (document.head.querySelector(`link[rel="${rel}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = rel;
+    if (type) link.type = type;
+    link.href = href;
+    document.head.appendChild(link);
+  });
+
+  const guideMark = document.querySelector('.brand-mark');
+  if (guideMark && guideMark.textContent.trim() === 'P') {
+    guideMark.textContent = '';
+    guideMark.style.background = 'transparent';
+    guideMark.style.overflow = 'hidden';
+    const image = document.createElement('img');
+    image.src = '../favicon.svg';
+    image.alt = '';
+    image.setAttribute('aria-hidden', 'true');
+    image.style.display = 'block';
+    image.style.width = '100%';
+    image.style.height = '100%';
+    image.style.objectFit = 'contain';
+    guideMark.appendChild(image);
+  }
+
   menuButton?.addEventListener('click', () => {
     const open = menuButton.getAttribute('aria-expanded') === 'true';
     menuButton.setAttribute('aria-expanded', String(!open));
