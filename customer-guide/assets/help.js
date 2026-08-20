@@ -8,21 +8,20 @@
   const sections = [...document.querySelectorAll('.guide-section')];
   const searchable = [...document.querySelectorAll('[data-search]')];
 
-  // The help centre is static HTML, so it does not pass through the PHP shared
-  // head helper. Add the same browser-tab identity here and replace its legacy P.
+  // The Help Centre is static HTML, so add the same SVG favicon used by PHP pages.
   [
     ['icon', 'image/svg+xml', '../favicon.svg'],
     ['shortcut icon', 'image/svg+xml', '../favicon.svg'],
-    ['apple-touch-icon', '', '../icon-192.png'],
   ].forEach(([rel, type, href]) => {
     if (document.head.querySelector(`link[rel="${rel}"]`)) return;
     const link = document.createElement('link');
     link.rel = rel;
-    if (type) link.type = type;
+    link.type = type;
     link.href = href;
     document.head.appendChild(link);
   });
 
+  // Replace the Help Centre's legacy blue P with the canonical hard-hat/check.
   const guideMark = document.querySelector('.brand-mark');
   if (guideMark && guideMark.textContent.trim() === 'P') {
     guideMark.textContent = '';
