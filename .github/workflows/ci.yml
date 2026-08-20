@@ -26,6 +26,7 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: composer check
       - run: node --check assets/app.js
+      - run: node --check assets/default-brand.js
       - run: node --check assets/phase3-status.js
       - run: node --check assets/phase3c-picker.js
       - run: node --check assets/uk-date-display.js
