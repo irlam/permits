@@ -8,6 +8,36 @@
   const sections = [...document.querySelectorAll('.guide-section')];
   const searchable = [...document.querySelectorAll('[data-search]')];
 
+  // The Help Centre is static HTML, so add the same SVG favicon used by PHP pages.
+  [
+    ['icon', 'image/svg+xml', '../favicon.svg'],
+    ['shortcut icon', 'image/svg+xml', '../favicon.svg'],
+  ].forEach(([rel, type, href]) => {
+    if (document.head.querySelector(`link[rel="${rel}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = rel;
+    link.type = type;
+    link.href = href;
+    document.head.appendChild(link);
+  });
+
+  // Replace the Help Centre's legacy blue P with the canonical hard-hat/check.
+  const guideMark = document.querySelector('.brand-mark');
+  if (guideMark && guideMark.textContent.trim() === 'P') {
+    guideMark.textContent = '';
+    guideMark.style.background = 'transparent';
+    guideMark.style.overflow = 'hidden';
+    const image = document.createElement('img');
+    image.src = '../favicon.svg';
+    image.alt = '';
+    image.setAttribute('aria-hidden', 'true');
+    image.style.display = 'block';
+    image.style.width = '100%';
+    image.style.height = '100%';
+    image.style.objectFit = 'contain';
+    guideMark.appendChild(image);
+  }
+
   menuButton?.addEventListener('click', () => {
     const open = menuButton.getAttribute('aria-expanded') === 'true';
     menuButton.setAttribute('aria-expanded', String(!open));

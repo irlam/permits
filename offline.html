@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0f172a">
   <title>Permits System · Offline</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg">
   <style>
     :root { color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     * { box-sizing: border-box; }
     body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; background: #020617; color: #e2e8f0; }
     main { width: min(100%, 520px); padding: 32px; border: 1px solid #334155; border-radius: 20px; background: #0f172a; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
-    .mark { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 20px; border-radius: 14px; background: #0ea5e9; color: #00111a; font-size: 24px; font-weight: 800; }
+    .mark { display: block; width: 48px; height: 48px; margin-bottom: 20px; border-radius: 14px; overflow: hidden; }
+    .mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
     h1 { margin: 0 0 12px; font-size: clamp(1.7rem, 8vw, 2.25rem); }
     p { margin: 0 0 22px; color: #cbd5e1; line-height: 1.6; }
     button { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: #0ea5e9; color: #00111a; font: inherit; font-weight: 750; cursor: pointer; }
@@ -18,7 +21,7 @@
 </head>
 <body>
   <main>
-    <div class="mark" aria-hidden="true">P</div>
+    <div class="mark" aria-hidden="true"><img src="/favicon.svg" alt=""></div>
     <h1>You are offline</h1>
     <p>Reconnect before viewing, creating or updating a permit. Live permit information is deliberately not stored on this device.</p>
     <button type="button" onclick="location.reload()">Try again</button>
