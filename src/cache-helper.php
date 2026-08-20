@@ -141,6 +141,13 @@ function cache_meta_tags(): void
     echo '<link rel="icon" type="image/svg+xml" href="' . $faviconUrl . '">';
     echo '<link rel="shortcut icon" href="' . $faviconUrl . '">';
 
+    // User-facing dates are stored in database/HTML-safe ISO formats but are
+    // displayed consistently as UK dates (DD/MM/YYYY HH:MM). The script only
+    // rewrites rendered text; form values, API values and database values stay
+    // untouched for reliable validation and expiry calculations.
+    $ukDateScript = htmlspecialchars(asset('/assets/uk-date-display.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    echo '<script src="' . $ukDateScript . '" defer></script>';
+
     // Page-specific progressive enhancements. Keep specialist assets off pages
     // that do not use them so admin and permit screens remain lean.
     $scriptName = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
