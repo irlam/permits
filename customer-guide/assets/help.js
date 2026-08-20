@@ -8,6 +8,39 @@
   const sections = [...document.querySelectorAll('.guide-section')];
   const searchable = [...document.querySelectorAll('[data-search]')];
 
+  // Keep the standalone help centre on the same visual identity as the main
+  // application, including browser-tab icons on pages that do not use PHP's
+  // shared cache_meta_tags() helper.
+  const iconLinks = [
+    ['icon', 'image/svg+xml', '../favicon.svg'],
+    ['icon', 'image/x-icon', '../favicon.ico'],
+    ['apple-touch-icon', '', '../icon-192.png'],
+  ];
+  iconLinks.forEach(([rel, type, href]) => {
+    if (document.head.querySelector(`link[rel="${rel}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = rel;
+    if (type) link.type = type;
+    link.href = href;
+    document.head.appendChild(link);
+  });
+
+  const guideMark = document.querySelector('.brand-mark');
+  if (guideMark && guideMark.textContent.trim() === 'P') {
+    guideMark.textContent = '';
+    guideMark.style.background = 'transparent';
+    guideMark.style.overflow = 'hidden';
+    const image = document.createElement('img');
+    image.src = '../favicon.svg';
+    image.alt = '';
+    image.setAttribute('aria-hidden', 'true');
+    image.style.display = 'block';
+    image.style.width = '100%';
+    image.style.height = '100%';
+    image.style.objectFit = 'contain';
+    guideMark.appendChild(image);
+  }
+
   menuButton?.addEventListener('click', () => {
     const open = menuButton.getAttribute('aria-expanded') === 'true';
     menuButton.setAttribute('aria-expanded', String(!open));
