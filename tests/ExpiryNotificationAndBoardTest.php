@@ -19,7 +19,7 @@ final class ExpiryNotificationAndBoardTest extends TestCase
 
         self::assertStringContainsString('PermitExpiryNotifier', $worker);
         self::assertStringContainsString('notifyRecentlyExpired(1440)', $worker);
-        self::assertStringContainsString("WorkerLock::acquire($pdo, 'expired-permit-alerts'", $service);
+        self::assertStringContainsString("WorkerLock::acquire(\$pdo, 'expired-permit-alerts'", $service);
         self::assertStringContainsString('NotificationDeliveryLedger', $service);
         self::assertStringContainsString("'expiry_email_sent'", $service);
         self::assertStringContainsString("'expiry_push_sent'", $service);
@@ -30,11 +30,11 @@ final class ExpiryNotificationAndBoardTest extends TestCase
     {
         $service = (string)file_get_contents($this->root . '/src/PermitExpiryNotifier.php');
 
-        self::assertStringContainsString("$permit['holder_email']", $service);
-        self::assertStringContainsString("$permit['holder_id']", $service);
-        self::assertStringContainsString("$permit['issuer_id']", $service);
+        self::assertStringContainsString("\$permit['holder_email']", $service);
+        self::assertStringContainsString("\$permit['holder_id']", $service);
+        self::assertStringContainsString("\$permit['issuer_id']", $service);
         self::assertStringContainsString("LOWER(role) IN ('admin','manager')", $service);
-        self::assertStringContainsString("in_array($role, ['admin','manager'], true)", $service);
+        self::assertStringContainsString("in_array(\$role, ['admin','manager'], true)", $service);
     }
 
     public function testOperationalAndPublicBoardsKeepRecentExpiryVisible(): void
@@ -50,7 +50,7 @@ final class ExpiryNotificationAndBoardTest extends TestCase
 
         self::assertStringContainsString('Expired — Do Not Work', $publicStatus);
         self::assertStringContainsString('time() - 86400', $publicStatus);
-        self::assertStringContainsString("'expired' => $expired", $publicStatus);
+        self::assertStringContainsString("'expired' => \$expired", $publicStatus);
 
         self::assertStringContainsString('data-live-count="expired"', $publicScript);
         self::assertStringContainsString('Expired in last 24h — stop work', $publicScript);
