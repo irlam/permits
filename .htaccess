@@ -8,6 +8,10 @@ RewriteRule ^(?:backups|bin|config|data|database|src|storage|templates|tests|ven
 # existing-file short circuit below.
 RewriteRule ^uploads/.*\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$ - [F,NC,L]
 
+# Retire the old blue-square/white-P raster artwork. Historic icon URLs and
+# browser favicon.ico probes are redirected to the canonical hard-hat/check SVG.
+RewriteRule ^(?:favicon\.ico|icon-(?:192|512)\.png|assets/pwa/icon-(?:32|192|512)\.png)$ /favicon.svg [R=302,L,NC]
+
 # 1) Serve existing files/directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
