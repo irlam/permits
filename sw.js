@@ -6,7 +6,7 @@
  * - Versioned cache keys for safe roll-outs
  */
 
-const SW_VERSION = 'permits-sw-v2.3.0';
+const SW_VERSION = 'permits-sw-v2.4.0';
 const PRECACHE = `permits-precache-${SW_VERSION}`;
 const RUNTIME = `permits-runtime-${SW_VERSION}`;
 
@@ -17,12 +17,8 @@ const PRECACHE_URLS = [
   '/assets/app.js',
   '/assets/phase3-status.js',
   '/assets/phase3c-picker.js',
+  '/assets/brand-identity.css',
   '/favicon.svg',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/assets/pwa/icon-192.png',
-  '/assets/pwa/icon-512.png',
-  '/assets/pwa/icon-32.png',
 ];
 
 // Immediately take control on install
@@ -34,7 +30,7 @@ self.addEventListener('install', (event) => {
   })());
 });
 
-// Claim clients and clear stale caches
+// Claim clients and clear stale caches, including the retired blue P icons.
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
@@ -61,9 +57,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   const isStaticAsset = url.pathname.startsWith('/assets/')
     || url.pathname === '/manifest.webmanifest'
-    || url.pathname === '/favicon.svg'
-    || url.pathname === '/icon-192.png'
-    || url.pathname === '/icon-512.png';
+    || url.pathname === '/favicon.svg';
 
   // Never cache API responses, permit/QR URLs, downloads or other dynamic data.
   if (!isStaticAsset) {
@@ -121,9 +115,9 @@ function parsePushData(event) {
   }
 }
 
-// Default icons (adjust paths if needed)
-const DEFAULT_ICON  = '/assets/pwa/icon-192.png';
-const DEFAULT_BADGE = '/assets/pwa/icon-32.png';
+// Use the same hard-hat/check artwork as the browser favicon everywhere.
+const DEFAULT_ICON  = '/favicon.svg';
+const DEFAULT_BADGE = '/favicon.svg';
 
 // Handle incoming push
 self.addEventListener('push', (event) => {
