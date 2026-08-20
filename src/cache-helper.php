@@ -130,16 +130,58 @@ function asset_timestamp(string $path): string
     return asset($path);
 }
 
+/**
+ * Return the shared site identity tags used by both modern and legacy pages.
+ */
+function shared_site_identity_tags(): string
+{
+    $faviconSvg = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $faviconIco = htmlspecialchars(asset('/favicon.ico'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $touchIcon = htmlspecialchars(asset('/icon-192.png'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $brandScript = htmlspecialchars(asset('/assets/default-brand.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    return '<link rel="icon" type="image/svg+xml" href="' . $faviconSvg . '">'
+        . '<link rel="icon" type="image/x-icon" href="' . $faviconIco . '">'
+        . '<link rel="shortcut icon" href="' . $faviconIco . '">'
+        . '<link rel="apple-touch-icon" sizes="192x192" href="' . $touchIcon . '">'
+        . '<script src="' . $brandScript . '" data-default-logo="' . $faviconSvg . '" defer></script>';
+}
+
+/**
+ * Legacy PHP pages do not all call cache_meta_tags(). Inject the same favicon
+ * and default-logo helper into any normal HTML document that passes through the
+ * shared bootstrap. JSON/API/download responses do not contain </head> and are
+ * therefore left byte-for-byte unchanged.
+ */
+function inject_shared_site_identity(string $output): string
+{
+    if (stripos($output, '</head>') === false) {
+        return $output;
+    }
+
+    $tags = '';
+    if (stripos($output, '/favicon.svg') === false && stripos($output, '/favicon.ico') === false) {
+        $tags .= shared_site_identity_tags();
+    } elseif (stripos($output, '/assets/default-brand.js') === false) {
+        $faviconSvg = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $brandScript = htmlspecialchars(asset('/assets/default-brand.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $tags .= '<script src="' . $brandScript . '" data-default-logo="' . $faviconSvg . '" defer></script>';
+    }
+
+    if ($tags === '') {
+        return $output;
+    }
+
+    return preg_replace('/<\/head>/i', $tags . '</head>', $output, 1) ?? $output;
+}
+
 // Generate shared head tags for cache control and site identity.
 function cache_meta_tags(): void
 {
     echo '<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">';
     echo '<meta http-equiv="Pragma" content="no-cache">';
     echo '<meta http-equiv="Expires" content="0">';
-
-    $faviconUrl = htmlspecialchars(asset('/favicon.svg'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    echo '<link rel="icon" type="image/svg+xml" href="' . $faviconUrl . '">';
-    echo '<link rel="shortcut icon" href="' . $faviconUrl . '">';
+    echo shared_site_identity_tags();
 
     // User-facing dates are stored in database/HTML-safe ISO formats but are
     // displayed consistently as UK dates (DD/MM/YYYY HH:MM). The script only
@@ -164,6 +206,11 @@ function cache_meta_tags(): void
         $inspectionControls = htmlspecialchars(asset('/assets/inspection-controls.css'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         echo '<link rel="stylesheet" href="' . $inspectionControls . '">';
     }
+}
+
+if (PHP_SAPI !== 'cli' && !defined('PERMITS_SITE_IDENTITY_BUFFER')) {
+    define('PERMITS_SITE_IDENTITY_BUFFER', true);
+    ob_start('inject_shared_site_identity');
 }
 
 // Call headers automatically when file is included
