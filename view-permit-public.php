@@ -47,6 +47,18 @@ if ($status === 'awaiting_acceptance') {
         . '<div style="font-size:16px;line-height:1.55;color:#fecaca;">Work must remain stopped. A manager must revalidate the permit and the holder must re-accept it before work can resume. Revalidation cannot extend the original expiry time.</div>'
         . '<a href="' . $escWorkflowUrl . '" class="btn" style="margin-top:14px;background:#fff;color:#991b1b;border:2px solid #fff;">Open Permit Controls</a>'
         . '</div>';
+} elseif ($status === 'expired') {
+    $expiredAt = trim((string)($permit['valid_to'] ?? ''));
+    if ($expiredAt !== '' && function_exists('formatDateUK')) {
+        $expiredAt = formatDateUK($expiredAt);
+    }
+    $expiredText = $expiredAt !== '' && $expiredAt !== 'N/A'
+        ? 'This permit expired at <strong>' . htmlspecialchars($expiredAt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong>.'
+        : 'This permit has passed its authorised validity window.';
+    $panel .= '<div class="no-print" role="alert" style="margin:0 0 24px;padding:22px;border:4px solid #dc2626;border-radius:12px;background:#450a0a;color:#fff;box-shadow:0 0 0 4px rgba(220,38,38,.18);">'
+        . '<div style="font-size:26px;font-weight:900;letter-spacing:.02em;margin-bottom:8px;">❌ EXPIRED — DO NOT WORK</div>'
+        . '<div style="font-size:16px;line-height:1.55;color:#fecaca;">' . $expiredText . ' Work is no longer authorised under this permit. A new permit or other formally authorised site process is required before work continues.</div>'
+        . '</div>';
 }
 
 // Surface linked permits, SIMOPS, isolation dependencies and explicit conflicts
@@ -107,5 +119,10 @@ if ($status === 'suspended' && !empty($canClose)) {
         $html
     );
 }
+
+// The mature permit renderer predates the shared cache_meta_tags() helper, so
+// add the display-only UK date normaliser here without touching stored values.
+$ukDateScript = htmlspecialchars(asset('/assets/uk-date-display.js'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$html = str_replace('</body>', '<script src="' . $ukDateScript . '" defer></script></body>', $html);
 
 echo $html;

@@ -28,6 +28,7 @@ jobs:
       - run: node --check assets/app.js
       - run: node --check assets/phase3-status.js
       - run: node --check assets/phase3c-picker.js
+      - run: node --check assets/uk-date-display.js
       - run: node --check sw.js
       - run: node --check customer-guide/assets/help.js
       - if: matrix.php == '8.3'
