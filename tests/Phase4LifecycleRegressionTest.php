@@ -97,4 +97,18 @@ final class Phase4LifecycleRegressionTest extends TestCase
         self::assertStringContainsString('live-permit-group__warning', $script);
         self::assertStringNotContainsString('This permit has expired and no longer authorises the work', $script);
     }
+
+    public function testAdminHealthCheckIsProtectedAndReadOnly(): void
+    {
+        $source = (string)file_get_contents($this->root . '/admin/health-check.php');
+        $admin = (string)file_get_contents($this->root . '/admin.php');
+
+        self::assertStringContainsString("requireRoles(['admin'])", $source);
+        self::assertStringContainsString('ProductionHealthCheck', $source);
+        self::assertStringContainsString("header('Cache-Control: no-store", $source);
+        self::assertStringContainsString('No settings or records are changed.', $source);
+        self::assertStringContainsString('Run checks again', $source);
+        self::assertStringNotContainsString('password', strtolower($source));
+        self::assertStringContainsString('/admin/health-check.php', $admin);
+    }
 }

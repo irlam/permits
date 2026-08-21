@@ -105,6 +105,13 @@ $brandingCss = SystemSettings::brandingCssVariables($branding);
 
         <section class="admin-grid" aria-label="Admin tools">
             <div class="admin-card">
+                <div class="icon">🩺</div>
+                <h3>System Health Check</h3>
+                <p>Run read-only production checks for the database, storage, server configuration and required PHP extensions.</p>
+                <a href="/admin/health-check.php" class="btn">Run Health Check</a>
+            </div>
+
+            <div class="admin-card">
                 <div class="icon">⏱️</div>
                 <h3>Permit Duration Presets</h3>
                 <p>Define the quick-select expiry options used when issuing permits. Manage the preset list from a dedicated admin page.</p>
