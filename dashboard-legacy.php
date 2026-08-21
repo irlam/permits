@@ -1,5 +1,6 @@
 <?php
 use Permits\PermitAccess;
+use Permits\DashboardActivityPresenter;
 use Permits\SystemSettings;
 /**
  * Main Dashboard with Advanced Metrics
@@ -173,6 +174,10 @@ try {
         ]);
     }
     $recentActivity = $stmt->fetchAll();
+    foreach ($recentActivity as &$activity) {
+        $activity['display'] = DashboardActivityPresenter::present($activity);
+    }
+    unset($activity);
 } catch (Exception $e) {
     // Ignore
 }
@@ -459,8 +464,8 @@ function getStatusBadge($status) {
 
         .activity-item {
             display: flex;
-            gap: 12px;
-            padding: 12px;
+            gap: 16px;
+            padding: 16px;
             background: rgba(6, 182, 212, 0.05);
             border-left: 3px solid #06b6d4;
             border-radius: 8px;
@@ -473,10 +478,15 @@ function getStatusBadge($status) {
         }
 
         .activity-time {
-            color: #94a3b8;
+            color: #cbd5e1;
+            background: rgba(148, 163, 184, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 999px;
+            padding: 5px 9px;
             font-size: 12px;
             white-space: nowrap;
-            font-weight: 500;
+            font-weight: 700;
+            align-self: flex-start;
         }
 
         .activity-content {
@@ -485,16 +495,23 @@ function getStatusBadge($status) {
         }
 
         .activity-action {
-            color: #e2e8f0;
-            font-size: 13px;
-            font-weight: 500;
+            color: #f8fafc;
+            font-size: 15px;
+            line-height: 1.3;
+            font-weight: 700;
         }
 
         .activity-desc {
-            color: #64748b;
-            font-size: 12px;
-            margin-top: 4px;
-            word-break: break-word;
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.55;
+            margin-top: 6px;
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 520px) {
+            .activity-item { display: grid; gap: 10px; }
+            .activity-time { justify-self: start; }
         }
 
         .kpi-badges {
@@ -692,11 +709,12 @@ function getStatusBadge($status) {
                         <div class="section-title">⚡ Recent Activity</div>
                         <div class="activity-timeline">
                             <?php foreach ($recentActivity as $activity): ?>
+                                <?php $activityDisplay = $activity['display'] ?? DashboardActivityPresenter::present($activity); ?>
                                 <div class="activity-item">
                                     <div class="activity-time"><?= date('H:i', strtotime($activity['timestamp'])); ?></div>
                                     <div class="activity-content">
-                                        <div class="activity-action"><?= htmlspecialchars(ucfirst($activity['action'])); ?></div>
-                                        <div class="activity-desc"><?= htmlspecialchars($activity['description'] ?? 'No description'); ?></div>
+                                        <div class="activity-action"><?= htmlspecialchars($activityDisplay['title']); ?></div>
+                                        <div class="activity-desc"><?= htmlspecialchars($activityDisplay['description']); ?></div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
