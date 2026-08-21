@@ -27,20 +27,27 @@
     .live-permit-search { flex:1 1 260px; min-height:46px; border-radius:12px; border:1px solid rgba(148,163,184,.28); background:rgba(15,23,42,.8); color:#e5e7eb; padding:10px 14px; font-size:16px; }
     .live-permit-search:focus { outline:2px solid rgba(var(--brand-primary-rgb),.65); outline-offset:2px; }
     .live-permit-updated { color:rgba(148,163,184,.82); font-size:13px; }
-    .live-permit-grid { display:grid; gap:12px; }
-    .live-permit-card { border:1px solid rgba(148,163,184,.18); border-radius:18px; background:rgba(15,23,42,.86); padding:18px; display:grid; gap:11px; }
+    .live-permit-groups { display:grid; gap:10px; }
+    .live-permit-group { border:1px solid rgba(148,163,184,.2); border-radius:16px; background:rgba(15,23,42,.55); overflow:hidden; }
+    .live-permit-group > summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; min-height:52px; padding:10px 16px; font-weight:750; }
+    .live-permit-group > summary::-webkit-details-marker { display:none; }
+    .live-permit-group > summary::before { content:'▸'; color:rgba(203,213,225,.75); transition:transform .15s ease; }
+    .live-permit-group[open] > summary::before { transform:rotate(90deg); }
+    .live-permit-group__count { min-width:28px; padding:3px 8px; border-radius:999px; background:rgba(148,163,184,.16); text-align:center; font-size:13px; }
+    .live-permit-group__warning { margin-left:auto; color:#fecaca; font-size:13px; font-weight:650; }
+    .live-permit-group__list { display:grid; border-top:1px solid rgba(148,163,184,.16); }
+    .live-permit-card { border:0; border-bottom:1px solid rgba(148,163,184,.14); background:rgba(15,23,42,.72); padding:12px 16px; display:grid; grid-template-columns:minmax(220px,1.2fr) minmax(280px,1fr) auto; gap:12px 18px; align-items:center; }
+    .live-permit-card:last-child { border-bottom:0; }
     .live-permit-card--pending { border-left:4px solid #eab308; }
     .live-permit-card--active { border-left:4px solid #22c55e; }
-    .live-permit-card--suspended { border:1px solid rgba(251,146,60,.48); border-left:5px solid #f97316; background:rgba(67,20,7,.62); }
-    .live-permit-card--expired { border:1px solid rgba(248,113,113,.6); border-left:6px solid #ef4444; background:rgba(69,10,10,.82); }
-    .live-permit-card__top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
-    .live-permit-card__title { margin:0; font-size:18px; font-weight:700; }
+    .live-permit-card--suspended { border-left:4px solid #f97316; background:rgba(67,20,7,.48); }
+    .live-permit-card--expired { border-left:4px solid #ef4444; background:rgba(69,10,10,.58); }
+    .live-permit-card__title { margin:0; font-size:16px; font-weight:700; }
     .live-permit-card__ref { margin-top:3px; color:rgba(148,163,184,.9); font-size:13px; }
-    .live-permit-card__meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px 14px; color:rgba(226,232,240,.9); font-size:14px; }
+    .live-permit-card__meta { display:flex; gap:6px 18px; flex-wrap:wrap; color:rgba(226,232,240,.9); font-size:13px; }
     .live-permit-card__meta strong { color:#f8fafc; }
-    .live-permit-card__note { margin:0; color:rgba(203,213,225,.82); font-size:14px; }
-    .live-permit-card--suspended .live-permit-card__note { color:#fed7aa; font-weight:700; }
-    .live-permit-card--expired .live-permit-card__note { color:#fecaca; font-weight:800; }
+    .live-permit-show-all { justify-self:center; margin:10px; border:0; background:transparent; color:#93c5fd; font:inherit; font-weight:700; cursor:pointer; }
+    .live-permit-show-all:hover { text-decoration:underline; }
     .live-permit-empty { border:1px dashed rgba(148,163,184,.32); border-radius:18px; padding:24px; text-align:center; color:rgba(203,213,225,.9); }
     .permit-specific-lookup { border-top:1px solid rgba(148,163,184,.18); padding-top:18px; }
     .permit-specific-lookup > summary { cursor:pointer; font-weight:700; color:#e2e8f0; list-style:none; display:flex; align-items:center; gap:8px; padding:4px 0; }
@@ -53,7 +60,9 @@
       .live-permit-board__stats { grid-template-columns:1fr; }
       .live-permit-board__tools { align-items:stretch; }
       .live-permit-board__tools .btn { width:100%; }
-      .live-permit-card { padding:16px; }
+      .live-permit-card { grid-template-columns:1fr; gap:8px; padding:12px 14px; }
+      .live-permit-card .status-badge { justify-self:start; }
+      .live-permit-group__warning { display:none; }
     }
   `;
   document.head.appendChild(style);
@@ -85,7 +94,7 @@
       <button class="btn btn-secondary" type="button" data-live-refresh>Refresh permits</button>
     </div>
     <div class="live-permit-updated" data-live-updated aria-live="polite">Loading current permits…</div>
-    <div class="live-permit-grid" data-live-list aria-live="polite"></div>
+    <div class="live-permit-groups" data-live-list aria-live="polite"></div>
   `;
 
   if (header) header.insertAdjacentElement('afterend', board);
@@ -119,6 +128,7 @@
   const suspendedCount = board.querySelector('[data-live-count="suspended"]');
   const expiredCount = board.querySelector('[data-live-count="expired"]');
   let permits = [];
+  const expandedGroups = new Set();
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -142,7 +152,19 @@
       return;
     }
 
-    list.innerHTML = visible.map((permit) => {
+    const groupOrder = [
+      { state:'active', label:'Active now', open:true },
+      { state:'pending', label:'Pending / awaiting acceptance', open:true },
+      { state:'suspended', label:'Suspended', open:false, warning:'STOP WORK until revalidated' },
+      { state:'expired', label:'Expired in the last 24 hours', open:false, warning:'STOP WORK — no longer valid' }
+    ];
+
+    list.innerHTML = groupOrder.map((group) => {
+      const items = visible.filter((permit) => permit.status === group.state || (group.state === 'pending' && !['active', 'suspended', 'expired'].includes(permit.status)));
+      if (items.length === 0) return '';
+      const showAll = Boolean(term) || expandedGroups.has(group.state);
+      const displayed = showAll ? items : items.slice(0, 5);
+      const rows = displayed.map((permit) => {
       const state = ['pending', 'active', 'suspended', 'expired'].includes(permit.status) ? permit.status : 'pending';
       const expired = state === 'expired';
       const suspended = state === 'suspended';
@@ -151,23 +173,22 @@
       const submitted = permit.submitted_at ? `<span><strong>Submitted:</strong> ${escapeHtml(formatDate(permit.submitted_at))}</span>` : '';
       const validTo = permit.valid_to ? `<span><strong>${expired ? 'Expired:' : 'Valid until:'}</strong> ${escapeHtml(formatDate(permit.valid_to))}</span>` : '';
       const badgeClass = (expired || suspended) ? 'status-badge--danger' : (pending ? 'status-badge--warning' : 'status-badge--success');
-      const note = expired
-        ? 'STOP WORK. This permit has expired and no longer authorises the work. Obtain fresh valid authorisation before work resumes.'
-        : (suspended
-          ? 'STOP WORK. This permit must be revalidated and accepted before work resumes.'
-          : (pending
-            ? (permit.status_label === 'Awaiting Holder Acceptance' ? 'Manager approved; holder acceptance is still required before work starts.' : 'Awaiting manager approval.')
-            : 'Approved, accepted and currently live on site.'));
-
       return `
         <article class="live-permit-card live-permit-card--${state}">
-          <div class="live-permit-card__top">
-            <div><h3 class="live-permit-card__title">${escapeHtml(permit.permit_type || 'Permit')}</h3><div class="live-permit-card__ref">Ref #${escapeHtml(permit.reference || '—')}</div></div>
-            <span class="status-badge ${badgeClass}">${escapeHtml(permit.status_label || state)}</span>
-          </div>
+          <div><h3 class="live-permit-card__title">${escapeHtml(permit.permit_type || 'Permit')}</h3><div class="live-permit-card__ref">Ref #${escapeHtml(permit.reference || '—')}</div></div>
           <div class="live-permit-card__meta">${location}${submitted}${validTo}</div>
-          <p class="live-permit-card__note">${escapeHtml(note)}</p>
+          <span class="status-badge ${badgeClass}">${escapeHtml(permit.status_label || state)}</span>
         </article>`;
+      }).join('');
+      const more = !showAll && items.length > 5
+        ? `<button class="live-permit-show-all" type="button" data-show-group="${group.state}">Show all ${items.length}</button>`
+        : '';
+      const warning = group.warning ? `<span class="live-permit-group__warning">${escapeHtml(group.warning)}</span>` : '';
+      const open = Boolean(term) || group.open || expandedGroups.has(group.state) ? ' open' : '';
+      return `<details class="live-permit-group live-permit-group--${group.state}"${open}>
+        <summary><span>${escapeHtml(group.label)}</span><span class="live-permit-group__count">${items.length}</span>${warning}</summary>
+        <div class="live-permit-group__list">${rows}${more}</div>
+      </details>`;
     }).join('');
   }
 
@@ -197,6 +218,12 @@
   }
 
   search?.addEventListener('input', render);
+  list?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-show-group]');
+    if (!button) return;
+    expandedGroups.add(button.dataset.showGroup);
+    render();
+  });
   refresh?.addEventListener('click', loadPermits);
   loadPermits();
   window.setInterval(() => { if (!document.hidden) loadPermits(); }, 30000);

@@ -90,5 +90,11 @@ final class Phase4LifecycleRegressionTest extends TestCase
         self::assertStringContainsString('Suspended — Do Not Work', $service);
         self::assertStringContainsString('Suspended — stop work', $script);
         self::assertStringContainsString('STOP WORK', $script);
+        self::assertStringContainsString("{ state:'active', label:'Active now', open:true }", $script);
+        self::assertStringContainsString("{ state:'expired', label:'Expired in the last 24 hours', open:false", $script);
+        self::assertStringContainsString('items.slice(0, 5)', $script);
+        self::assertStringContainsString('data-show-group', $script);
+        self::assertStringContainsString('live-permit-group__warning', $script);
+        self::assertStringNotContainsString('This permit has expired and no longer authorises the work', $script);
     }
 }
