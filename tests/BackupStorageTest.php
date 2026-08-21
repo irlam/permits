@@ -62,4 +62,38 @@ final class BackupStorageTest extends TestCase
             @rmdir($this->sandbox . DIRECTORY_SEPARATOR . 'private-backups');
         }
     }
+
+    public function testConfiguredPrivateFolderCanBePassedDirectlyToEnsure(): void
+    {
+        $configured = $this->sandbox . DIRECTORY_SEPARATOR . 'configured-private-backups';
+
+        $path = BackupStorage::ensure($this->root, $configured);
+
+        self::assertSame(realpath($configured), $path);
+        self::assertFalse(BackupStorage::isInside($path, $this->root));
+        @rmdir($configured);
+    }
+
+    public function testInaccessibleConfiguredParentFailsWithoutLeakingAPhpWarning(): void
+    {
+        $warningRaised = false;
+        set_error_handler(static function () use (&$warningRaised): bool {
+            $warningRaised = true;
+            return true;
+        });
+
+        try {
+            BackupStorage::pathFromValue(
+                $this->root,
+                $this->sandbox . DIRECTORY_SEPARATOR . 'missing-parent' . DIRECTORY_SEPARATOR . 'backups'
+            );
+            self::fail('An inaccessible backup parent should be rejected.');
+        } catch (RuntimeException $exception) {
+            self::assertStringContainsString('open_basedir', $exception->getMessage());
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertFalse($warningRaised);
+    }
 }

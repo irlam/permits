@@ -176,8 +176,14 @@ final class SecurityRegressionTest extends TestCase
         self::assertStringContainsString("\$relativePath === '.env'", $backup);
         self::assertStringNotContainsString('name="include_backups"', $backup);
         self::assertStringContainsString('permits_backup_\\d{8}_\\d{6}', $backup);
-        self::assertStringContainsString('BackupStorage::ensure($root)', $backup);
+        self::assertStringContainsString('BackupStorage::ensure($root, $backupPath)', $backup);
         self::assertStringNotContainsString("\$root . '/backups'", $backup);
+        self::assertStringContainsString('save_backup_settings', $backup);
+        self::assertStringContainsString('backup_retention', $backup);
+        self::assertStringContainsString('backup_delete_after_download', $backup);
+        self::assertStringContainsString('prune_backups($backupDir, $backupRetention)', $backup);
+        self::assertStringContainsString("SystemSettings::save(\$db", $backup);
+        self::assertStringContainsString("if (\$deleteAfterDownload && !@unlink(\$path))", $backup);
     }
 
     public function testAdminSettingsDoNotRewriteEnvironmentSecrets(): void

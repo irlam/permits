@@ -286,7 +286,7 @@ final class ProductionHealthCheck
                 'directory.backups.private',
                 false,
                 'Private backup storage is configured safely.',
-                'Private backup storage must resolve outside the public application directory.'
+                'Set BACKUP_PATH to an absolute private directory outside the public application directory and permitted by open_basedir.'
             );
         }
 
