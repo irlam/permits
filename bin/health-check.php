@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Permits\ProductionHealthCheck;
+use Permits\SystemSettings;
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -19,6 +20,9 @@ try {
 }
 
 $sessionCookieParameters = session_get_cookie_params();
+$backupSettings = SystemSettings::load($db, ['backup_path'], [
+    'backup_path' => (string)($_ENV['BACKUP_PATH'] ?? ''),
+]);
 $checker = new ProductionHealthCheck(
     $db->pdo,
     $root,
@@ -29,7 +33,7 @@ $checker = new ProductionHealthCheck(
         'session_cookie_secure' => $sessionCookieParameters['secure'] ?? false,
         'session_cookie_httponly' => $sessionCookieParameters['httponly'] ?? false,
         'db_driver' => $app->config('DB_DRIVER', ''),
-        'backup_path' => (string)($_ENV['BACKUP_PATH'] ?? ''),
+        'backup_path' => $backupSettings['backup_path'],
     ]
 );
 $report = $checker->run();

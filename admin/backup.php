@@ -10,6 +10,7 @@
 require __DIR__ . '/../vendor/autoload.php';
 use Permits\Csrf;
 use Permits\BackupStorage;
+use Permits\SystemSettings;
 
 [$app, $db, $root] = require_once __DIR__ . '/../src/bootstrap.php';
 require_once __DIR__ . '/../src/Auth.php';
@@ -19,9 +20,21 @@ $currentUser = $auth->requireRoles(['admin']);
 
 $errors = [];
 $messages = [];
+$backupSettings = SystemSettings::load($db, [
+    'backup_path', 'backup_retention', 'backup_include_vendor', 'backup_delete_after_download',
+], [
+    'backup_path' => (string)($_ENV['BACKUP_PATH'] ?? ''),
+    'backup_retention' => '5',
+    'backup_include_vendor' => 'true',
+    'backup_delete_after_download' => 'false',
+]);
+$backupPath = trim((string)$backupSettings['backup_path']);
+$backupRetention = max(1, min(50, (int)$backupSettings['backup_retention']));
+$defaultIncludeVendor = filter_var($backupSettings['backup_include_vendor'], FILTER_VALIDATE_BOOLEAN);
+$deleteAfterDownload = filter_var($backupSettings['backup_delete_after_download'], FILTER_VALIDATE_BOOLEAN);
 $backupDir = null;
 try {
-    $backupDir = BackupStorage::ensure($root);
+    $backupDir = BackupStorage::ensure($root, $backupPath);
 } catch (Throwable $storageError) {
     $errors[] = $storageError->getMessage();
 }
@@ -52,7 +65,46 @@ if ($download) {
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('X-Content-Type-Options: nosniff');
     readfile($path);
+    if ($deleteAfterDownload && !@unlink($path)) {
+        error_log('Downloaded backup could not be removed from private storage: ' . $safeName);
+    }
     exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_backup_settings'])) {
+    try {
+        $submittedPath = trim((string)($_POST['backup_path'] ?? ''));
+        $submittedRetention = filter_var(
+            $_POST['backup_retention'] ?? null,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1, 'max_range' => 50]]
+        );
+        if ($submittedPath === '') {
+            throw new RuntimeException('Enter an absolute private backup directory.');
+        }
+        if ($submittedRetention === false) {
+            throw new RuntimeException('Backup retention must be between 1 and 50 archives.');
+        }
+
+        $validatedPath = BackupStorage::ensure($root, $submittedPath);
+        $submittedIncludeVendor = isset($_POST['backup_include_vendor']);
+        $submittedDeleteAfterDownload = isset($_POST['backup_delete_after_download']);
+        SystemSettings::save($db, [
+            'backup_path' => $validatedPath,
+            'backup_retention' => (string)$submittedRetention,
+            'backup_include_vendor' => $submittedIncludeVendor ? 'true' : 'false',
+            'backup_delete_after_download' => $submittedDeleteAfterDownload ? 'true' : 'false',
+        ]);
+
+        $backupPath = $validatedPath;
+        $backupRetention = $submittedRetention;
+        $defaultIncludeVendor = $submittedIncludeVendor;
+        $deleteAfterDownload = $submittedDeleteAfterDownload;
+        $backupDir = $validatedPath;
+        $messages[] = 'Backup configuration saved and the private directory was verified.';
+    } catch (Throwable $settingsError) {
+        $errors[] = $settingsError->getMessage();
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !Csrf::validateRequest('admin-backup', true)) {
@@ -70,6 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_backup'])) {
         $result = create_full_backup($root, $backupDir, $db->pdo, [
             'includeVendor'  => $includeVendor,
         ]);
+        prune_backups($backupDir, $backupRetention);
         $messages[] = 'Backup created: ' . htmlspecialchars($result['name']) . ' (' . format_bytes($result['size']) . ')';
     } catch (Throwable $e) {
         $errors[] = $e->getMessage();
@@ -381,6 +434,17 @@ function list_backups(string $backupDir): array
     }, $items);
 }
 
+function prune_backups(string $backupDir, int $retention): void
+{
+    $items = glob($backupDir . DIRECTORY_SEPARATOR . 'permits_backup_*.zip') ?: [];
+    usort($items, static fn (string $left, string $right): int => (filemtime($right) ?: 0) <=> (filemtime($left) ?: 0));
+    foreach (array_slice($items, max(1, $retention)) as $expiredBackup) {
+        if (!@unlink($expiredBackup)) {
+            error_log('Expired backup could not be removed: ' . basename($expiredBackup));
+        }
+    }
+}
+
 function format_bytes(int $bytes): string
 {
     if ($bytes <= 0) {
@@ -444,6 +508,35 @@ function format_bytes(int $bytes): string
         <?php endforeach; ?>
 
         <div class="card">
+            <h2 style="margin-top:0;">Backup Configuration</h2>
+            <p class="meta">These are the only server-file options editable here. The directory must be an absolute, private path outside <code>httpdocs</code> and permitted by the host's <code>open_basedir</code> policy.</p>
+            <form method="post">
+                <?= Csrf::getFormField('admin-backup') ?>
+                <div class="field" style="margin-top:16px;">
+                    <label for="backup_path" style="display:block;font-weight:600;">Private backup directory</label>
+                    <input id="backup_path" name="backup_path" type="text" value="<?= htmlspecialchars($backupPath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" placeholder="/absolute/private/path/permits-backups" required style="width:100%;margin-top:8px;padding:11px 12px;border-radius:9px;border:1px solid #475569;background:#0a101a;color:#e2e8f0;box-sizing:border-box;">
+                    <p class="meta">For this Netcup layout, try <code>/var/www/vhosts/hosting215226.ae97b.netcup.net/tmp/permits-private-backups</code>.</p>
+                </div>
+                <div class="options">
+                    <div class="option">
+                        <label for="backup_retention">Keep the latest
+                            <input id="backup_retention" name="backup_retention" type="number" min="1" max="50" value="<?= (int)$backupRetention ?>" style="width:70px;padding:8px;border-radius:8px;border:1px solid #475569;background:#111827;color:#e2e8f0;">
+                            ZIP files
+                        </label>
+                    </div>
+                    <div class="option">
+                        <label><input type="checkbox" name="backup_include_vendor" value="1" <?= $defaultIncludeVendor ? 'checked' : '' ?>> Include <code>vendor/</code> by default</label>
+                    </div>
+                    <div class="option">
+                        <label><input type="checkbox" name="backup_delete_after_download" value="1" <?= $deleteAfterDownload ? 'checked' : '' ?>> Delete server copy after download</label>
+                        <p class="meta">Use this only when each downloaded ZIP is immediately moved to safe off-site storage.</p>
+                    </div>
+                </div>
+                <button type="submit" name="save_backup_settings" value="1" class="btn btn-primary" style="margin-top:18px;">Save &amp; Verify Configuration</button>
+            </form>
+        </div>
+
+        <div class="card">
             <h2 style="margin-top:0;">Create Backup</h2>
             <p class="meta">Backups contain permit records, account data and private links. Download them promptly, store them in encrypted off-site storage, then remove the server copy. The <code>.env</code> secrets file and earlier backups are always excluded.</p>
             <form method="post">
@@ -451,7 +544,7 @@ function format_bytes(int $bytes): string
                 <div class="options">
                     <div class="option">
                         <label>
-                            <input type="checkbox" name="include_vendor" value="1" checked>
+                            <input type="checkbox" name="include_vendor" value="1" <?= $defaultIncludeVendor ? 'checked' : '' ?>>
                             Include <code>vendor/</code> directory
                         </label>
                         <p class="meta">Keeps Composer dependencies packed. Uncheck if you prefer to run <code>composer install</code> after restore.</p>

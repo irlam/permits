@@ -8,14 +8,20 @@ use RuntimeException;
 /** Resolves backup storage and guarantees it is outside the public application root. */
 final class BackupStorage
 {
-    public static function configuredPath(string $root): string
+    public static function configuredPath(string $root, ?string $configured = null): string
     {
-        return self::pathFromValue($root, (string)($_ENV['BACKUP_PATH'] ?? ''));
+        return self::pathFromValue(
+            $root,
+            $configured ?? (string)($_ENV['BACKUP_PATH'] ?? '')
+        );
     }
 
     public static function pathFromValue(string $root, string $configured): string
     {
-        $rootPath = realpath($root);
+        // Shared hosts commonly restrict PHP to the document root and a
+        // private sibling directory. A denied realpath() emits a warning
+        // before returning false, so treat it as a normal validation failure.
+        $rootPath = @realpath($root);
         if ($rootPath === false) {
             throw new RuntimeException('The application directory could not be verified.');
         }
@@ -29,13 +35,15 @@ final class BackupStorage
             throw new RuntimeException('BACKUP_PATH must be an absolute server path.');
         }
 
-        $existing = realpath($candidate);
+        $existing = @realpath($candidate);
         if ($existing !== false) {
             $resolved = $existing;
         } else {
-            $parent = realpath(dirname($candidate));
+            $parent = @realpath(dirname($candidate));
             if ($parent === false) {
-                throw new RuntimeException('The parent folder for BACKUP_PATH does not exist.');
+                throw new RuntimeException(
+                    'The parent folder for BACKUP_PATH does not exist or is not permitted by open_basedir.'
+                );
             }
             $resolved = $parent . DIRECTORY_SEPARATOR . basename($candidate);
         }
@@ -47,19 +55,20 @@ final class BackupStorage
         return $resolved;
     }
 
-    public static function ensure(string $root): string
+    public static function ensure(string $root, ?string $configured = null): string
     {
-        $path = self::configuredPath($root);
-        if (!is_dir($path) && !@mkdir($path, 0700) && !is_dir($path)) {
+        $path = self::configuredPath($root, $configured);
+        if (!@is_dir($path) && !@mkdir($path, 0700) && !@is_dir($path)) {
             throw new RuntimeException('Unable to create the private backup directory.');
         }
         @chmod($path, 0700);
-        if (!is_writable($path)) {
+        if (!@is_writable($path)) {
             throw new RuntimeException('The private backup directory is not writable.');
         }
 
-        $verified = realpath($path);
-        if ($verified === false || self::isInside($verified, (string)realpath($root))) {
+        $verified = @realpath($path);
+        $verifiedRoot = @realpath($root);
+        if ($verified === false || $verifiedRoot === false || self::isInside($verified, $verifiedRoot)) {
             throw new RuntimeException('The private backup directory could not be verified.');
         }
 
