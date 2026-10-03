@@ -23,25 +23,72 @@ if ($provided === '' || !hash_equals($expected, $provided)) {
     exit;
 }
 
+function suite_permit_location(array $row): string
+{
+    $siteBlock = trim((string) ($row['site_block'] ?? ''));
+    if ($siteBlock !== '') {
+        return $siteBlock;
+    }
+
+    $data = json_decode((string) ($row['form_data'] ?? ''), true);
+    if (!is_array($data)) {
+        return '';
+    }
+
+    foreach ([
+        'siteProject',
+        'inspectionArea',
+        'buildingArea',
+        'propertyArea',
+        'location',
+        'exactWorkLocation',
+        'workLocation',
+        'exactLocation',
+        'siteLocation',
+        'siteBlock',
+        'area',
+    ] as $key) {
+        if (!isset($data[$key]) || !is_scalar($data[$key])) {
+            continue;
+        }
+
+        $value = trim((string) $data[$key]);
+        if ($value !== '') {
+            return mb_substr($value, 0, 190, 'UTF-8');
+        }
+    }
+
+    return '';
+}
+
 try {
     $stmt = $db->pdo->query(
-        "SELECT DISTINCT TRIM(site_block) AS site_block
+        "SELECT site_block, form_data
          FROM forms
-         WHERE site_block IS NOT NULL AND TRIM(site_block) <> ''
-         ORDER BY site_block ASC"
+         ORDER BY created_at DESC"
     );
 
-    $items = [];
+    $values = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $site = (string) ($row['site_block'] ?? '');
-        if ($site === '') continue;
-        $items[] = ['value' => $site, 'label' => $site];
+        $location = suite_permit_location($row);
+        if ($location === '') {
+            continue;
+        }
+        $values[$location] = true;
     }
+
+    $labels = array_keys($values);
+    natcasesort($labels);
+
+    $items = array_map(
+        static fn(string $value): array => ['value' => $value, 'label' => $value],
+        array_values($labels)
+    );
 
     echo json_encode([
         'ok' => true,
         'module' => 'permits',
-        'reference_type' => 'site_block',
+        'reference_type' => 'site',
         'items' => $items,
     ], JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
