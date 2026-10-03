@@ -24,42 +24,97 @@ if ($provided === '' || !hash_equals($expected, $provided)) {
 }
 
 $site = trim((string) ($_GET['site'] ?? ''));
-$where = ['1=1'];
-$params = [];
-if ($site !== '') {
-    $where[] = 'f.site_block = :site';
-    $params[':site'] = $site;
+
+function suite_permit_location(array $row): string
+{
+    $siteBlock = trim((string) ($row['site_block'] ?? ''));
+    if ($siteBlock !== '') {
+        return $siteBlock;
+    }
+
+    $data = json_decode((string) ($row['form_data'] ?? ''), true);
+    if (!is_array($data)) {
+        return '';
+    }
+
+    foreach ([
+        'siteProject',
+        'inspectionArea',
+        'buildingArea',
+        'propertyArea',
+        'location',
+        'exactWorkLocation',
+        'workLocation',
+        'exactLocation',
+        'siteLocation',
+        'siteBlock',
+        'area',
+    ] as $key) {
+        if (!isset($data[$key]) || !is_scalar($data[$key])) {
+            continue;
+        }
+
+        $value = trim((string) $data[$key]);
+        if ($value !== '') {
+            return mb_substr($value, 0, 190, 'UTF-8');
+        }
+    }
+
+    return '';
 }
 
 try {
-    $sql = "SELECT
-                COUNT(*) AS total,
-                COALESCE(SUM(CASE WHEN f.status IN ('active','issued','approved','open') THEN 1 ELSE 0 END),0) AS active,
-                COALESCE(SUM(CASE WHEN f.status = 'pending_approval' THEN 1 ELSE 0 END),0) AS pending_approval,
-                COALESCE(SUM(CASE WHEN f.status = 'awaiting_acceptance' THEN 1 ELSE 0 END),0) AS awaiting_acceptance,
-                COALESCE(SUM(CASE WHEN f.status = 'suspended' THEN 1 ELSE 0 END),0) AS suspended,
-                COALESCE(SUM(CASE WHEN f.status = 'expired' THEN 1 ELSE 0 END),0) AS expired,
-                MAX(f.updated_at) AS last_updated
-            FROM forms f
-            WHERE " . implode(' AND ', $where);
+    $stmt = $db->pdo->query(
+        "SELECT status, site_block, form_data, updated_at
+         FROM forms"
+    );
 
-    $stmt = $db->pdo->prepare($sql);
-    $stmt->execute($params);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $metrics = [
+        'total' => 0,
+        'active' => 0,
+        'pending_approval' => 0,
+        'awaiting_acceptance' => 0,
+        'suspended' => 0,
+        'expired' => 0,
+    ];
+    $lastUpdated = null;
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if ($site !== '' && strcasecmp(suite_permit_location($row), $site) !== 0) {
+            continue;
+        }
+
+        $status = strtolower(trim((string) ($row['status'] ?? '')));
+        $metrics['total']++;
+
+        if (in_array($status, ['active', 'issued', 'approved', 'open'], true)) {
+            $metrics['active']++;
+        }
+        if ($status === 'pending_approval') {
+            $metrics['pending_approval']++;
+        }
+        if ($status === 'awaiting_acceptance') {
+            $metrics['awaiting_acceptance']++;
+        }
+        if ($status === 'suspended') {
+            $metrics['suspended']++;
+        }
+        if ($status === 'expired') {
+            $metrics['expired']++;
+        }
+
+        $updated = trim((string) ($row['updated_at'] ?? ''));
+        if ($updated !== '' && ($lastUpdated === null || strcmp($updated, $lastUpdated) > 0)) {
+            $lastUpdated = $updated;
+        }
+    }
 
     echo json_encode([
         'ok' => true,
         'module' => 'permits',
         'scope' => ['site' => $site !== '' ? $site : null],
-        'metrics' => [
-            'total' => (int) ($row['total'] ?? 0),
-            'active' => (int) ($row['active'] ?? 0),
-            'pending_approval' => (int) ($row['pending_approval'] ?? 0),
-            'awaiting_acceptance' => (int) ($row['awaiting_acceptance'] ?? 0),
-            'suspended' => (int) ($row['suspended'] ?? 0),
-            'expired' => (int) ($row['expired'] ?? 0),
-        ],
-        'last_updated' => $row['last_updated'] ?: null,
+        'metrics' => $metrics,
+        'last_updated' => $lastUpdated,
     ], JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     error_log('Construction Suite summary failed: ' . $e->getMessage());
