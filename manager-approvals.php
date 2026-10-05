@@ -60,9 +60,9 @@ try {
             f.expiry_duration,
             f.site_block,
             f.form_data,
-            ft.name as template_name
+            COALESCE(ft.name, 'Permit') as template_name
         FROM forms f
-        JOIN form_templates ft ON f.template_id = ft.id
+        LEFT JOIN form_templates ft ON f.template_id = ft.id
         WHERE f.status = 'pending_approval'
         ORDER BY f.created_at ASC
     ");
