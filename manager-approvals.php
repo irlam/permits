@@ -25,6 +25,26 @@ require_once __DIR__ . '/src/Auth.php';
 $auth = new Auth($db);
 $user = $auth->requireRoles(['manager', 'admin']);
 
+// Optional strict source-site mapping from Construction Suite.
+$externalSite = trim((string) ($_GET['site'] ?? ''));
+function approval_site_reference(array $row): string {
+    $siteBlock = trim((string) ($row['site_block'] ?? ''));
+    if ($siteBlock !== '') return $siteBlock;
+    $data = json_decode((string) ($row['form_data'] ?? ''), true);
+    if (!is_array($data)) return '';
+    foreach ([
+        'siteProject', 'inspectionArea', 'buildingArea', 'propertyArea',
+        'location', 'exactWorkLocation', 'workLocation', 'exactLocation',
+        'siteLocation', 'siteBlock', 'area',
+    ] as $key) {
+        if (!isset($data[$key]) || !is_scalar($data[$key])) continue;
+        $value = trim((string) $data[$key]);
+        if ($value !== '') return mb_substr($value, 0, 190, 'UTF-8');
+    }
+    return '';
+}
+
+
 // Get pending approvals
 try {
     $stmt = $db->pdo->query("
@@ -38,6 +58,8 @@ try {
             f.created_at,
             f.unique_link,
             f.expiry_duration,
+            f.site_block,
+            f.form_data,
             ft.name as template_name
         FROM forms f
         JOIN form_templates ft ON f.template_id = ft.id
@@ -45,6 +67,15 @@ try {
         ORDER BY f.created_at ASC
     ");
     $pending_permits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($externalSite !== '') {
+        $pending_permits = array_values(array_filter(
+            $pending_permits,
+            static fn (array $row): bool => strcasecmp(
+                approval_site_reference($row), $externalSite
+            ) === 0
+        ));
+    }
+
 } catch (Exception $e) {
     $pending_permits = [];
     error_log("Error fetching pending permits: " . $e->getMessage());
