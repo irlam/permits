@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// summary_method_guard
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') { http_response_code(405); header('Content-Type: application/json'); echo '{"ok":false}'; exit; }
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
