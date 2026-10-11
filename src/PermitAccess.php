@@ -11,6 +11,14 @@ final class PermitAccess
     /** @param array<string,mixed> $user */
     public static function canViewAll(array $user): bool
     {
+        // The dedicated Suite gate verifies the company database and current
+        // identity before rendering. Its Viewer can read that company's permits;
+        // the gate independently denies every write and workflow route.
+        if (($GLOBALS['suite_gate_binding']['module_key'] ?? null) === 'permits'
+            && ($GLOBALS['suite_gate_identity']['role'] ?? null) === 'viewer'
+            && isset($_SESSION['suite_gate']['token'])) {
+            return true;
+        }
         return in_array(strtolower((string)($user['role'] ?? '')), ['admin', 'manager'], true);
     }
 
